@@ -32,57 +32,276 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
 
   // Grid state
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragMode, setDragMode] = useState<'select' | 'deselect'>('select');
+  
+  // Use refs for drag state to avoid closure staleness in event handlers
+  // and to prevent unnecessary re-renders during high-frequency events
+  const isDragging = useRef(false);
+  const dragMode = useRef<'select' | 'deselect'>('select');
+  
+  // Ref to track selected cells for event handlers (avoids stale closures)
+  const selectedCellsRef = useRef<Set<string>>(new Set());
+
+  // Timestamp to prevent mouse events from firing after touch events (double toggle fix)
+  const lastTouchTime = useRef(0);
 
   // UI state
   const [showBottomPanel, setShowBottomPanel] = useState(false);
 
-  const gridRef = useRef<HTMLDivElement>(null);
-  const onSlotsChangeRef = useRef(onSlotsChange);
+    const gridRef = useRef<HTMLDivElement>(null);
 
-  // Keep the ref up to date
-  useEffect(() => {
-    onSlotsChangeRef.current = onSlotsChange;
-  }, [onSlotsChange]);
+    // tableRef is no longer needed as we attach listeners to the grid container
 
-  // Generate weeks based on date range (Sunday as start)
-  const weeks = useMemo((): Week[] => {
-    const start = new Date(startDate + 'T00:00:00');
-    const end = new Date(endDate + 'T00:00:00');
+    const onSlotsChangeRef = useRef(onSlotsChange);
 
-    // Find the Sunday before or on start date
-    const firstSunday = new Date(start);
-    firstSunday.setDate(start.getDate() - start.getDay());
+  
 
-    // Find the Saturday after or on end date
-    const lastSaturday = new Date(end);
-    lastSaturday.setDate(end.getDate() + (6 - end.getDay()));
+    // Keep the ref up to date
 
-    const weeksArray: Week[] = [];
-    let current = new Date(firstSunday);
-    let weekNum = 0;
+    useEffect(() => {
 
-    while (current <= lastSaturday && weekNum < MAX_WEEKS) {
-      const weekDates: string[] = [];
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(current);
-        date.setDate(current.getDate() + i);
-        weekDates.push(date.toISOString().split('T')[0]);
+      onSlotsChangeRef.current = onSlotsChange;
+
+    }, [onSlotsChange]);
+
+  
+
+    // Keep selectedCellsRef up to date
+
+    useEffect(() => {
+
+      selectedCellsRef.current = selectedCells;
+
+    }, [selectedCells]);
+
+  
+
+    // Native Touch Event Handlers (Event Delegation) with { passive: false }
+
+    // Attached to the grid container to handle all weeks/tables
+
+    useEffect(() => {
+
+      const grid = gridRef.current;
+
+      if (!grid) return;
+
+  
+
+      // Helper to check selection using the ref (fresh state)
+
+      const isCellSelectedFresh = (date: string, hour: number): boolean => {
+
+        return selectedCellsRef.current.has(`${date}_${hour}`);
+
+      };
+
+  
+
+      const handleNativeTouchStart = (e: TouchEvent) => {
+
+        const td = (e.target as HTMLElement).closest('td');
+
+        if (!td) return;
+
+  
+
+        const date = td.dataset.date;
+
+        const hourStr = td.dataset.hour;
+
+  
+
+        if (date && hourStr) {
+
+          const hour = parseInt(hourStr);
+
+          if (!isDateInRange(date)) return;
+
+  
+
+          // Prevent default to block scrolling and mouse emulation
+
+          if (e.cancelable) e.preventDefault();
+
+          
+
+          lastTouchTime.current = Date.now();
+
+          
+
+          // Use fresh state to determine drag mode
+
+          const isSelected = isCellSelectedFresh(date, hour);
+
+          dragMode.current = isSelected ? 'deselect' : 'select';
+
+          isDragging.current = true;
+
+          toggleCell(date, hour);
+
+        }
+
+      };
+
+  
+
+      const handleNativeTouchMove = (e: TouchEvent) => {
+
+        if (!isDragging.current) return;
+
+        if (e.cancelable) e.preventDefault();
+
+  
+
+        const touch = e.touches[0];
+
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        
+
+        if (element instanceof HTMLElement) {
+
+          // Handle case where elementFromPoint hits the text inside the td or the td itself
+
+          const td = element.closest('td');
+
+          if (td) {
+
+            const date = td.dataset.date;
+
+            const hourStr = td.dataset.hour;
+
+            
+
+            if (date && hourStr) {
+
+              const hour = parseInt(hourStr);
+
+              if (isDateInRange(date)) {
+
+                // Optimization: Only update if the state needs changing
+
+                const currentSelected = isCellSelectedFresh(date, hour);
+
+                const shouldSelect = dragMode.current === 'select';
+
+                
+
+                if (currentSelected !== shouldSelect) {
+
+                  setCell(date, hour, shouldSelect);
+
+                }
+
+              }
+
+            }
+
+          }
+
+        }
+
+      };
+
+  
+
+      const handleNativeTouchEnd = (e: TouchEvent) => {
+
+        isDragging.current = false;
+
+        if (e.cancelable) e.preventDefault();
+
+      };
+
+  
+
+      // Attach listeners with passive: false to allow blocking scroll
+
+      grid.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
+
+      grid.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
+
+      grid.addEventListener('touchend', handleNativeTouchEnd, { passive: false });
+
+  
+
+      return () => {
+
+        grid.removeEventListener('touchstart', handleNativeTouchStart);
+
+        grid.removeEventListener('touchmove', handleNativeTouchMove);
+
+        grid.removeEventListener('touchend', handleNativeTouchEnd);
+
+      };
+
+    }, [startDate, endDate]); // Re-bind if date range logic changes
+
+  
+
+    // Generate weeks based on date range (Sunday as start)
+
+    const weeks = useMemo((): Week[] => {
+
+      // ... (weeks generation logic remains the same)
+
+      const start = new Date(startDate + 'T00:00:00');
+
+      const end = new Date(endDate + 'T00:00:00');
+
+      const firstSunday = new Date(start);
+
+      firstSunday.setDate(start.getDate() - start.getDay());
+
+      const lastSaturday = new Date(end);
+
+      lastSaturday.setDate(end.getDate() + (6 - end.getDay()));
+
+  
+
+      const weeksArray: Week[] = [];
+
+      let current = new Date(firstSunday);
+
+      let weekNum = 0;
+
+  
+
+      while (current <= lastSaturday && weekNum < MAX_WEEKS) {
+
+        const weekDates: string[] = [];
+
+        for (let i = 0; i < 7; i++) {
+
+          const date = new Date(current);
+
+          date.setDate(current.getDate() + i);
+
+          weekDates.push(date.toISOString().split('T')[0]);
+
+        }
+
+        weeksArray.push({
+
+          weekNumber: weekNum,
+
+          startDate: new Date(current),
+
+          dates: weekDates,
+
+        });
+
+        current.setDate(current.getDate() + 7);
+
+        weekNum++;
+
       }
 
-      weeksArray.push({
-        weekNumber: weekNum,
-        startDate: new Date(current),
-        dates: weekDates,
-      });
+      return weeksArray;
 
-      current.setDate(current.getDate() + 7);
-      weekNum++;
-    }
+    }, [startDate, endDate]);
 
-    return weeksArray;
-  }, [startDate, endDate]);
+  
 
   // Hours array based on time range
   const hours = useMemo(() => {
@@ -185,7 +404,6 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       return newSet;
     });
   };
-
   const removeSlot = (key: string) => {
     setSelectedCells(prev => {
       const newSet = new Set(prev);
@@ -195,30 +413,40 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   };
 
   const handleMouseDown = (date: string, hour: number) => {
+    // Ignore mouse events that occur shortly after touch events
+    // This prevents the "double toggle" issue on mobile devices
+    if (Date.now() - lastTouchTime.current < 1000) return;
+
     if (!isDateInRange(date)) return;
 
     const isSelected = isCellSelected(date, hour);
-    setDragMode(isSelected ? 'deselect' : 'select');
-    setIsDragging(true);
+    dragMode.current = isSelected ? 'deselect' : 'select';
+    isDragging.current = true;
     toggleCell(date, hour);
   };
 
   const handleMouseEnter = (date: string, hour: number) => {
-    if (isDragging && isDateInRange(date)) {
-      setCell(date, hour, dragMode === 'select');
+    if (isDragging.current && isDateInRange(date)) {
+      setCell(date, hour, dragMode.current === 'select');
     }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    isDragging.current = false;
   };
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      setIsDragging(false);
+      isDragging.current = false;
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    // We don't need global touchend here as we handle it on the table with capture/bubbling or specific logic
+    // But keeping it for safety if drag extends outside
+    document.addEventListener('touchend', handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchend', handleGlobalMouseUp);
+    };
   }, []);
 
   // Format date for display
@@ -276,7 +504,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       <div>
         <h3 className="text-lg font-semibold text-gray-900">Select Your Available Time Slots</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Click and drag to select time slots
+          Click and drag (or touch and drag) to select time slots
         </p>
       </div>
 
@@ -522,8 +750,10 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                           return (
                             <td
                               key={`${date}_${hour}`}
+                              data-date={date}
+                              data-hour={hour}
                               className={`
-                                border border-gray-300 w-16 h-10 cursor-pointer transition-colors
+                                border border-gray-300 w-16 h-10 cursor-pointer transition-colors touch-none
                                 ${!inRange
                                   ? 'bg-gray-100 cursor-not-allowed'
                                   : isSelected
