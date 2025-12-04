@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { TimeSlot } from '../types';
 
 interface TimeSlotBottomPanelProps {
@@ -30,6 +29,14 @@ export default function TimeSlotBottomPanel({
         <div
           className="fixed inset-0 bg-black bg-opacity-30 z-40"
           onClick={onTogglePanel}
+          role="button"
+          tabIndex={0}
+          aria-label="Close panel"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              onTogglePanel();
+            }
+          }}
         />
       )}
 
@@ -37,15 +44,15 @@ export default function TimeSlotBottomPanel({
       <div className="fixed bottom-0 left-0 right-0 z-50">
         {/* Expanded Panel */}
         <div
-          className={`bg-white border-t-2 border-green-600 shadow-2xl transition-all duration-300 ease-in-out ${
+          className={`bg-paper border-t border-film-border shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out ${
             showBottomPanel ? 'max-h-[60vh]' : 'max-h-0'
           } overflow-hidden`}
         >
           {/* Panel Header */}
-          <div className="bg-green-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-paper px-6 py-4 border-b border-film-border flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Selected Time Slots</h3>
-              <p className="text-xs text-gray-600">{selectedCount} slots selected</p>
+              <h3 className="text-lg font-serif font-bold text-ink">Selected Time Slots</h3>
+              <p className="text-sm text-gray-600 font-mono">{selectedCount} slots selected</p>
             </div>
             <button
               type="button"
@@ -53,39 +60,39 @@ export default function TimeSlotBottomPanel({
                 onClearAll();
                 onTogglePanel();
               }}
-              className="px-3 py-1.5 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="px-4 py-2 text-xs bg-transparent border border-film-border text-ink font-mono font-bold hover:bg-ink hover:text-paper transition-colors"
             >
-              Clear All
+              CLEAR ALL
             </button>
           </div>
 
           {/* Panel Content */}
-          <div className="overflow-y-auto p-4 space-y-3 max-h-[calc(60vh-60px)]">
+          <div className="overflow-y-auto p-6 space-y-4 max-h-[calc(60vh-80px)]">
             {selectedDates.map(date => (
-              <div key={date} className="border-b border-gray-200 pb-3 last:border-b-0">
-                <div className="font-medium text-gray-900 mb-2 flex items-center justify-between">
-                  <span className="text-sm">
+              <div key={date} className="border-b border-dashed border-film-border pb-4 last:border-b-0">
+                <div className="font-bold text-ink mb-3 flex items-center justify-between font-serif">
+                  <span className="text-base">
                     {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
+                      weekday: 'long',
+                      month: 'long',
                       day: 'numeric'
                     })}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 font-mono">
                     {selectedSlotsByDate[date].length} slots
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {selectedSlotsByDate[date].map(slot => (
                     <button
                       type="button"
                       key={slot.id}
                       onClick={() => onRemoveSlot(slot.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-100 text-green-800 rounded text-xs hover:bg-red-100 hover:text-red-800 transition-colors"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-film-accent text-white border border-transparent text-sm font-mono hover:bg-film-accent-hover transition-colors group rounded-sm"
                       title="Click to remove"
                     >
                       {slot.startTime.slice(0, 5)}-{slot.endTime.slice(0, 5)}
-                      <span className="text-red-600">✕</span>
+                      <span className="text-white/70 group-hover:text-white">✕</span>
                     </button>
                   ))}
                 </div>
@@ -102,16 +109,16 @@ export default function TimeSlotBottomPanel({
             e.stopPropagation();
             onTogglePanel();
           }}
-          className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-4 flex items-center justify-between transition-colors"
+          className="w-full bg-ink hover:bg-gray-800 text-paper px-6 py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-lg"
         >
-          <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center w-7 h-7 bg-white text-green-600 rounded-full text-sm font-bold">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center justify-center w-8 h-8 bg-film-accent text-white font-mono font-bold text-sm rounded-sm">
               {selectedCount}
             </span>
-            <span className="font-semibold">Selected Time Slots</span>
+            <span className="font-serif font-bold text-lg tracking-wide">Selected Time Slots</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-green-100">
+          <div className="flex items-center gap-3 font-mono text-sm font-bold">
+            <span className="uppercase tracking-wider">
               {showBottomPanel ? 'Hide Details' : 'View Details'}
             </span>
             <span className={`transition-transform duration-300 ${showBottomPanel ? 'rotate-180' : ''}`}>

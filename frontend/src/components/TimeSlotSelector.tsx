@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 
@@ -13,7 +13,7 @@ interface Week {
   dates: string[];
 }
 
-const MAX_WEEKS = 8; // 最多 8 週
+const MAX_WEEKS = 8;
 
 export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: TimeSlotSelectorProps) {
   // Date range controls
@@ -33,278 +33,59 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
 
   // Grid state
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  
-  // Use refs for drag state to avoid closure staleness in event handlers
-  // and to prevent unnecessary re-renders during high-frequency events
-  const isDragging = useRef(false);
-  const dragMode = useRef<'select' | 'deselect'>('select');
-  
-  // Ref to track selected cells for event handlers (avoids stale closures)
-  const selectedCellsRef = useRef<Set<string>>(new Set());
-
-  // Timestamp to prevent mouse events from firing after touch events (double toggle fix)
-  const lastTouchTime = useRef(0);
-
-  // UI state
   const [showBottomPanel, setShowBottomPanel] = useState(false);
 
-    const gridRef = useRef<HTMLDivElement>(null);
-
-    // tableRef is no longer needed as we attach listeners to the grid container
-
-    const onSlotsChangeRef = useRef(onSlotsChange);
-
-  
-
-    // Keep the ref up to date
-
-    useEffect(() => {
-
-      onSlotsChangeRef.current = onSlotsChange;
-
-    }, [onSlotsChange]);
-
-  
-
-    // Keep selectedCellsRef up to date
-
-    useEffect(() => {
-
-      selectedCellsRef.current = selectedCells;
-
-    }, [selectedCells]);
-
-  
-
-    // Native Touch Event Handlers (Event Delegation) with { passive: false }
-
-    // Attached to the grid container to handle all weeks/tables
-
-    useEffect(() => {
-
-      const grid = gridRef.current;
-
-      if (!grid) return;
-
-  
-
-      // Helper to check selection using the ref (fresh state)
-
-      const isCellSelectedFresh = (date: string, hour: number): boolean => {
-
-        return selectedCellsRef.current.has(`${date}_${hour}`);
-
-      };
-
-  
-
-      const handleNativeTouchStart = (e: TouchEvent) => {
-
-        const td = (e.target as HTMLElement).closest('td');
-
-        if (!td) return;
-
-  
-
-        const date = td.dataset.date;
-
-        const hourStr = td.dataset.hour;
-
-  
-
-        if (date && hourStr) {
-
-          const hour = parseInt(hourStr);
-
-          if (!isDateInRange(date)) return;
-
-  
-
-          // Prevent default to block scrolling and mouse emulation
-
-          if (e.cancelable) e.preventDefault();
-
-          
-
-          lastTouchTime.current = Date.now();
-
-          
-
-          // Use fresh state to determine drag mode
-
-          const isSelected = isCellSelectedFresh(date, hour);
-
-          dragMode.current = isSelected ? 'deselect' : 'select';
-
-          isDragging.current = true;
-
-          toggleCell(date, hour);
-
-        }
-
-      };
-
-  
-
-      const handleNativeTouchMove = (e: TouchEvent) => {
-
-        if (!isDragging.current) return;
-
-        if (e.cancelable) e.preventDefault();
-
-  
-
-        const touch = e.touches[0];
-
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
-        
-
-        if (element instanceof HTMLElement) {
-
-          // Handle case where elementFromPoint hits the text inside the td or the td itself
-
-          const td = element.closest('td');
-
-          if (td) {
-
-            const date = td.dataset.date;
-
-            const hourStr = td.dataset.hour;
-
-            
-
-            if (date && hourStr) {
-
-              const hour = parseInt(hourStr);
-
-              if (isDateInRange(date)) {
-
-                // Optimization: Only update if the state needs changing
-
-                const currentSelected = isCellSelectedFresh(date, hour);
-
-                const shouldSelect = dragMode.current === 'select';
-
-                
-
-                if (currentSelected !== shouldSelect) {
-
-                  setCell(date, hour, shouldSelect);
-
-                }
-
-              }
-
-            }
-
-          }
-
-        }
-
-      };
-
-  
-
-      const handleNativeTouchEnd = (e: TouchEvent) => {
-
-        isDragging.current = false;
-
-        if (e.cancelable) e.preventDefault();
-
-      };
-
-  
-
-      // Attach listeners with passive: false to allow blocking scroll
-
-      grid.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
-
-      grid.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
-
-      grid.addEventListener('touchend', handleNativeTouchEnd, { passive: false });
-
-  
-
-      return () => {
-
-        grid.removeEventListener('touchstart', handleNativeTouchStart);
-
-        grid.removeEventListener('touchmove', handleNativeTouchMove);
-
-        grid.removeEventListener('touchend', handleNativeTouchEnd);
-
-      };
-
-    }, [startDate, endDate]); // Re-bind if date range logic changes
-
-  
-
-    // Generate weeks based on date range (Sunday as start)
-
-    const weeks = useMemo((): Week[] => {
-
-      // ... (weeks generation logic remains the same)
-
-      const start = new Date(startDate + 'T00:00:00');
-
-      const end = new Date(endDate + 'T00:00:00');
-
-      const firstSunday = new Date(start);
-
-      firstSunday.setDate(start.getDate() - start.getDay());
-
-      const lastSaturday = new Date(end);
-
-      lastSaturday.setDate(end.getDate() + (6 - end.getDay()));
-
-  
-
-      const weeksArray: Week[] = [];
-
-      let current = new Date(firstSunday);
-
-      let weekNum = 0;
-
-  
-
-      while (current <= lastSaturday && weekNum < MAX_WEEKS) {
-
-        const weekDates: string[] = [];
-
-        for (let i = 0; i < 7; i++) {
-
-          const date = new Date(current);
-
-          date.setDate(current.getDate() + i);
-
-          weekDates.push(date.toISOString().split('T')[0]);
-
-        }
-
-        weeksArray.push({
-
-          weekNumber: weekNum,
-
-          startDate: new Date(current),
-
-          dates: weekDates,
-
-        });
-
-        current.setDate(current.getDate() + 7);
-
-        weekNum++;
-
+  // Interaction state
+  const isDragging = useRef(false);
+  const dragMode = useRef<'select' | 'deselect'>('select');
+  const gridRef = useRef<HTMLDivElement>(null);
+  const onSlotsChangeRef = useRef(onSlotsChange);
+  const selectedCellsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    onSlotsChangeRef.current = onSlotsChange;
+  }, [onSlotsChange]);
+
+  // Keep selectedCellsRef up to date
+  useEffect(() => {
+    selectedCellsRef.current = selectedCells;
+  }, [selectedCells]);
+
+  // Generate weeks based on date range (UTC consistent)
+  const weeks = useMemo((): Week[] => {
+    const createUTC = (d: string) => new Date(d + 'T00:00:00Z');
+    const startObj = createUTC(startDate);
+    const endObj = createUTC(endDate);
+
+    const firstSunday = new Date(startObj);
+    firstSunday.setUTCDate(startObj.getUTCDate() - startObj.getUTCDay());
+
+    const lastSaturday = new Date(endObj);
+    lastSaturday.setUTCDate(endObj.getUTCDate() + (6 - endObj.getUTCDay()));
+
+    const weeksArray: Week[] = [];
+    let current = new Date(firstSunday);
+    let weekNum = 0;
+
+    while (current <= lastSaturday && weekNum < MAX_WEEKS) {
+      const weekDates: string[] = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(current);
+        date.setUTCDate(current.getUTCDate() + i);
+        weekDates.push(date.toISOString().split('T')[0]);
       }
+      weeksArray.push({
+        weekNumber: weekNum,
+        startDate: new Date(current),
+        dates: weekDates,
+      });
+      current.setUTCDate(current.getUTCDate() + 7);
+      weekNum++;
+    }
+    return weeksArray;
+  }, [startDate, endDate]);
 
-      return weeksArray;
-
-    }, [startDate, endDate]);
-
-  
-
-  // Hours array based on time range
+  // Hours array
   const hours = useMemo(() => {
     const result: number[] = [];
     for (let h = startHour; h <= endHour; h++) {
@@ -317,23 +98,17 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   const dateRangeError = useMemo(() => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    if (end < start) {
-      return '結束日期不能早於開始日期';
-    }
-
+    if (end < start) return 'End date cannot be before start date';
+    
     const diffTime = end.getTime() - start.getTime();
     const diffDays = diffTime / (1000 * 3600 * 24);
     const diffWeeks = Math.ceil(diffDays / 7);
-
-    if (diffWeeks > MAX_WEEKS) {
-      return `日期範圍不能超過 ${MAX_WEEKS} 週`;
-    }
-
+    
+    if (diffWeeks > MAX_WEEKS) return `Date range cannot exceed ${MAX_WEEKS} weeks`;
     return null;
   }, [startDate, endDate]);
 
-  // Initialize from initialSlots
+  // Initialize
   useEffect(() => {
     if (initialSlots.length > 0) {
       const keys = new Set<string>();
@@ -345,7 +120,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     }
   }, []);
 
-  // Notify parent when selected cells change
+  // Notify parent
   useEffect(() => {
     if (onSlotsChangeRef.current) {
       const slots: TimeSlot[] = Array.from(selectedCells).map(key => {
@@ -368,43 +143,32 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     return selectedCells.has(getCellKey(date, hour));
   };
 
-  // Check if date is within selected range
   const isDateInRange = (dateStr: string): boolean => {
-    const date = new Date(dateStr);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return date >= start && date <= end;
+    return dateStr >= startDate && dateStr <= endDate;
   };
 
   const toggleCell = (date: string, hour: number) => {
     if (!isDateInRange(date)) return;
-
     const key = getCellKey(date, hour);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
       return newSet;
     });
   };
 
   const setCell = (date: string, hour: number, selected: boolean) => {
     if (!isDateInRange(date)) return;
-
     const key = getCellKey(date, hour);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
-      if (selected) {
-        newSet.add(key);
-      } else {
-        newSet.delete(key);
-      }
+      if (selected) newSet.add(key);
+      else newSet.delete(key);
       return newSet;
     });
   };
+
   const removeSlot = (key: string) => {
     setSelectedCells(prev => {
       const newSet = new Set(prev);
@@ -413,16 +177,16 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     });
   };
 
-  const handleMouseDown = (date: string, hour: number) => {
-    // Ignore mouse events that occur shortly after touch events
-    // This prevents the "double toggle" issue on mobile devices
-    if (Date.now() - lastTouchTime.current < 1000) return;
-
+  // Interaction Handlers
+  const handleMouseDown = (e: React.MouseEvent, date: string, hour: number) => {
+    if (e.button !== 0) return; // Only left click
     if (!isDateInRange(date)) return;
+
+    e.preventDefault(); // Prevent text selection
+    isDragging.current = true;
 
     const isSelected = isCellSelected(date, hour);
     dragMode.current = isSelected ? 'deselect' : 'select';
-    isDragging.current = true;
     toggleCell(date, hour);
   };
 
@@ -436,21 +200,92 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     isDragging.current = false;
   };
 
+  // Native Touch Event Handlers with { passive: false }
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    // Helper to check selection using the ref (fresh state)
+    const isCellSelectedFresh = (date: string, hour: number): boolean => {
+      return selectedCellsRef.current.has(`${date}_${hour}`);
+    };
+
+    const handleNativeTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const td = target.closest('td');
+      if (!td) return;
+
+      const date = td.dataset.date;
+      const hourStr = td.dataset.hour;
+      if (!date || !hourStr) return;
+
+      const hour = parseInt(hourStr);
+      if (!isDateInRange(date)) return;
+
+      // Prevent scrolling
+      if (e.cancelable) e.preventDefault();
+
+      isDragging.current = true;
+      const isSelected = isCellSelectedFresh(date, hour);
+      dragMode.current = isSelected ? 'deselect' : 'select';
+      toggleCell(date, hour);
+    };
+
+    const handleNativeTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+
+      // Prevent scrolling
+      if (e.cancelable) e.preventDefault();
+
+      const touch = e.touches[0];
+      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+      if (element instanceof HTMLElement) {
+        const td = element.closest('td');
+        if (td) {
+          const date = td.dataset.date;
+          const hourStr = td.dataset.hour;
+
+          if (date && hourStr) {
+            const hour = parseInt(hourStr);
+            if (isDateInRange(date)) {
+              // Only update if the state needs changing (optimization)
+              const currentSelected = isCellSelectedFresh(date, hour);
+              const shouldSelect = dragMode.current === 'select';
+
+              if (currentSelected !== shouldSelect) {
+                setCell(date, hour, shouldSelect);
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const handleNativeTouchEnd = (e: TouchEvent) => {
       isDragging.current = false;
+      if (e.cancelable) e.preventDefault();
     };
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    // We don't need global touchend here as we handle it on the table with capture/bubbling or specific logic
-    // But keeping it for safety if drag extends outside
-    document.addEventListener('touchend', handleGlobalMouseUp);
+
+    // Attach listeners with passive: false to allow preventDefault
+    grid.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
+    grid.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
+    grid.addEventListener('touchend', handleNativeTouchEnd, { passive: false });
+
     return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('touchend', handleGlobalMouseUp);
+      grid.removeEventListener('touchstart', handleNativeTouchStart);
+      grid.removeEventListener('touchmove', handleNativeTouchMove);
+      grid.removeEventListener('touchend', handleNativeTouchEnd);
     };
+  }, [startDate, endDate]);
+
+  // Global mouse up listener
+  useEffect(() => {
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Format date for display
+  // Format helpers
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr + 'T00:00:00');
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -473,7 +308,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
   };
 
-  // Group selected slots by date
+  // Group selected slots
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
     selectedCells.forEach(key => {
@@ -489,89 +324,96 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
         endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
       });
     });
-    // Sort slots within each date
     Object.keys(grouped).forEach(date => {
       grouped[date].sort((a, b) => a.startTime.localeCompare(b.startTime));
     });
     return grouped;
   }, [selectedCells]);
 
-  const selectedDates = Object.keys(selectedSlotsByDate).sort();
-  const selectedCount = selectedCells.size;
-
   return (
-    <div className="space-y-4">
-      {/* Title */}
+    <div className="space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
       <div>
-        <h3 className="text-lg font-semibold text-gray-900">Select Your Available Time Slots</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Click and drag (or touch and drag) to select time slots
+        <h3 className="text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
+        <p className="text-sm text-gray-600 mt-1 font-mono">
+          Click and drag to select time slots
         </p>
       </div>
 
-      {/* Date & Time Range Controls */}
-      <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Date Range */}
+      <div className="bg-paper border border-film-border p-6 space-y-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <div className="flex items-center gap-2">
-              <input
-                id="startDate"
-                name="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="text-gray-500">to</span>
-              <input
-                id="endDate"
-                name="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+            <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label htmlFor="startDate" className="sr-only">Start Date</label>
+                <input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  title="Start date"
+                />
+              </div>
+              <span className="text-ink font-bold">→</span>
+              <div className="flex-1">
+                <label htmlFor="endDate" className="sr-only">End Date</label>
+                <input
+                  id="endDate"
+                  name="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  title="End date"
+                />
+              </div>
             </div>
             {dateRangeError && (
-              <p className="text-xs text-red-600 mt-1">{dateRangeError}</p>
+              <p className="text-xs text-red-600 mt-2 font-mono font-bold">{dateRangeError}</p>
             )}
           </div>
 
-          {/* Time Range */}
           <div>
-            <label htmlFor="startHour" className="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
-            <div className="flex items-center gap-2">
-              <select
-                id="startHour"
-                name="startHour"
-                value={startHour}
-                onChange={(e) => setStartHour(parseInt(e.target.value))}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{formatHour(i)}</option>
-                ))}
-              </select>
-              <span className="text-gray-500">to</span>
-              <select
-                id="endHour"
-                name="endHour"
-                value={endHour}
-                onChange={(e) => setEndHour(parseInt(e.target.value))}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{formatHour(i)}</option>
-                ))}
-              </select>
+            <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label htmlFor="startHour" className="sr-only">Start Hour</label>
+                <select
+                  id="startHour"
+                  name="startHour"
+                  value={startHour}
+                  onChange={(e) => setStartHour(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  title="Start hour"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{formatHour(i)}</option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-ink font-bold">→</span>
+              <div className="flex-1">
+                <label htmlFor="endHour" className="sr-only">End Hour</label>
+                <select
+                  id="endHour"
+                  name="endHour"
+                  value={endHour}
+                  onChange={(e) => setEndHour(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  title="End hour"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{formatHour(i)}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Panel */}
       <TimeSlotBottomPanel
         selectedCells={selectedCells}
         selectedSlotsByDate={selectedSlotsByDate}
@@ -584,9 +426,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
         onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
       />
 
-      {/* Navigation Controls */}
       {weeks.length > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between font-mono text-sm">
           <button
             type="button"
             onClick={() => {
@@ -594,12 +435,12 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                 gridRef.current.scrollBy({ left: -800, behavior: 'smooth' });
               }
             }}
-            className="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 flex items-center gap-1"
+            className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
           >
-            ← Scroll Left
+            ← PREV
           </button>
-          <span className="text-sm text-gray-600">
-            {weeks.length} {weeks.length === 1 ? 'week' : 'weeks'} • Scroll horizontally to see more
+          <span className="text-ink font-bold">
+            {weeks.length} {weeks.length === 1 ? 'WEEK' : 'WEEKS'}
           </span>
           <button
             type="button"
@@ -608,45 +449,40 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                 gridRef.current.scrollBy({ left: 800, behavior: 'smooth' });
               }
             }}
-            className="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 flex items-center gap-1"
+            className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
           >
-            Scroll Right →
+            NEXT →
           </button>
         </div>
       )}
 
-      {/* Grid - Horizontal Scrolling */}
       {!dateRangeError && (
         <div
           ref={gridRef}
-          className="overflow-x-auto border border-gray-300 rounded-lg select-none"
+          className="overflow-x-auto border border-film-border bg-paper select-none"
         >
           <div className="flex">
             {weeks.map((week, weekIndex) => (
               <div
                 key={week.weekNumber}
-                className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l-4 border-gray-400' : ''}`}
+                className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l border-film-border' : ''}`}
               >
-                {/* Week Header */}
-                <div className="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 border-b border-gray-300">
-                  Week {week.weekNumber + 1}: {formatWeekRange(week)}
+                <div className="bg-paper px-4 py-3 text-sm font-serif font-bold text-ink border-b border-film-border tracking-wide">
+                  WEEK {week.weekNumber + 1}: {formatWeekRange(week)}
                 </div>
 
-                {/* Week Grid */}
                 <table className="border-collapse">
                   <thead>
                     <tr>
-                      <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700 sticky left-0 z-20">
-                        Time
+                      <th className="border-r border-b border-film-border bg-paper px-3 py-2 text-xs font-mono font-bold text-ink sticky left-0 z-20">
+                        TIME
                       </th>
                       {week.dates.map(date => {
                         const inRange = isDateInRange(date);
                         return (
                           <th
                             key={date}
-                            className={`border border-gray-300 px-4 py-2 text-xs font-medium whitespace-pre-line text-center ${
-                              inRange ? 'bg-gray-50 text-gray-700' : 'bg-gray-100 text-gray-400'
-                            }`}
+                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-film-border/10 text-gray-400'}`}
                           >
                             {formatDate(date)}
                           </th>
@@ -657,7 +493,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   <tbody>
                     {hours.map(hour => (
                       <tr key={hour}>
-                        <th className="border border-gray-300 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700 text-right sticky left-0 z-10">
+                        <th className="border-r border-b border-film-border bg-paper px-3 py-2 text-xs font-mono text-ink text-right sticky left-0 z-10 last:border-b-0">
                           {formatHour(hour)}
                         </th>
                         {week.dates.map(date => {
@@ -666,18 +502,23 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                           return (
                             <td
                               key={`${date}_${hour}`}
+                              role="gridcell"
+                              aria-selected={isSelected}
                               data-date={date}
                               data-hour={hour}
+                              style={{
+                                backgroundColor: isSelected ? '#EBB02D' : undefined
+                              }}
                               className={`
-                                border border-gray-300 w-16 h-10 cursor-pointer transition-colors touch-none
+                                border-r border-b border-film-border w-16 h-12 cursor-pointer transition-colors last:border-r-0
                                 ${!inRange
-                                  ? 'bg-gray-100 cursor-not-allowed'
+                                  ? 'bg-film-border/10 cursor-not-allowed pattern-diagonal-lines'
                                   : isSelected
-                                  ? 'bg-green-400 hover:bg-green-500'
-                                  : 'bg-white hover:bg-gray-100'
+                                  ? ''
+                                  : 'bg-transparent hover:bg-film-light active:bg-film-light'
                                 }
                               `}
-                              onMouseDown={() => handleMouseDown(date, hour)}
+                              onMouseDown={(e) => handleMouseDown(e, date, hour)}
                               onMouseEnter={() => handleMouseEnter(date, hour)}
                               onMouseUp={handleMouseUp}
                             />
@@ -693,11 +534,10 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
         </div>
       )}
 
-      <div className="text-xs text-gray-500">
-        <p>💡 Tip: Click and drag across multiple cells to quickly select large time blocks.</p>
+      <div className="text-xs text-gray-500 font-mono">
+        <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
       </div>
 
-      {/* Bottom spacing for fixed bar */}
       {selectedCells.size > 0 && <div className="h-20" />}
     </div>
   );

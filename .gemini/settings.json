@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "Astro": {
+      "command": "doc",
+      "args": []
+    }
+  }
+}
