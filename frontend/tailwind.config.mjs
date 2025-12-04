@@ -4,19 +4,18 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				paper: '#F2F0E9', // Warmer, organic beige
-				ink: '#35322F',   // Soft charcoal, not pure black
-				'film-accent': '#EBB02D', // Warm amber/gold (Kodak style)
-				'film-accent-hover': '#D99F21',
-				'film-border': '#D1CEC7', // Soft grey border
-				'film-light': '#F9F7F2', // Lighter paper tone
+				paper: '#F7F9FA', // Cool, airy white (Fuji-style base)
+				ink: '#37474F',   // Soft blue-grey charcoal
+				'film-accent': '#4CB5AB', // Fuji Green/Teal
+				'film-accent-hover': '#3D9189',
+				'film-border': '#CFD8DC', // Cool blue-grey border (improved contrast)
+				'film-light': '#FFFFFF', // Pure white
 			},
 			fontFamily: {
-				serif: ['"Merriweather"', 'serif'],
+				serif: ['"Shippori Mincho"', 'serif'],
 				mono: ['"Space Mono"', 'monospace'],
-				sans: ['"Inter"', 'sans-serif'],
+				sans: ['"Zen Kaku Gothic New"', 'sans-serif'],
 			},
-			// Removed retro hard shadow
 		},
 	},
 	plugins: [],

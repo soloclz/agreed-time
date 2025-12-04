@@ -352,7 +352,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
                   title="Start date"
                 />
               </div>
@@ -365,7 +365,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
                   title="End date"
                 />
               </div>
@@ -385,7 +385,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   name="startHour"
                   value={startHour}
                   onChange={(e) => setStartHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
                   title="Start hour"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
@@ -401,7 +401,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   name="endHour"
                   value={endHour}
                   onChange={(e) => setEndHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-none bg-transparent text-sm focus:outline-none focus:border-film-accent font-mono transition-colors"
+                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
                   title="End hour"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
@@ -482,7 +482,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                         return (
                           <th
                             key={date}
-                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-film-border/10 text-gray-400'}`}
+                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
                           >
                             {formatDate(date)}
                           </th>
@@ -507,15 +507,15 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                               data-date={date}
                               data-hour={hour}
                               style={{
-                                backgroundColor: isSelected ? '#EBB02D' : undefined
+                                backgroundColor: isSelected ? '#4CB5AB' : undefined
                               }}
                               className={`
                                 border-r border-b border-film-border w-16 h-12 cursor-pointer transition-colors last:border-r-0
                                 ${!inRange
-                                  ? 'bg-film-border/10 cursor-not-allowed pattern-diagonal-lines'
+                                  ? 'bg-gray-100/80 cursor-not-allowed pattern-diagonal-lines'
                                   : isSelected
                                   ? ''
-                                  : 'bg-transparent hover:bg-film-light active:bg-film-light'
+                                  : 'bg-film-light hover:bg-white active:bg-white'
                                 }
                               `}
                               onMouseDown={(e) => handleMouseDown(e, date, hour)}
