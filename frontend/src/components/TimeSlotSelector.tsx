@@ -330,12 +330,31 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     return grouped;
   }, [selectedCells]);
 
+  const handleHeaderClick = (date: string) => {
+    if (!isDateInRange(date)) return;
+
+    const allCellsInColumn = hours.map(hour => getCellKey(date, hour));
+    const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
+
+    setSelectedCells(prev => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all
+        allCellsInColumn.forEach(key => newSet.delete(key));
+      } else {
+        // Select all
+        allCellsInColumn.forEach(key => newSet.add(key));
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
       <div>
         <h3 className="text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
         <p className="text-sm text-gray-600 mt-1 font-mono">
-          Click and drag to select time slots
+          Click and drag to select time slots, or click date headers to select a full day.
         </p>
       </div>
 
@@ -482,7 +501,9 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                         return (
                           <th
                             key={date}
-                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
+                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light' : 'bg-gray-100/80 text-gray-400'}`}
+                            onClick={() => handleHeaderClick(date)}
+                            aria-label={`Toggle selection for ${date}`}
                           >
                             {formatDate(date)}
                           </th>
