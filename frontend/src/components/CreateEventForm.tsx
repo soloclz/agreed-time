@@ -46,7 +46,7 @@ export default function CreateEventForm() {
       {/* Event Details Section */}
       <div className="space-y-6">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="title" className="block text-sm font-medium text-ink mb-2 font-serif">
             Event Title <span className="text-red-500">*</span>
           </label>
           <input
@@ -56,13 +56,13 @@ export default function CreateEventForm() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Team Sync Meeting"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border-b border-film-border bg-transparent focus:outline-none focus:border-film-accent transition-colors font-mono rounded-none placeholder-gray-400"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="description" className="block text-sm font-medium text-ink mb-2 font-serif">
             Description (optional)
           </label>
           <textarea
@@ -72,7 +72,7 @@ export default function CreateEventForm() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add any details about the event..."
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 border-b border-film-border bg-transparent focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-none placeholder-gray-400"
           />
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function CreateEventForm() {
         <button
           type="submit"
           disabled={isSubmitting || !title.trim() || selectedSlots.length === 0}
-          className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-8 py-3 bg-ink text-paper font-serif font-bold tracking-wide hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors rounded-sm shadow-sm"
         >
           {isSubmitting ? 'Creating...' : 'Create Event'}
         </button>
