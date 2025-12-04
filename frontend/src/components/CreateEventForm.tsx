@@ -56,7 +56,7 @@ export default function CreateEventForm() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Team Sync Meeting"
-            className="w-full px-4 py-3 border-b border-film-border bg-transparent focus:outline-none focus:border-film-accent transition-colors font-mono rounded-none placeholder-gray-400"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono rounded-t-sm placeholder-gray-400 text-ink"
             required
           />
         </div>
@@ -72,7 +72,7 @@ export default function CreateEventForm() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add any details about the event..."
             rows={3}
-            className="w-full px-4 py-3 border-b border-film-border bg-transparent focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-none placeholder-gray-400"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink"
           />
         </div>
       </div>
@@ -83,20 +83,20 @@ export default function CreateEventForm() {
       </div>
 
       {/* Submit Button */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-        <div className="text-sm text-gray-600">
+      <div className="flex items-center justify-between py-6 border-t border-film-border">
+        <div className="text-base font-sans">
           {selectedSlots.length > 0 ? (
-            <span>
-              ✓ <span className="font-semibold">{selectedSlots.length}</span> time slots selected
+            <span className="text-ink">
+              <span className="font-bold">✓</span> <span className="font-semibold">{selectedSlots.length}</span> time slots selected
             </span>
           ) : (
-            <span className="text-gray-400">No time slots selected yet</span>
+            <span className="text-ink/70">No time slots selected yet</span>
           )}
         </div>
         <button
           type="submit"
           disabled={isSubmitting || !title.trim() || selectedSlots.length === 0}
-          className="px-8 py-3 bg-ink text-paper font-serif font-bold tracking-wide hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors rounded-sm shadow-sm"
+          className="px-8 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 rounded-lg shadow-md hover:shadow-lg active:transform active:scale-[0.98]"
         >
           {isSubmitting ? 'Creating...' : 'Create Event'}
         </button>
