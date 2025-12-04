@@ -27,7 +27,7 @@ export default function TimeSlotBottomPanel({
       {/* Bottom Panel Overlay */}
       {showBottomPanel && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40"
+          className="fixed inset-0 bg-black/5 backdrop-blur-sm z-40"
           onClick={onTogglePanel}
           role="button"
           tabIndex={0}
@@ -43,63 +43,62 @@ export default function TimeSlotBottomPanel({
       {/* Bottom Fixed Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50">
         {/* Expanded Panel */}
-        <div
-          className={`bg-paper border-t border-film-border shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out ${
-            showBottomPanel ? 'max-h-[60vh]' : 'max-h-0'
-          } overflow-hidden`}
-        >
-          {/* Panel Header */}
-          <div className="bg-paper px-6 py-4 border-b border-film-border flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-serif font-bold text-ink">Selected Time Slots</h3>
-              <p className="text-sm text-gray-600 font-mono">{selectedCount} slots selected</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onClearAll();
-                onTogglePanel();
-              }}
-              className="px-4 py-2 text-xs bg-transparent border border-film-border text-ink font-mono font-bold hover:bg-ink hover:text-paper transition-colors"
-            >
-              CLEAR ALL
-            </button>
-          </div>
-
-          {/* Panel Content */}
-          <div className="overflow-y-auto p-6 space-y-4 max-h-[calc(60vh-80px)]">
-            {selectedDates.map(date => (
-              <div key={date} className="border-b border-dashed border-film-border pb-4 last:border-b-0">
-                <div className="font-bold text-ink mb-3 flex items-center justify-between font-serif">
-                  <span className="text-base">
-                    {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </span>
-                  <span className="text-xs text-gray-500 font-mono">
-                    {selectedSlotsByDate[date].length} slots
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedSlotsByDate[date].map(slot => (
-                    <button
-                      type="button"
-                      key={slot.id}
-                      onClick={() => onRemoveSlot(slot.id)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-film-accent text-white border border-transparent text-sm font-mono hover:bg-film-accent-hover transition-colors group rounded-sm"
-                      title="Click to remove"
-                    >
-                      {slot.startTime.slice(0, 5)}-{slot.endTime.slice(0, 5)}
-                      <span className="text-white/70 group-hover:text-white">✕</span>
-                    </button>
-                  ))}
-                </div>
+        {showBottomPanel && (
+          <div className="bg-white/95 border-t border-film-border shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
+            {/* Panel Header */}
+            <div className="px-6 py-4 border-b border-film-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-serif font-bold text-ink">Selected Time Slots</h3>
+                <p className="text-sm text-gray-600 font-mono">{selectedCount} slots selected</p>
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => {
+                  onClearAll();
+                  onTogglePanel();
+                }}
+                className="px-4 py-2 text-xs bg-transparent border border-film-border text-ink font-mono font-bold hover:bg-ink hover:text-paper transition-colors"
+              >
+                CLEAR ALL
+              </button>
+            </div>
+
+            {/* Panel Content */}
+            <div className="overflow-y-auto p-6 space-y-4">
+              
+              {selectedDates.map(date => (
+                <div key={date} className="border-b border-dashed border-gray-300 pb-4 last:border-b-0">
+                  <div className="font-bold text-gray-800 mb-3 flex items-center justify-between font-serif">
+                    <span className="text-base">
+                      {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {selectedSlotsByDate[date].length} slots
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSlotsByDate[date].map(slot => (
+                      <button
+                        type="button"
+                        key={slot.id}
+                        onClick={() => onRemoveSlot(slot.id)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#4CB5AB] text-white shadow-sm text-sm font-mono hover:bg-[#3D9189] transition-colors group rounded-sm"
+                        title="Click to remove"
+                      >
+                        {slot.startTime.slice(0, 5)}-{slot.endTime.slice(0, 5)}
+                        <span className="text-white/70 group-hover:text-white">✕</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bottom Bar - Always Visible */}
         <button

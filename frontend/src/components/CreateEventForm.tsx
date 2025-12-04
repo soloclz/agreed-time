@@ -58,6 +58,7 @@ export default function CreateEventForm() {
             placeholder="e.g., Team Sync Meeting"
             className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono rounded-t-sm placeholder-gray-400 text-ink"
             required
+            autoComplete="off"
           />
         </div>
 
@@ -70,9 +71,14 @@ export default function CreateEventForm() {
             name="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = target.scrollHeight + 'px';
+            }}
             placeholder="Add any details about the event..."
-            rows={3}
-            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink"
+            rows={1}
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
           />
         </div>
       </div>
