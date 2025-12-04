@@ -16,16 +16,22 @@ interface Week {
 const MAX_WEEKS = 8;
 
 export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: TimeSlotSelectorProps) {
-  // Date range controls
-  const [startDate, setStartDate] = useState<string>(() => {
+  // Hydration fix: Track mounted state
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Date range controls - Initialize empty, set on mount
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  useEffect(() => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState<string>(() => {
     const future = new Date();
     future.setDate(future.getDate() + 27); // 4 weeks by default
-    return future.toISOString().split('T')[0];
-  });
+    
+    setStartDate(today.toISOString().split('T')[0]);
+    setEndDate(future.toISOString().split('T')[0]);
+    setIsMounted(true);
+  }, []);
 
   // Time range controls (hours)
   const [startHour, setStartHour] = useState(9);
@@ -41,6 +47,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   const gridRef = useRef<HTMLDivElement>(null);
   const onSlotsChangeRef = useRef(onSlotsChange);
   const selectedCellsRef = useRef<Set<string>>(new Set());
+  const longPressTimerRef = useRef<number | undefined>(undefined);
+  const touchStartPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     onSlotsChangeRef.current = onSlotsChange;
@@ -177,6 +185,26 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     });
   };
 
+  // Header Click Handler (Select/Deselect Day)
+  const handleHeaderClick = (date: string) => {
+    if (!isDateInRange(date)) return;
+
+    const allCellsInColumn = hours.map(hour => getCellKey(date, hour));
+    const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
+
+    setSelectedCells(prev => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all
+        allCellsInColumn.forEach(key => newSet.delete(key));
+      } else {
+        // Select all
+        allCellsInColumn.forEach(key => newSet.add(key));
+      }
+      return newSet;
+    });
+  };
+
   // Interaction Handlers
   const handleMouseDown = (e: React.MouseEvent, date: string, hour: number) => {
     if (e.button !== 0) return; // Only left click
@@ -218,28 +246,60 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       const date = td.dataset.date;
       const hourStr = td.dataset.hour;
       if (!date || !hourStr) return;
+      
+      // Record start position for scroll detection
+      const touch = e.touches[0];
+      touchStartPositionRef.current = { x: touch.clientX, y: touch.clientY };
 
-      const hour = parseInt(hourStr);
-      if (!isDateInRange(date)) return;
+      // Clear any existing timer
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
 
-      // Prevent scrolling
-      if (e.cancelable) e.preventDefault();
+      // Start Long Press Timer (500ms)
+      longPressTimerRef.current = window.setTimeout(() => {
+        const hour = parseInt(hourStr);
+        if (!isDateInRange(date)) return;
 
-      isDragging.current = true;
-      const isSelected = isCellSelectedFresh(date, hour);
-      dragMode.current = isSelected ? 'deselect' : 'select';
-      toggleCell(date, hour);
+        // Long press confirmed: Enter drag mode
+        isDragging.current = true;
+        
+        // Haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+
+        const isSelected = isCellSelectedFresh(date, hour);
+        dragMode.current = isSelected ? 'deselect' : 'select';
+        toggleCell(date, hour);
+      }, 500);
     };
 
     const handleNativeTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      
+      // Check if user is scrolling (moved significantly before long press fired)
+      if (touchStartPositionRef.current && !isDragging.current) {
+        const moveX = Math.abs(touch.clientX - touchStartPositionRef.current.x);
+        const moveY = Math.abs(touch.clientY - touchStartPositionRef.current.y);
+        
+        // If moved more than 10px, it's a scroll, cancel long press
+        if (moveX > 10 || moveY > 10) {
+          if (longPressTimerRef.current) {
+            window.clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = undefined;
+          }
+        }
+        return; // Let native scroll happen
+      }
+
+      // If not in drag mode, do nothing (allow scroll)
       if (!isDragging.current) return;
 
-      // Prevent scrolling
+      // In Drag Mode: Prevent scrolling and handle selection
       if (e.cancelable) e.preventDefault();
 
-      const touch = e.touches[0];
       const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
       if (element instanceof HTMLElement) {
         const td = element.closest('td');
         if (td) {
@@ -249,7 +309,6 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
           if (date && hourStr) {
             const hour = parseInt(hourStr);
             if (isDateInRange(date)) {
-              // Only update if the state needs changing (optimization)
               const currentSelected = isCellSelectedFresh(date, hour);
               const shouldSelect = dragMode.current === 'select';
 
@@ -263,8 +322,14 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     };
 
     const handleNativeTouchEnd = (e: TouchEvent) => {
+      // Cancel timer if finger lifted early (tap)
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = undefined;
+      }
+      
       isDragging.current = false;
-      if (e.cancelable) e.preventDefault();
+      touchStartPositionRef.current = null;
     };
 
     // Attach listeners with passive: false to allow preventDefault
@@ -330,31 +395,19 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     return grouped;
   }, [selectedCells]);
 
-  const handleHeaderClick = (date: string) => {
-    if (!isDateInRange(date)) return;
-
-    const allCellsInColumn = hours.map(hour => getCellKey(date, hour));
-    const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
-
-    setSelectedCells(prev => {
-      const newSet = new Set(prev);
-      if (allSelected) {
-        // Deselect all
-        allCellsInColumn.forEach(key => newSet.delete(key));
-      } else {
-        // Select all
-        allCellsInColumn.forEach(key => newSet.add(key));
-      }
-      return newSet;
-    });
-  };
+  if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
     <div className="space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
       <div>
         <h3 className="text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
         <p className="text-sm text-gray-600 mt-1 font-mono">
-          Click and drag to select time slots, or click date headers to select a full day.
+          <span className="md:hidden">
+            Long press & drag to select.
+          </span>
+          <span className="hidden md:inline">
+            Click and drag to select time slots, or click date headers to select a full day.
+          </span>
         </p>
       </div>
 
@@ -455,6 +508,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
               }
             }}
             className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
+            aria-label="Scroll to previous week"
           >
             ← PREV
           </button>
@@ -469,6 +523,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
               }
             }}
             className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
+            aria-label="Scroll to next week"
           >
             NEXT →
           </button>
@@ -501,9 +556,17 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                         return (
                           <th
                             key={date}
-                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light' : 'bg-gray-100/80 text-gray-400'}`}
+                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
                             onClick={() => handleHeaderClick(date)}
-                            aria-label={`Toggle selection for ${date}`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleHeaderClick(date);
+                              }
+                            }}
+                            role={inRange ? "button" : undefined}
+                            tabIndex={inRange ? 0 : undefined}
+                            aria-label={inRange ? `Toggle selection for ${date}` : undefined}
                           >
                             {formatDate(date)}
                           </th>
