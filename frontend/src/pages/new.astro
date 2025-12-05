@@ -4,16 +4,16 @@ import CreateEventForm from '../components/CreateEventForm';
 ---
 
 <Layout title="Create an Event - AgreedTime">
-  <main class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
-      <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-ink mb-3 tracking-tight font-serif">Create a New Event</h1>
-        <p class="text-lg text-ink/70 font-sans font-light">
+  <main class="min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto w-full">
+      <div class="text-center mb-8 sm:mb-12">
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-ink mb-2 sm:mb-3 tracking-tight font-serif">Create a New Event</h1>
+        <p class="text-base sm:text-lg text-ink/70 font-sans font-light">
           Set up your event and select the time slots you want to offer
         </p>
       </div>
 
-      <div class="bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-white/50 p-8 sm:p-12 transition-all duration-500 hover:shadow-[0_12px_50px_rgba(76,181,171,0.1)]">
+      <div class="bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-white/50 p-4 sm:p-8 lg:p-12 transition-all duration-500 hover:shadow-[0_12px_50px_rgba(76,181,171,0.1)]">
         <CreateEventForm client:load />
       </div>
     </div>

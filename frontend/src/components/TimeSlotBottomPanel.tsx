@@ -108,17 +108,17 @@ export default function TimeSlotBottomPanel({
             e.stopPropagation();
             onTogglePanel();
           }}
-          className="w-full bg-white/95 backdrop-blur-md hover:bg-white text-ink px-6 py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
+          className="w-full bg-white/95 backdrop-blur-md hover:bg-white text-ink px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
         >
-          <div className="flex items-center gap-4">
-            <span className="flex items-center justify-center w-8 h-8 bg-film-accent text-white font-mono font-bold text-sm rounded-full shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="flex items-center justify-center min-w-[2rem] h-8 px-2 bg-film-accent text-white font-mono font-bold text-sm rounded-full shadow-sm">
               {selectedCount}
             </span>
-            <span className="font-serif font-bold text-lg tracking-wide">Selected Time Slots</span>
+            <span className="hidden sm:inline font-serif font-bold text-base sm:text-lg tracking-wide">Selected Time Slots</span>
           </div>
-          <div className="flex items-center gap-3 font-mono text-sm font-bold">
+          <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-bold">
             <span className="uppercase tracking-wider">
-              {showBottomPanel ? 'Hide Details' : 'View Details'}
+              {showBottomPanel ? 'Hide' : 'Details'}
             </span>
             <span className={`transition-transform duration-300 ${showBottomPanel ? 'rotate-180' : ''}`}>
               ▲

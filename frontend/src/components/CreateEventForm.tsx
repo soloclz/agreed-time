@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import TimeSlotSelector from './TimeSlotSelector';
 import type { TimeSlot } from '../types';
 
@@ -7,10 +7,25 @@ export default function CreateEventForm() {
   const [description, setDescription] = useState('');
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSlotsChange = useCallback((slots: TimeSlot[]) => {
     setSelectedSlots(slots);
   }, []);
+
+  // Auto-resize textarea function
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+  }, []);
+
+  // Set initial height for placeholder
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [resizeTextarea]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +57,9 @@ export default function CreateEventForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
       {/* Event Details Section */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-ink mb-2 font-serif">
             Event Title <span className="text-red-500">*</span>
@@ -67,14 +82,13 @@ export default function CreateEventForm() {
             Description (optional)
           </label>
           <textarea
+            ref={textareaRef}
             id="description"
             name="description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = target.scrollHeight + 'px';
+            onChange={(e) => {
+              setDescription(e.target.value);
+              resizeTextarea();
             }}
             placeholder="Add any details about the event..."
             rows={1}
@@ -89,8 +103,8 @@ export default function CreateEventForm() {
       </div>
 
       {/* Submit Button */}
-      <div className="flex items-center justify-between py-6 border-t border-film-border">
-        <div className="text-base font-sans">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 py-4 sm:py-6 border-t border-film-border pb-20 sm:pb-6">
+        <div className="text-sm sm:text-base font-sans hidden sm:block">
           {selectedSlots.length > 0 ? (
             <span className="text-ink">
               <span className="font-bold">✓</span> <span className="font-semibold">{selectedSlots.length}</span> time slots selected
@@ -102,7 +116,7 @@ export default function CreateEventForm() {
         <button
           type="submit"
           disabled={isSubmitting || !title.trim() || selectedSlots.length === 0}
-          className="px-8 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 rounded-lg shadow-md hover:shadow-lg active:transform active:scale-[0.98]"
+          className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 rounded-lg shadow-md hover:shadow-lg active:transform active:scale-[0.98]"
         >
           {isSubmitting ? 'Creating...' : 'Create Event'}
         </button>

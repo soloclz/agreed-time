@@ -385,10 +385,10 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
-    <div className="space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
+    <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
       <div>
-        <h3 className="text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
-        <p className="text-sm text-gray-600 mt-1 font-mono">
+        <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
+        <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
           <span className="md:hidden">
             Long press & drag to select.
           </span>
@@ -398,33 +398,33 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
         </p>
       </div>
 
-      <div className="bg-paper border border-film-border p-6 space-y-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex-1">
-                <label htmlFor="startDate" className="sr-only">Start Date</label>
+                <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
                 <input
                   id="startDate"
                   name="startDate"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
+                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
                   title="Start date"
                 />
               </div>
-              <span className="text-ink font-bold">→</span>
+              <span className="text-ink font-bold text-center hidden sm:block">→</span>
               <div className="flex-1">
-                <label htmlFor="endDate" className="sr-only">End Date</label>
+                <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
                 <input
                   id="endDate"
                   name="endDate"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
+                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
                   title="End date"
                 />
               </div>
@@ -436,15 +436,15 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
 
           <div>
             <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex-1">
-                <label htmlFor="startHour" className="sr-only">Start Hour</label>
+                <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
                 <select
                   id="startHour"
                   name="startHour"
                   value={startHour}
                   onChange={(e) => setStartHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
+                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
                   title="Start hour"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
@@ -452,15 +452,15 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                   ))}
                 </select>
               </div>
-              <span className="text-ink font-bold">→</span>
+              <span className="text-ink font-bold text-center hidden sm:block">→</span>
               <div className="flex-1">
-                <label htmlFor="endHour" className="sr-only">End Hour</label>
+                <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
                 <select
                   id="endHour"
                   name="endHour"
                   value={endHour}
                   onChange={(e) => setEndHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border-b border-film-border rounded-t-sm bg-film-light/50 text-sm focus:outline-none focus:border-film-accent font-mono transition-colors text-ink"
+                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
                   title="End hour"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
@@ -486,7 +486,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       />
 
       {weeks.length > 1 && (
-        <div className="flex items-center justify-between font-mono text-sm">
+        <div className="flex items-center justify-between font-mono text-xs sm:text-sm gap-2">
           <button
             type="button"
             onClick={() => {
@@ -494,12 +494,12 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                 gridRef.current.scrollBy({ left: -800, behavior: 'smooth' });
               }
             }}
-            className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
+            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
             aria-label="Scroll to previous week"
           >
-            ← PREV
+            ← <span className="hidden sm:inline">PREV</span>
           </button>
-          <span className="text-ink font-bold">
+          <span className="text-ink font-bold text-xs sm:text-sm">
             {weeks.length} {weeks.length === 1 ? 'WEEK' : 'WEEKS'}
           </span>
           <button
@@ -509,10 +509,10 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                 gridRef.current.scrollBy({ left: 800, behavior: 'smooth' });
               }
             }}
-            className="px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-2 transition-colors active:translate-y-0.5"
+            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
             aria-label="Scroll to next week"
           >
-            NEXT →
+            <span className="hidden sm:inline">NEXT</span> →
           </button>
         </div>
       )}
