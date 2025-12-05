@@ -1,6 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
+import {
+  getTodayLocal,
+  addDays,
+  parseLocalDate,
+  formatLocalDate,
+  getFirstSunday,
+  getLastSaturday,
+  diffInDays,
+  formatDateDisplay,
+  formatHour,
+  formatHourTime,
+} from '../utils/dateUtils';
 
 interface TimeSlotSelectorProps {
   onSlotsChange?: (slots: TimeSlot[]) => void;
@@ -24,12 +36,11 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
-    const today = new Date();
-    const future = new Date();
-    future.setDate(future.getDate() + 27); // 4 weeks by default
-    
-    setStartDate(today.toISOString().split('T')[0]);
-    setEndDate(future.toISOString().split('T')[0]);
+    const today = getTodayLocal();
+    const future = addDays(today, 27); // 4 weeks by default
+
+    setStartDate(today);
+    setEndDate(future);
     setIsMounted(true);
   }, []);
 
@@ -59,35 +70,28 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
     selectedCellsRef.current = selectedCells;
   }, [selectedCells]);
 
-  // Generate weeks based on date range (UTC consistent)
+  // Generate weeks based on date range (timezone-safe)
   const weeks = useMemo((): Week[] => {
-    const createUTC = (d: string) => new Date(d + 'T00:00:00Z');
-    const startObj = createUTC(startDate);
-    const endObj = createUTC(endDate);
+    if (!startDate || !endDate) return [];
 
-    const firstSunday = new Date(startObj);
-    firstSunday.setUTCDate(startObj.getUTCDate() - startObj.getUTCDay());
-
-    const lastSaturday = new Date(endObj);
-    lastSaturday.setUTCDate(endObj.getUTCDate() + (6 - endObj.getUTCDay()));
+    const firstSundayStr = getFirstSunday(startDate);
+    const lastSaturdayStr = getLastSaturday(endDate);
 
     const weeksArray: Week[] = [];
-    let current = new Date(firstSunday);
+    let currentDateStr = firstSundayStr;
     let weekNum = 0;
 
-    while (current <= lastSaturday && weekNum < MAX_WEEKS) {
+    while (currentDateStr <= lastSaturdayStr && weekNum < MAX_WEEKS) {
       const weekDates: string[] = [];
       for (let i = 0; i < 7; i++) {
-        const date = new Date(current);
-        date.setUTCDate(current.getUTCDate() + i);
-        weekDates.push(date.toISOString().split('T')[0]);
+        weekDates.push(addDays(currentDateStr, i));
       }
       weeksArray.push({
         weekNumber: weekNum,
-        startDate: new Date(current),
+        startDate: parseLocalDate(currentDateStr),
         dates: weekDates,
       });
-      current.setUTCDate(current.getUTCDate() + 7);
+      currentDateStr = addDays(currentDateStr, 7);
       weekNum++;
     }
     return weeksArray;
@@ -104,14 +108,13 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
 
   // Validate date range
   const dateRangeError = useMemo(() => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (end < start) return 'End date cannot be before start date';
-    
-    const diffTime = end.getTime() - start.getTime();
-    const diffDays = diffTime / (1000 * 3600 * 24);
-    const diffWeeks = Math.ceil(diffDays / 7);
-    
+    if (!startDate || !endDate) return null;
+
+    if (endDate < startDate) return 'End date cannot be before start date';
+
+    const days = diffInDays(startDate, endDate);
+    const diffWeeks = Math.ceil(days / 7);
+
     if (diffWeeks > MAX_WEEKS) return `Date range cannot exceed ${MAX_WEEKS} weeks`;
     return null;
   }, [startDate, endDate]);
@@ -137,8 +140,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
         return {
           id: key,
           date,
-          startTime: `${hour.toString().padStart(2, '0')}:00`,
-          endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
+          startTime: formatHourTime(hour),
+          endTime: formatHourTime(hour + 1),
         };
       });
       onSlotsChangeRef.current(slots);
@@ -351,25 +354,9 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   }, []);
 
   // Format helpers
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr + 'T00:00:00');
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const day = days[date.getDay()];
-    const month = date.getMonth() + 1;
-    const dateNum = date.getDate();
-    return `${day}\n${month}/${dateNum}`;
-  };
-
-  const formatHour = (hour: number): string => {
-    if (hour === 0) return '12 AM';
-    if (hour < 12) return `${hour} AM`;
-    if (hour === 12) return '12 PM';
-    return `${hour - 12} PM`;
-  };
-
   const formatWeekRange = (week: Week): string => {
-    const start = new Date(week.dates[0] + 'T00:00:00');
-    const end = new Date(week.dates[6] + 'T00:00:00');
+    const start = parseLocalDate(week.dates[0]);
+    const end = parseLocalDate(week.dates[6]);
     return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
   };
 
@@ -385,8 +372,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       grouped[date].push({
         id: key,
         date,
-        startTime: `${hour.toString().padStart(2, '0')}:00`,
-        endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
+        startTime: formatHourTime(hour),
+        endTime: formatHourTime(hour + 1),
       });
     });
     Object.keys(grouped).forEach(date => {
@@ -568,7 +555,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                             tabIndex={inRange ? 0 : undefined}
                             aria-label={inRange ? `Toggle selection for ${date}` : undefined}
                           >
-                            {formatDate(date)}
+                            {formatDateDisplay(date)}
                           </th>
                         );
                       })}
