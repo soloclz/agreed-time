@@ -631,8 +631,6 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       <div className="text-xs text-gray-500 font-mono">
         <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
       </div>
-
-      {selectedCells.size > 0 && <div className="h-20" />}
     </div>
   );
 }
