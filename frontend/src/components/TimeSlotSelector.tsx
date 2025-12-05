@@ -518,89 +518,112 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
       )}
 
       {!dateRangeError && (
-        <div
-          ref={gridRef}
-          className="overflow-x-auto border border-film-border bg-paper select-none"
-        >
-          <div className="flex">
-            {weeks.map((week, weekIndex) => (
-              <div
-                key={week.weekNumber}
-                className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l border-film-border' : ''}`}
-              >
-                <div className="bg-paper px-4 py-3 text-sm font-serif font-bold text-ink border-b border-film-border tracking-wide">
-                  WEEK {week.weekNumber + 1}: {formatWeekRange(week)}
-                </div>
+        <div className="flex border border-film-border bg-paper relative overflow-hidden rounded-sm">
+          {/* Left: Fixed Time Column */}
+          <div className="flex-shrink-0 z-30 bg-paper border-r border-film-border shadow-sm">
+            {/* Placeholder for Week Title alignment */}
+            <div className="bg-paper px-3 py-3 text-sm font-serif font-bold text-transparent border-b border-film-border tracking-wide select-none">
+              &nbsp;
+            </div>
+            <table className="border-collapse">
+              <thead>
+                <tr>
+                  <th className="border-b border-film-border bg-paper px-3 py-3 text-xs font-mono font-bold text-ink h-[45px] box-border">
+                    TIME
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {hours.map(hour => (
+                  <tr key={hour}>
+                    <th className="border-b border-film-border bg-paper px-3 py-2 text-xs font-mono text-ink text-right h-12 box-border last:border-b-0">
+                      {formatHour(hour)}
+                    </th>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-                <table className="border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border-r border-b border-film-border bg-paper px-3 py-2 text-xs font-mono font-bold text-ink sticky left-0 z-20">
-                        TIME
-                      </th>
-                      {week.dates.map(date => {
-                        const inRange = isDateInRange(date);
-                        return (
-                          <th
-                            key={date}
-                            className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
-                            onClick={() => handleHeaderClick(date)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleHeaderClick(date);
-                              }
-                            }}
-                            role={inRange ? "button" : undefined}
-                            tabIndex={inRange ? 0 : undefined}
-                            aria-label={inRange ? `Toggle selection for ${date}` : undefined}
-                          >
-                            {formatDateDisplay(date)}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hours.map(hour => (
-                      <tr key={hour}>
-                        <th className="border-r border-b border-film-border bg-paper px-3 py-2 text-xs font-mono text-ink text-right sticky left-0 z-10 last:border-b-0">
-                          {formatHour(hour)}
-                        </th>
+          {/* Right: Scrollable Grid */}
+          <div
+            ref={gridRef}
+            className="overflow-x-auto flex-1"
+          >
+            <div className="flex">
+              {weeks.map((week, weekIndex) => (
+                <div
+                  key={week.weekNumber}
+                  className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l border-film-border' : ''}`}
+                >
+                  <div className="bg-paper px-4 py-3 text-sm font-serif font-bold text-ink border-b border-film-border tracking-wide whitespace-nowrap">
+                    WEEK {week.weekNumber + 1}: {formatWeekRange(week)}
+                  </div>
+
+                  <table className="border-collapse">
+                    <thead>
+                      <tr>
                         {week.dates.map(date => {
-                          const isSelected = isCellSelected(date, hour);
                           const inRange = isDateInRange(date);
                           return (
-                            <td
-                              key={`${date}_${hour}`}
-                              role="gridcell"
-                              aria-selected={isSelected}
-                              data-date={date}
-                              data-hour={hour}
-                              style={{
-                                backgroundColor: isSelected ? '#4CB5AB' : undefined
-                              }}
-                              className={`
-                                border-r border-b border-film-border w-16 h-12 cursor-pointer transition-colors last:border-r-0
-                                ${!inRange
-                                  ? 'bg-gray-100/80 cursor-not-allowed pattern-diagonal-lines'
-                                  : isSelected
-                                  ? ''
-                                  : 'bg-film-light hover:bg-white active:bg-white'
+                            <th
+                              key={date}
+                              className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center h-[45px] box-border last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
+                              onClick={() => handleHeaderClick(date)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleHeaderClick(date);
                                 }
-                              `}
-                              onMouseDown={(e) => handleMouseDown(e, date, hour)}
-                              onMouseEnter={() => handleMouseEnter(date, hour)}
-                              onMouseUp={handleMouseUp}
-                            />
+                              }}
+                              role={inRange ? "button" : undefined}
+                              tabIndex={inRange ? 0 : undefined}
+                              aria-label={inRange ? `Toggle selection for ${date}` : undefined}
+                            >
+                              {formatDateDisplay(date)}
+                            </th>
                           );
                         })}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+                    </thead>
+                    <tbody>
+                      {hours.map(hour => (
+                        <tr key={hour}>
+                          {week.dates.map(date => {
+                            const isSelected = isCellSelected(date, hour);
+                            const inRange = isDateInRange(date);
+                            return (
+                              <td
+                                key={`${date}_${hour}`}
+                                role="gridcell"
+                                aria-selected={isSelected}
+                                data-date={date}
+                                data-hour={hour}
+                                style={{
+                                  backgroundColor: isSelected ? '#4CB5AB' : undefined
+                                }}
+                                className={`
+                                  border-r border-b border-film-border w-16 h-12 cursor-pointer transition-colors box-border last:border-r-0
+                                  ${!inRange
+                                    ? 'bg-gray-100/80 cursor-not-allowed pattern-diagonal-lines'
+                                    : isSelected
+                                    ? ''
+                                    : 'bg-film-light hover:bg-white active:bg-white'
+                                  }
+                                `}
+                                onMouseDown={(e) => handleMouseDown(e, date, hour)}
+                                onMouseEnter={() => handleMouseEnter(date, hour)}
+                                onMouseUp={handleMouseUp}
+                              />
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
