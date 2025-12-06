@@ -1,11 +1,18 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Welcome to AgreedTime">
+	<main class="min-h-screen grid place-items-center bg-paper text-ink">
+		<div class="text-center space-y-6">
+			<h1 class="text-5xl font-bold font-serif">AgreedTime</h1>
+			<p class="text-xl font-sans text-ink/70">Modern scheduling made simple.</p>
+			<a 
+				href="/new" 
+				class="inline-block px-8 py-4 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg"
+			>
+				Create a New Event
+			</a>
+		</div>
+	</main>
 </Layout>
