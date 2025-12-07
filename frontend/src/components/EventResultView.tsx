@@ -48,10 +48,19 @@ export default function EventResultView({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [allSortedSlots, setAllSortedSlots] = useState<{ slot: string; count: number; attendees: string[] }[]>([]);
   const [timezoneOffsetString, setTimezoneOffsetString] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
 
   useEffect(() => {
     // Set timezone string on mount
     setTimezoneOffsetString(getTimezoneOffsetString());
+
+    // Check for admin token in localStorage
+    // In a real app, we would verify this token with the backend
+    const adminToken = localStorage.getItem(`agreed_time_admin_${eventId}`);
+    if (adminToken) {
+      setIsAdmin(true);
+    }
 
     // Simulate calculation logic
     setLoading(true);
@@ -91,15 +100,59 @@ export default function EventResultView({ eventId }: { eventId: string }) {
     return allSortedSlots.filter(slot => slot.count < maxCount);
   }, [allSortedSlots, maxCount]);
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2000);
+  };
+
+  const handleDelete = () => {
+    if (confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      alert('Event deleted! (Simulation)');
+      // In a real app, redirect to home after delete
+      window.location.href = '/';
+    }
+  };
+
+  const handleFinalize = () => {
+    alert('Finalize feature coming soon! (Simulation)');
+  };
+
 
   if (loading) {
     return <div className="text-center py-12 text-ink/60 font-serif">Calculating best times...</div>;
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 relative">
+      {/* Action Bar */}
+      <div className="flex justify-end gap-2">
+        {isAdmin && (
+          <>
+            <button
+              onClick={handleFinalize}
+              className="px-4 py-2 bg-film-accent text-white text-sm rounded-md hover:bg-film-accent-hover transition-colors font-sans font-medium shadow-sm"
+            >
+              Finalize
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 text-sm rounded-md hover:bg-red-100 transition-colors font-sans font-medium"
+            >
+              Delete
+            </button>
+          </>
+        )}
+        <button
+          onClick={handleShare}
+          className="px-4 py-2 bg-white border border-film-border text-ink text-sm rounded-md hover:bg-gray-50 transition-colors font-sans font-medium flex items-center gap-2 shadow-sm"
+        >
+          {copiedShare ? 'Copied!' : 'Share Results'}
+        </button>
+      </div>
+
       {/* Header */}
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-4 -mt-6"> {/* Negative margin to pull up closer to actions */}
         <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{MOCK_EVENT_DATA.title}</h1>
         <p className="text-ink/80 text-lg font-sans max-w-2xl mx-auto leading-relaxed">{MOCK_EVENT_DATA.description}</p>
         {timezoneOffsetString && (
