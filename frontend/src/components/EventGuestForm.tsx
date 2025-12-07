@@ -6,25 +6,56 @@ interface EventData {
   id: string;
   title: string;
   description: string;
-  availableSlots: Set<string>;
+  availableSlots: TimeSlot[];
+  slotDuration?: number; // Duration in minutes
 }
 
 // MOCK DATA - In a real app, this would come from an API call
-const MOCK_EVENT_DATA = {
+const MOCK_EVENT_DATA: EventData = {
   id: 'mock-event-id',
-  title: 'Team Brainstorming Session',
-  description: 'Let\'s find the best time for our next big idea. Please select your available slots within the provided window.',
-  availableSlots: new Set([
-    "2025-12-08_9",  // Monday 9am
-    "2025-12-08_10", // Monday 10am
-    "2025-12-08_11", // Monday 11am
-    "2025-12-09_13", // Tuesday 1pm
-    "2025-12-09_14", // Tuesday 2pm
-    "2025-12-10_17", // Wednesday 5pm
-    "2025-12-11_9",  // Thursday 9am
-    "2025-12-11_10", // Thursday 10am
-    "2025-12-11_11", // Thursday 11am
-  ])
+  title: 'Availability',
+  description: 'Select your available time slots.',
+  slotDuration: 60, // 1 hour slots
+  availableSlots: [
+    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '10:00' }, // Monday 9am-10am
+    { id: '2', date: '2025-12-08', startTime: '10:00', endTime: '11:00' }, // Monday 10am-11am
+    { id: '3', date: '2025-12-08', startTime: '11:00', endTime: '12:00' }, // Monday 11am-12pm
+    { id: '4', date: '2025-12-09', startTime: '13:00', endTime: '14:00' }, // Tuesday 1pm-2pm
+    { id: '5', date: '2025-12-09', startTime: '14:00', endTime: '15:00' }, // Tuesday 2pm-3pm
+    { id: '6', date: '2025-12-10', startTime: '17:00', endTime: '18:00' }, // Wednesday 5pm-6pm
+    { id: '7', date: '2025-12-11', startTime: '09:00', endTime: '10:00' }, // Thursday 9am-10am
+    { id: '8', date: '2025-12-11', startTime: '10:00', endTime: '11:00' }, // Thursday 10am-11am
+    { id: '9', date: '2025-12-11', startTime: '11:00', endTime: '12:00' }, // Thursday 11am-12pm
+  ]
+};
+
+// Example: 30-minute intervals
+const MOCK_EVENT_DATA_30MIN: EventData = {
+  id: 'mock-event-30min',
+  title: 'Quick Team Sync',
+  description: 'Short 30-minute slots for quick discussions.',
+  slotDuration: 30,
+  availableSlots: [
+    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '09:30' },
+    { id: '2', date: '2025-12-08', startTime: '09:30', endTime: '10:00' },
+    { id: '3', date: '2025-12-08', startTime: '10:00', endTime: '10:30' },
+    { id: '4', date: '2025-12-08', startTime: '14:00', endTime: '14:30' },
+    { id: '5', date: '2025-12-09', startTime: '15:00', endTime: '15:30' },
+  ]
+};
+
+// Example: Half-day intervals (4 hours)
+const MOCK_EVENT_DATA_HALF_DAY: EventData = {
+  id: 'mock-event-half-day',
+  title: 'Workshop Session',
+  description: 'Half-day workshop slots.',
+  slotDuration: 240, // 4 hours
+  availableSlots: [
+    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '13:00' }, // Morning
+    { id: '2', date: '2025-12-08', startTime: '13:00', endTime: '17:00' }, // Afternoon
+    { id: '3', date: '2025-12-09', startTime: '09:00', endTime: '13:00' },
+    { id: '4', date: '2025-12-10', startTime: '13:00', endTime: '17:00' },
+  ]
 };
 
 export default function EventGuestForm({ eventId }: { eventId: string }) {
@@ -41,8 +72,18 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
     setLoading(true);
     setError(null);
     setTimeout(() => {
+      let data: EventData | null = null;
+
       if (eventId === MOCK_EVENT_DATA.id) {
-        setEventData(MOCK_EVENT_DATA);
+        data = MOCK_EVENT_DATA;
+      } else if (eventId === MOCK_EVENT_DATA_30MIN.id) {
+        data = MOCK_EVENT_DATA_30MIN;
+      } else if (eventId === MOCK_EVENT_DATA_HALF_DAY.id) {
+        data = MOCK_EVENT_DATA_HALF_DAY;
+      }
+
+      if (data) {
+        setEventData(data);
         setLoading(false);
       } else {
         setError('Event not found.');
@@ -125,10 +166,10 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
       </div>
 
       <div>
-        <h3 className="text-xl sm:text-2xl font-serif font-bold text-ink mb-4">Select Your Available Slots</h3>
         {eventData && eventData.availableSlots && (
           <TimeSlotSelector
             availableSlots={eventData.availableSlots}
+            slotDuration={eventData.slotDuration}
             onSlotsChange={setSelectedGuestSlots}
             // Add initialSlots if we want to pre-fill based on a previous submission
           />

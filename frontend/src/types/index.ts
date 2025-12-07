@@ -15,3 +15,8 @@ export interface TimeRange {
   startHour: number;
   endHour: number;
 }
+
+export interface TimeSlotConfig {
+  slotDuration: number; // Duration in minutes: 30, 60, 120, 240 (half-day), 480 (full-day)
+  displayMode?: 'hourly' | 'half-hourly' | 'half-day' | 'full-day';
+}
