@@ -88,28 +88,57 @@ This section outlines the planned approach for managing access to event pages, b
 
 ### 5.2 Access Control Mechanism (Hybrid Model)
 
-To provide a balance between frictionless anonymous usage and future member-based management, a hybrid access control model will be implemented:
+To provide a balance between frictionless anonymous usage and future member-based management, a hybrid access control model will be implemented.
 
-1.  **Public Event ID (`:id`)**:
-    *   Generated for every event.
-    *   Used for public-facing links, primarily the Guest Submission Page (`/event/:id`).
-    *   The Event Result Page (`/event/:id/result`) may or may not be publicly accessible, depending on the organizer's privacy preference (defaulting to publicly viewable results for ease of sharing).
+#### 5.2.1 Public Event ID (`:id`)
+*   Generated for every event.
+*   Used for public-facing links, primarily the Guest Submission Page (`/event/:id`).
+*   The Event Result Page (`/event/:id/result`) may or may not be publicly accessible, depending on the organizer's privacy preference. Defaulting to publicly viewable results for ease of sharing is common, but private access will be supported via the management flows.
 
-2.  **`adminToken` (Long Secret String)**:
-    *   A unique, long, and unguessable token (e.g., UUID) generated upon event creation.
-    *   **Purpose**: Provides direct, secret-link-based access to event management features (e.g., `event/:id/manage?token=adminToken`) without requiring a login. This is primarily for **anonymous organizers**.
-    *   **Usage**: The organizer saves this link or its token to re-access full management capabilities.
+#### 5.2.2 `adminToken` (Long Secret String)
+*   A unique, long, and unguessable token (e.g., UUID) generated upon event creation.
+*   **Purpose**: Provides direct, secret-link-based access to event management features (e.g., `/event/:id/manage?token=adminToken`) without requiring a login. This is primarily for **anonymous organizers**.
+*   **Best Practice**: This "Capability URL" design is a standard and effective pattern for frictionless access in stateless/anonymous applications (e.g., Doodle, Rallly).
+*   **Security**: Relies on the secrecy of the token. Token must be sufficiently long and random. Transport via HTTPS is mandatory.
+*   **Usage**: The organizer saves this link or its token to re-access full management capabilities. This link provides management rights.
 
-3.  **`secureCode` (Short, 6-Digit Code)**:
-    *   A short, memorable alphanumeric code generated upon event creation.
-    *   **Purpose**: Serves as a recovery or "claiming" mechanism, primarily for **anonymous organizers**.
-    *   **Usage**:
-        *   **Recovery**: If an organizer loses their `adminToken` link, they can use the Event ID and `secureCode` to regain access to management features (e.g., via a "Lookup" page).
-        *   **Claiming (Future)**: When a user registers an account, they can "claim" ownership of an existing event by providing its Event ID and `secureCode`, associating it with their user account.
+#### 5.2.3 `secureCode` (Short, 6-Digit Code)
+*   A short, memorable alphanumeric code generated upon event creation.
+*   **Purpose**: Serves as a recovery or "claiming" mechanism, primarily for **anonymous organizers**.
+*   **Validation**: `secureCode` alone is insufficient; it must be combined with the `eventId` for validation (`ID + Code` pattern).
+*   **Best Practice**: `secureCode` should never be exposed in the URL. It must be entered manually into a dedicated input field or modal.
+*   **Storage (Future Backend)**: When stored in a database, `secureCode` (like any password) must be salted and hashed.
+*   **Usage**: If an organizer loses their `adminToken` link, they can use the `eventId` and `secureCode` to regain access to management features (e.g., via a "Lookup" page or directly on the event page).
 
-### 5.3 Initial Implementation & Future Enhancements
+### 5.3 User Experience Flows & Implementation Details
 
-*   **Current State**: Events are created anonymously.
-*   **Initial Display on Event Creation Success**: The system will present both the public Guest Link and the Admin Link (containing the `adminToken`). The `secureCode` will also be displayed with instructions to save it.
-*   **Future - Member Integration**: Once a user authentication system is in place, if an event is created by a logged-in member, the `adminToken` and `secureCode` will still be generated but may not be explicitly shown to the user (as their account login provides management access). Members will manage events from a personalized dashboard.
-*   **Future - "Claim Event" Feature**: A dedicated interface for members to link existing events to their accounts using the `secureCode`.
+*   **Event Creation Success Screen (`/new` post-submit)**:
+    *   Displays the public Guest Link (for participants to respond).
+    *   Displays the Admin Link (containing the `adminToken`), masked from direct view with a "Copy Admin Link" button for enhanced security against shoulder-surfing. A clear warning against sharing this link is provided.
+    *   Displays the `secureCode`, initially masked (e.g., `******`) with a toggle to reveal. The recovery instruction is context-driven, guiding users to use the code directly on their event page for admin access.
+    *   A "Go to Event Results" button navigates to the `event/:id/result` page.
+
+*   **Result Link Revelation**:
+    *   The Result Link (`/event/:id/result`) is generally **not actively exposed on the event creation success screen** to avoid overwhelming the user or causing confusion about which link to share.
+    *   **Recommended Revelation Points**:
+        1.  **Admin/Manage Page (Future)**: The primary place for the organizer to retrieve and share the Result Link, especially for publicly shared results.
+        2.  **Result Page Itself**: A "Share Results" button on the `event/:id/result` page itself allows anyone (organizer or participant) to copy the Result Link. This is a common and intuitive practice.
+
+*   **Admin Link Invalid/Expired Handling (Graceful Degradation - Future Backend)**:
+    *   If a user accesses `/event/:id/manage?token=invalid-token`, instead of showing an error, the system will redirect them to the public Result Page (`/event/:id/result`).
+    *   A prominent banner message on the Result Page should then inform the user: *"The admin link you used is invalid or expired. You are viewing the public results instead."* This provides a user-friendly fallback.
+
+*   **Frontend Organizer Identification (Cookie/LocalStorage - Immediate Future)**:
+    *   To improve convenience for the organizer, upon successful event creation (or successful `adminToken`/`secureCode` validation), a flag (`agreed_time_admin_${eventId}`) containing the `adminToken` will be stored in the browser's LocalStorage or a secure Cookie.
+    *   This allows the same browser to automatically identify as the event's organizer for that `eventId` in subsequent visits, providing management capabilities without needing to re-enter the token. This offers a "sticky session" for the owner on a specific browser.
+
+### 5.4 Future Enhancements
+
+*   **Member Integration**: Once a user authentication system is in place, if an event is created by a logged-in member, the `adminToken` and `secureCode` will still be generated but may not be explicitly shown to the user (as their account login provides management access). Members will manage events from a personalized dashboard.
+*   **"Claim Event" Feature**: A dedicated interface for members to link existing events to their accounts using the `secureCode`.
+*   **Backend API**: Implementation of actual API endpoints for event creation, response submission, and result retrieval, replacing current mock data.
+*   **Heatmap Visualization**: Enhance the Result Page to graphically display availability intersections.
+*   **Edit Participant Response**: Allow participants to modify their previously submitted time slots.
+*   **Event Expiry/Deadline**: Option for organizers to set a deadline for submissions.
+*   **Social Sharing Buttons**: Integrate direct share options for Guest Link and (public) Result Link.
+*   **Email Reminders**: Option to send links/updates via email.
