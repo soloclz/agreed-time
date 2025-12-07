@@ -86,7 +86,7 @@ export default function TimeSlotBottomPanel({
                         type="button"
                         key={slot.id}
                         onClick={() => onRemoveSlot(slot.id)}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#4CB5AB] text-white shadow-sm text-sm font-mono hover:bg-[#3D9189] transition-colors group rounded-sm"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-film-accent text-white shadow-sm text-sm font-mono hover:bg-film-accent-hover transition-colors group rounded-sm"
                         title="Click to remove"
                       >
                         {slot.startTime.slice(0, 5)}-{slot.endTime.slice(0, 5)}
