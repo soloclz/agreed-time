@@ -17,7 +17,8 @@ import {
 interface TimeSlotSelectorProps {
   onSlotsChange?: (slots: TimeSlot[]) => void;
   initialSlots?: TimeSlot[];
-  availableSlots?: Set<string>; // If provided, only these slots can be selected (Guest Mode)
+  availableSlots?: TimeSlot[]; // If provided, only these slots can be selected (Guest Mode)
+  slotDuration?: number; // Duration in minutes (default: 60)
 }
 
 interface Week {
@@ -28,7 +29,7 @@ interface Week {
 
 const MAX_WEEKS = 8;
 
-export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], availableSlots }: TimeSlotSelectorProps) {
+export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], availableSlots, slotDuration = 60 }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
 
@@ -38,20 +39,23 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   useEffect(() => {
     // Guest Mode: Calculate date/time range from availableSlots
-    if (availableSlots && availableSlots.size > 0) {
+    if (availableSlots && availableSlots.length > 0) {
       const dates: string[] = [];
-      const hours: number[] = [];
+      const startTimes: number[] = [];
+      const endTimes: number[] = [];
 
-      availableSlots.forEach(key => {
-        const [date, hourStr] = key.split('_');
-        dates.push(date);
-        hours.push(parseInt(hourStr));
+      availableSlots.forEach(slot => {
+        dates.push(slot.date);
+        const startHourMinute = slot.startTime.split(':');
+        const endHourMinute = slot.endTime.split(':');
+        startTimes.push(parseInt(startHourMinute[0]) + parseInt(startHourMinute[1]) / 60);
+        endTimes.push(parseInt(endHourMinute[0]) + parseInt(endHourMinute[1]) / 60);
       });
 
       const minDate = dates.reduce((min, date) => date < min ? date : min, dates[0]);
       const maxDate = dates.reduce((max, date) => date > max ? date : max, dates[0]);
-      const minHour = Math.min(...hours);
-      const maxHour = Math.max(...hours);
+      const minHour = Math.floor(Math.min(...startTimes));
+      const maxHour = Math.ceil(Math.max(...endTimes));
 
       setStartDate(minDate);
       setEndDate(maxDate);
@@ -122,14 +126,36 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
     return weeksArray;
   }, [startDate, endDate]);
 
-  // Hours array
-  const hours = useMemo(() => {
-    const result: number[] = [];
-    for (let h = startHour; h <= endHour; h++) {
-      result.push(h);
+
+  // Generate time slots based on slotDuration
+  const timeSlots = useMemo(() => {
+    const result: Array<{ startHour: number; endHour: number; label: string }> = [];
+    const durationInHours = slotDuration / 60;
+
+    let currentHour = startHour;
+    while (currentHour < endHour) {
+      const nextHour = Math.min(currentHour + durationInHours, endHour);
+
+      // Generate label
+      const startMinutes = Math.floor((currentHour % 1) * 60);
+      const endMinutes = Math.floor((nextHour % 1) * 60);
+      const startHourInt = Math.floor(currentHour);
+      const endHourInt = Math.floor(nextHour);
+
+      const startLabel = `${String(startHourInt).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+      const endLabel = `${String(endHourInt).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+
+      result.push({
+        startHour: currentHour,
+        endHour: nextHour,
+        label: `${startLabel}-${endLabel}`,
+      });
+
+      currentHour = nextHour;
     }
+
     return result;
-  }, [startHour, endHour]);
+  }, [startHour, endHour, slotDuration]);
 
   // Validate date range
   const dateRangeError = useMemo(() => {
@@ -149,8 +175,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
     if (initialSlots.length > 0) {
       const keys = new Set<string>();
       initialSlots.forEach(slot => {
-        const hour = parseInt(slot.startTime.split(':')[0]);
-        keys.add(getCellKey(slot.date, hour));
+        keys.add(getCellKey(slot.date, slot.startTime, slot.endTime));
       });
       setSelectedCells(keys);
     }
@@ -160,29 +185,49 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   useEffect(() => {
     if (onSlotsChangeRef.current) {
       const slots: TimeSlot[] = Array.from(selectedCells).map(key => {
-        const [date, hourStr] = key.split('_');
-        const hour = parseInt(hourStr);
+        const [datePart, timePart] = key.split('_');
+        const [startTime, endTime] = timePart.split('-');
         return {
           id: key,
-          date,
-          startTime: formatHourTime(hour),
-          endTime: formatHourTime(hour + 1),
+          date: datePart,
+          startTime,
+          endTime,
         };
       });
       onSlotsChangeRef.current(slots);
     }
   }, [selectedCells]);
 
-  const getCellKey = (date: string, hour: number): string => `${date}_${hour}`;
+  // Helper to generate time slot key
+  const getCellKey = (date: string, startTime: string, endTime: string): string =>
+    `${date}_${startTime}-${endTime}`;
+
+  // Helper to convert hour to time slot with duration
+  const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
+    const startMinutes = Math.floor((hour % 1) * 60);
+    const startHour = Math.floor(hour);
+    const totalMinutes = startHour * 60 + startMinutes + duration;
+    const endHour = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+
+    return {
+      startTime: `${String(startHour).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`,
+      endTime: `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`,
+    };
+  };
 
   const isSlotSelectable = (date: string, hour: number): boolean => {
     // 1. Basic range check
     if (!isDateInRange(date)) return false;
 
     // 2. Guest Mode check: If availableSlots is provided, slot MUST be in it
-    if (availableSlots) {
-      const key = getCellKey(date, hour);
-      return availableSlots.has(key);
+    if (availableSlots && availableSlots.length > 0) {
+      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+      return availableSlots.some(slot =>
+        slot.date === date &&
+        slot.startTime === startTime &&
+        slot.endTime === endTime
+      );
     }
 
     // 3. Organizer Mode: All range-valid slots are selectable
@@ -190,7 +235,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   };
 
   const isCellSelected = (date: string, hour: number): boolean => {
-    return selectedCells.has(getCellKey(date, hour));
+    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+    return selectedCells.has(getCellKey(date, startTime, endTime));
   };
 
   const isDateInRange = (dateStr: string): boolean => {
@@ -199,7 +245,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   const toggleCell = (date: string, hour: number) => {
     if (!isSlotSelectable(date, hour)) return;
-    const key = getCellKey(date, hour);
+    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+    const key = getCellKey(date, startTime, endTime);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
       if (newSet.has(key)) newSet.delete(key);
@@ -210,7 +257,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   const setCell = (date: string, hour: number, selected: boolean) => {
     if (!isSlotSelectable(date, hour)) return;
-    const key = getCellKey(date, hour);
+    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+    const key = getCellKey(date, startTime, endTime);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
       if (selected) newSet.add(key);
@@ -232,10 +280,13 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
     if (!isDateInRange(date)) return;
 
     // Filter slots that are actually selectable
-    const selectableHours = hours.filter(hour => isSlotSelectable(date, hour));
-    if (selectableHours.length === 0) return;
+    const selectableSlots = timeSlots.filter(slot => isSlotSelectable(date, slot.startHour));
+    if (selectableSlots.length === 0) return;
 
-    const allCellsInColumn = selectableHours.map(hour => getCellKey(date, hour));
+    const allCellsInColumn = selectableSlots.map(slot => {
+      const { startTime, endTime } = getTimeSlotFromHour(slot.startHour, slotDuration);
+      return getCellKey(date, startTime, endTime);
+    });
     const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
 
     setSelectedCells(prev => {
@@ -281,7 +332,9 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
     // Helper to check selection using the ref (fresh state)
     const isCellSelectedFresh = (date: string, hour: number): boolean => {
-      return selectedCellsRef.current.has(`${date}_${hour}`);
+      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+      const key = getCellKey(date, startTime, endTime);
+      return selectedCellsRef.current.has(key);
     };
 
     const handleNativeTouchStart = (e: TouchEvent) => {
@@ -304,7 +357,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
       // Start Long Press Timer (500ms)
       longPressTimerRef.current = window.setTimeout(() => {
-        const hour = parseInt(hourStr);
+        const hour = parseFloat(hourStr);
         if (!isDateInRange(date)) return;
 
         // Long press confirmed: Enter drag mode
@@ -353,7 +406,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
           const hourStr = td.dataset.hour;
 
           if (date && hourStr) {
-            const hour = parseInt(hourStr);
+            const hour = parseFloat(hourStr);
             if (isDateInRange(date)) {
               const currentSelected = isCellSelectedFresh(date, hour);
               const shouldSelect = dragMode.current === 'select';
@@ -407,16 +460,16 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
     selectedCells.forEach(key => {
-      const [date, hourStr] = key.split('_');
-      const hour = parseInt(hourStr);
-      if (!grouped[date]) {
-        grouped[date] = [];
+      const [datePart, timePart] = key.split('_');
+      const [startTime, endTime] = timePart.split('-');
+      if (!grouped[datePart]) {
+        grouped[datePart] = [];
       }
-      grouped[date].push({
+      grouped[datePart].push({
         id: key,
-        date,
-        startTime: formatHourTime(hour),
-        endTime: formatHourTime(hour + 1),
+        date: datePart,
+        startTime,
+        endTime,
       });
     });
     Object.keys(grouped).forEach(date => {
@@ -573,16 +626,16 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
             <table className="border-collapse">
               <thead>
                 <tr>
-                  <th className="border-b border-film-border bg-paper px-3 py-3 text-xs font-mono font-bold text-ink h-[45px] box-border">
+                  <th className="border-b border-film-border bg-paper px-3 text-xs font-mono font-bold text-ink h-12 box-border align-middle">
                     TIME
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {hours.map(hour => (
-                  <tr key={hour}>
-                    <th className="border-b border-film-border bg-paper px-3 py-2 text-xs font-mono text-ink text-right h-12 box-border last:border-b-0">
-                      {formatHour(hour)}
+                {timeSlots.map((slot, index) => (
+                  <tr key={index}>
+                    <th className="border-b border-film-border bg-paper px-3 text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-middle">
+                      {slot.label}
                     </th>
                   </tr>
                 ))}
@@ -613,7 +666,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                           return (
                             <th
                               key={date}
-                              className={`border-b border-r border-film-border px-4 py-3 text-xs font-serif font-bold whitespace-pre-line text-center h-[45px] box-border last:border-r-0 ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
+                              className={`border-b border-r border-film-border px-4 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 align-middle ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
                               onClick={() => handleHeaderClick(date)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
@@ -632,25 +685,25 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                       </tr>
                     </thead>
                     <tbody>
-                      {hours.map(hour => (
-                        <tr key={hour}>
+                      {timeSlots.map((slot, slotIndex) => (
+                        <tr key={slotIndex}>
                           {week.dates.map(date => {
-                            const isSelected = isCellSelected(date, hour);
-                            const selectable = isSlotSelectable(date, hour);
-                            
+                            const isSelected = isCellSelected(date, slot.startHour);
+                            const selectable = isSlotSelectable(date, slot.startHour);
+
                             return (
                               <td
-                                key={`${date}_${hour}`}
+                                key={`${date}_${slotIndex}`}
                                 role="gridcell"
                                 aria-selected={isSelected}
                                 aria-disabled={!selectable}
                                 data-date={date}
-                                data-hour={hour}
+                                data-hour={slot.startHour}
                                 style={{
                                   backgroundColor: isSelected ? '#4CB5AB' : undefined
                                 }}
                                 className={`
-                                  border-r border-b border-film-border w-16 h-12 box-border last:border-r-0
+                                  border-r border-b border-film-border w-16 h-12 box-border last:border-r-0 align-middle
                                   ${!selectable
                                     ? 'bg-gray-100/50 cursor-not-allowed'
                                     : 'cursor-pointer transition-colors'
@@ -660,12 +713,12 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                                     : ''
                                   }
                                   ${!selectable && !isSelected
-                                    ? 'pattern-diagonal-lines opacity-50' 
+                                    ? 'pattern-diagonal-lines opacity-50'
                                     : ''
                                   }
                                 `}
-                                onMouseDown={(e) => selectable && handleMouseDown(e, date, hour)}
-                                onMouseEnter={() => selectable && handleMouseEnter(date, hour)}
+                                onMouseDown={(e) => selectable && handleMouseDown(e, date, slot.startHour)}
+                                onMouseEnter={() => selectable && handleMouseEnter(date, slot.startHour)}
                                 onMouseUp={handleMouseUp}
                               />
                             );
