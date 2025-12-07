@@ -110,6 +110,21 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
                 defaultHeader // Default header is fine for heatmap, no interaction
             )}
         />
+        
+        <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60">
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div> {/* Approx opacity for 25% participation */}
+                <span>Few</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.83)]"></div> {/* Approx opacity for 75% participation */}
+                <span>Most</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,1.0)]"></div> {/* Full opacity for 100% participation */}
+                <span>All ({totalParticipants})</span>
+            </div>
+        </div>
       </div>
     </div>
   );
