@@ -13,9 +13,10 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
     - [x] Sticky time column layout
     - [x] Mobile long-press selection
     - [x] UTC timezone storage
-- [ ] **Guest Response View**
+- [x] **Guest Response View**
     - [ ] Read-only calendar mode
-    - [ ] Availability overlay ("painting" on top of organizer's slots)
+    - [x] Availability overlay ("painting" on top of organizer's slots)
+    - [x] Heatmap visualization
 - [ ] **Backend Integration**
     - [ ] Database schema design
     - [ ] API routes (Astro Actions)
