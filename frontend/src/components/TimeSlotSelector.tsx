@@ -666,19 +666,22 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                           return (
                             <th
                               key={date}
-                              className={`border-b border-r border-film-border px-4 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 align-middle ${inRange ? 'bg-paper text-ink cursor-pointer hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent' : 'bg-gray-100/80 text-gray-400'}`}
-                              onClick={() => handleHeaderClick(date)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleHeaderClick(date);
-                                }
-                              }}
-                              role={inRange ? "button" : undefined}
-                              tabIndex={inRange ? 0 : undefined}
-                              aria-label={inRange ? `Toggle selection for ${date}` : undefined}
+                              className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
                             >
-                              {formatDateDisplay(date)}
+                              {inRange ? (
+                                <button
+                                  type="button"
+                                  className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
+                                  onClick={() => handleHeaderClick(date)}
+                                  aria-label={`Toggle selection for ${date}`}
+                                >
+                                  {formatDateDisplay(date)}
+                                </button>
+                              ) : (
+                                <div className="w-full h-full px-4 flex items-center justify-center">
+                                  {formatDateDisplay(date)}
+                                </div>
+                              )}
                             </th>
                           );
                         })}
