@@ -4,12 +4,12 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				paper: '#F7F9FA', // Cool, airy white (Fuji-style base)
-				ink: '#37474F',   // Soft blue-grey charcoal
-				'film-accent': '#4CB5AB', // Fuji Green/Teal
-				'film-accent-hover': '#3D9189',
-				'film-border': '#CFD8DC', // Cool blue-grey border (improved contrast)
-				'film-light': '#FFFFFF', // Pure white
+				paper: '#F4F8FA', // Softer, lower saturation blue-grey background
+				ink: '#155E75',   // Fuji Cyan 900 - dark, rich text color
+				'film-accent': '#0891B2', // Fuji Cyan 600 - primary accent, buttons
+				'film-accent-hover': '#0E7490', // Fuji Cyan 700 - darker hover for buttons
+				'film-border': '#d4e8ed', // Matching logo border color
+				'film-light': '#FFFFFF', // Pure white, for elements like inputs
 			},
 			fontFamily: {
 				serif: ['"Shippori Mincho"', 'serif'],
