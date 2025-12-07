@@ -22,6 +22,7 @@ We follow the "HTML First" philosophy. The page shell (`Layout`, `Header`, `Text
 *   **State**: Selected slots are stored as a `Set<string>` of **UTC ISO Strings** (`2025-12-05T09:00:00Z`).
 *   **Layout**: Uses a specific "Sticky Column" layout where the time labels are in a separate `div` from the scrollable date grid.
 *   **Mobile**: Implements custom "Long Press" logic for drag-selection on touch devices.
+*   **Heatmap Mode (Planned)**: The `TimeSlotSelector` is designed to be reusable for heatmap visualization, accepting `heatmapData` and `totalParticipants` props to render color intensity instead of selectable states. This ensures consistency and reusability.
 
 ---
 
@@ -142,3 +143,50 @@ To provide a balance between frictionless anonymous usage and future member-base
 *   **Event Expiry/Deadline**: Option for organizers to set a deadline for submissions.
 *   **Social Sharing Buttons**: Integrate direct share options for Guest Link and (public) Result Link.
 *   **Email Reminders**: Option to send links/updates via email.
+
+---
+
+## 6. Frontend UI/UX Details
+
+This section documents the visual and interactive design choices made during development.
+
+### 6.1 Header and Brand Identity
+
+*   **Fixed Header**: A responsive, fixed header (`Layout.astro`) is present across all pages for consistent navigation and branding.
+*   **Logo Display**: The `agreed-time-logo.svg` is used as the primary brand identifier.
+    *   **Header**: The icon is paired with the text "AgreedTime" (`<span class="font-sans font-bold text-ink">AgreedTime</span>`) to ensure clear brand visibility. The spacing between the icon and text (`gap-0`) is set for a tight, cohesive lockup.
+    *   **Favicon**: The `agreed-time-logo.svg` itself is directly used as the favicon, ensuring brand consistency in browser tabs. The redundant `favicon.svg` file has been removed.
+    *   **Homepage Hero**: The landing page's hero section prominently displays only the large graphic logo (`agreed-time-logo.svg`) without additional text, maintaining a minimalist and "airy" aesthetic.
+*   **Brand Typography**: The primary brand typeface for text elements like "AgreedTime" is set to `font-sans` (Zen Kaku Gothic New) for a modern and digital-native feel, complementing the geometric icon. Serif fonts are used for general headings, and mono fonts for technical/time displays.
+
+### 6.2 Visual Theme (Fujifilm-Inspired Palette)
+
+The application's color palette is carefully crafted to evoke a Fujifilm-inspired aesthetic, characterized by cool, cyanic tones and subtle contrasts.
+
+*   **`frontend/tailwind.config.mjs` Colors**:
+    *   `paper`: `#F4F8FA` (Soft, low-saturation blue-grey for main background, reducing visual strain).
+    *   `ink`: `#155E75` (Deep cyan-tinted grey for primary text, providing rich contrast).
+    *   `film-accent`: `#0891B2` (Vibrant Cyan 600 for primary interactive elements, buttons, selected states).
+    *   `film-accent-hover`: `#0E7490` (Darker Cyan 700 for hover states).
+    *   `film-border`: `#d4e8ed` (Light, cool grey for borders, matching the logo's outer stroke).
+    *   `film-light`: `#FFFFFF` (Pure white for elements like input backgrounds and card interiors, creating layered depth).
+*   **Consistency**: All UI components, including `TimeSlotSelector` (selected slot color) and `EventResultView`, now automatically utilize this palette, ensuring a unified visual experience.
+
+### 6.3 Event Result Page Enhancements
+
+*   **Empty State Handling**: `EventResultView.tsx` now conditionally renders a user-friendly empty state when no responses have been submitted. This includes a clear message ("No responses yet!"), an illustrative icon, and a call to action. For admins, a "Go to Guest Link" button is provided.
+*   **Share Results Button**: A prominent "Share Results" button is available on the Result Page, allowing any viewer to easily copy the current page's URL to their clipboard.
+*   **Admin Action Buttons**: For identified event administrators (via LocalStorage token), "Finalize" and "Delete" action buttons are displayed. These are currently simulated with alerts for demonstration purposes.
+
+---
+
+## 7. Heatmap Visualization (Planned Implementation)
+
+The `TimeSlotSelector` component will be extended to support a dedicated "heatmap" mode for the Result Page, providing a graphical overview of participant availability.
+
+*   **Reusability**: `TimeSlotSelector` will be intelligently reused and extended rather than creating a separate component.
+*   **Props Expansion**: New props will include `mode: 'select' | 'heatmap'`, `heatmapData: Record<string, HeatmapCellData>`, and `totalParticipants: number`.
+*   **`HeatmapData` Structure**: A `HeatmapCellData` interface (`{ count: number; attendees: string[]; }`) will be used to store aggregated availability for each time slot. This pre-calculated data (done in the parent component like `EventResultView`) will ensure efficient rendering.
+*   **Visual Representation**: In heatmap mode, `<td>` elements will display varying shades of `film-accent` (e.g., using `bg-film-accent/[opacity]`) based on the `count` of available participants relative to `totalParticipants`.
+*   **Interaction**: In heatmap mode, selection interactions (click, drag, long-press) will be disabled. Hover tooltips will provide detailed information (e.g., "X people available").
+*   **Logic Separation**: The `TimeSlotSelector` will focus solely on rendering; the `EventResultView` will handle the aggregation of raw responses into `heatmapData`.
