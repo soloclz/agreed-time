@@ -5,6 +5,10 @@ import EventResultView from '../../../../src/components/EventResultView';
 export const prerender = false; // Mark as non-prerenderable since data is dynamic
 
 const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/404');
+}
 ---
 
 <Layout title={`Event Results - ${id}`}>

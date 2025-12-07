@@ -5,6 +5,10 @@ import EventGuestForm from '../../components/EventGuestForm';
 export const prerender = false; // Mark as non-prerenderable since data is dynamic
 
 const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/404');
+}
 ---
 
 <Layout title={`Event - ${id}`}>

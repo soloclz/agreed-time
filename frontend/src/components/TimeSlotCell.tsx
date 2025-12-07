@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import type { HeatmapCellData } from '../types';
-import { formatHour } from '../utils/dateUtils';
 
 interface TimeSlotCellProps {
   // Coordinates

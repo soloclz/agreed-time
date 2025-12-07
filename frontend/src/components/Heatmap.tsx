@@ -17,7 +17,7 @@ interface HeatmapProps {
 
 export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
   // Transform data for TimeGrid (and TimeSlotCell)
-  const { heatmapData, availableSlots, minDate, maxDate, minHour, maxHour } = useMemo(() => {
+  const { heatmapData, minDate, maxDate, minHour, maxHour } = useMemo(() => {
     const data: Record<string, HeatmapCellData> = {};
     const availSlots: TimeSlot[] = [];
 
@@ -64,7 +64,6 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
 
     return { 
         heatmapData: data, 
-        availableSlots: availSlots,
         minDate: availSlots.length > 0 ? currentMinDate : format(new Date(), 'yyyy-MM-dd'),
         maxDate: availSlots.length > 0 ? currentMaxDate : format(addDays(new Date(), 6), 'yyyy-MM-dd'), // Default to a week
         minHour: finalMinHour,

@@ -6,7 +6,6 @@ import {
   getLastSaturday,
   diffInDays,
   formatDateDisplay,
-  formatHour,
 } from '../utils/dateUtils';
 
 interface Week {
