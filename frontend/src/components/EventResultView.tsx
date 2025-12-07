@@ -22,13 +22,13 @@ const MOCK_EVENT_DATA: EventData = {
 
 // Temporarily set to empty for empty state testing
 const MOCK_RESPONSES: Response[] = [
-  { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z'], comment: 'Prefer earlier' },
-  { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z'], comment: 'Only Tuesdays' },
+  { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Prefer earlier' },
+  { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Only Tuesdays' },
   { name: 'Charlie', slots: ['2025-12-08T03:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Wednesdays are best' },
-  { name: 'David', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z'] },
+  { name: 'David', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
   { name: 'Eve', slots: ['2025-12-10T09:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-12T02:00:00.000Z'], comment: 'Flexible!' },
-  { name: 'Frank', slots: ['2025-12-08T01:00:00.000Z', '2025-12-12T02:00:00.000Z'] },
-  { name: 'Grace', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z'] },
+  { name: 'Frank', slots: ['2025-12-08T01:00:00.000Z', '2025-12-12T02:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
+  { name: 'Grace', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
 ];
 
 // Helper function to get the current timezone offset string (e.g., "GMT+8")
@@ -44,6 +44,8 @@ function getTimezoneOffsetString(): string {
 
   return `GMT${sign}${formattedHours}:${formattedMinutes}`;
 }
+
+import Heatmap from './Heatmap';
 
 export default function EventResultView({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
@@ -266,9 +268,9 @@ export default function EventResultView({ eventId }: { eventId: string }) {
             </div>
           </section>
 
-          {/* Placeholder for Heatmap */}
-          <section className="bg-paper border-2 border-dashed border-film-border rounded-xl p-16 text-center">
-            <p className="text-ink/40 font-serif text-lg">Heatmap Calendar View Coming Soon...</p>
+          {/* Heatmap Calendar View */}
+          <section>
+             <Heatmap slots={allSortedSlots} totalParticipants={MOCK_RESPONSES.length} />
           </section>
         </>
       )}
