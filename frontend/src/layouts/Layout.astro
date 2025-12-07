@@ -14,7 +14,7 @@ const { title = 'AgreedTime' } = Astro.props;
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&family=Space+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 		<title>{title}</title>
 		<style is:global>
@@ -34,6 +34,21 @@ const { title = 'AgreedTime' } = Astro.props;
 	</head>
 	<body class="bg-paper text-ink font-serif antialiased selection:bg-film-accent selection:text-white overflow-x-hidden">
 		<div class="film-grain"></div>
-		<slot />
+		
+		<header class="fixed top-0 left-0 w-full bg-paper z-40 border-b border-film-border shadow-sm">
+			<div class="max-w-3xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
+				<a href="/" class="flex items-center space-x-2">
+					<img src="/agreed-time-logo.svg" alt="AgreedTime Logo" class="h-8 sm:h-9" />
+				</a>
+				<!-- Future: Mobile Menu Toggle / Auth Buttons -->
+				<nav>
+					<!-- Placeholder for menu items -->
+				</nav>
+			</div>
+		</header>
+
+		<main class="pt-[4.5rem]"> {/* Adjust padding top to account for fixed header height */}
+			<slot />
+		</main>
 	</body>
 </html>
