@@ -1,10 +1,11 @@
 import { defineMiddleware } from 'astro:middleware';
 
-export const onRequest = defineMiddleware((context, next) => {
+export const onRequest = defineMiddleware(async (_context, next) => {
   // Get the response
-  return next().then((response) => {
-    // Clone the response so we can modify headers
-    const newResponse = new Response(response.body, response);
+  const response = await next();
+
+  // Clone the response so we can modify headers
+  const newResponse = new Response(response.body, response);
 
     // Security Headers
 
@@ -38,5 +39,4 @@ export const onRequest = defineMiddleware((context, next) => {
     newResponse.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
     return newResponse;
-  });
 });

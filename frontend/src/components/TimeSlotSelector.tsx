@@ -402,294 +402,148 @@ export default function TimeSlotSelector({
 
     if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
-  
-
-    return (
-
-      <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
-
-        <div>
-
-          <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
-
-              Select Your Available Time Slots
-
-          </h3>
-
-          <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
-
-              <>
-
-              <span className="md:hidden">
-
-                  Long press & drag to select.
-
-              </span>
-
-              <span className="hidden md:inline">
-
-                  Click and drag to select time slots, or click date headers to select a full day.
-
-              </span>
-
-              </>
-
-          </p>
-
-        </div>
-
-  
-
-        {!availableSlots && (
-
-          <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-
-              <div>
-
-                <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-
-                  <div className="flex-1">
-
-                    <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
-
-                    <input
-
-                      id="startDate"
-
-                      name="startDate"
-
-                      type="date"
-
-                      value={startDate}
-
-                      onChange={(e) => setStartDate(e.target.value)}
-
-                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-
-                      title="Start date"
-
-                    />
-
-                  </div>
-
-                  <span className="text-ink font-bold text-center hidden sm:block">→</span>
-
-                  <div className="flex-1">
-
-                    <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
-
-                    <input
-
-                      id="endDate"
-
-                      name="endDate"
-
-                      type="date"
-
-                      value={endDate}
-
-                      onChange={(e) => setEndDate(e.target.value)}
-
-                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-
-                      title="End date"
-
-                    />
-
-                  </div>
-
-                </div>
-
-              </div>
-
-  
-
-              <div>
-
-                <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-
-                  <div className="flex-1">
-
-                    <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
-
-                    <select
-
-                      id="startHour"
-
-                      name="startHour"
-
-                      value={startHour}
-
-                      onChange={(e) => setStartHour(parseInt(e.target.value))}
-
-                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-
-                      title="Start hour"
-
-                    >
-
-                      {Array.from({ length: 24 }, (_, i) => (
-
-                        <option key={i} value={i}>{formatHour(i)}</option>
-
-                      ))}
-
-                    </select>
-
-                  </div>
-
-                  <span className="text-ink font-bold text-center hidden sm:block">→</span>
-
-                  <div className="flex-1">
-
-                    <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
-
-                    <select
-
-                      id="endHour"
-
-                      name="endHour"
-
-                      value={endHour}
-
-                      onChange={(e) => setEndHour(parseInt(e.target.value))}
-
-                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-
-                      title="End hour"
-
-                    >
-
-                      {Array.from({ length: 24 }, (_, i) => (
-
-                        <option key={i} value={i}>{formatHour(i)}</option>
-
-                      ))}
-
-                    </select>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )}
-
-  
-
-        <TimeSlotBottomPanel
-
-            selectedCells={selectedCells}
-
-            selectedSlotsByDate={selectedSlotsByDate}
-
-            onRemoveSlot={removeSlot}
-
-            onClearAll={() => {
-
-            setSelectedCells(new Set());
-
-            setShowBottomPanel(false);
-
-            }}
-
-            showBottomPanel={showBottomPanel}
-
-            onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
-
-        />
-
-        
-
-        <TimeGrid
-
-          startDate={startDate}
-
-          endDate={endDate}
-
-          startHour={startHour}
-
-          endHour={endHour}
-
-          slotDuration={slotDuration}
-
-          onMouseDown={handleMouseDown}
-
-          onMouseEnter={handleMouseEnter}
-
-          onMouseUp={handleMouseUp}
-
-          renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
-
-            <TimeSlotCell
-
-              key={key}
-
-              date={date}
-
-              hour={hour}
-
-              slotLabel={slotLabel}
-
-              mode="select"
-
-              isSelected={isCellSelected(date, hour)}
-
-              isSelectable={isSlotSelectable(date, hour)}
-
-              onMouseDown={onMouseDownGrid}
-
-              onMouseEnter={onMouseEnterGrid}
-
-              onMouseUp={onMouseUpGrid}
-
-            />
-
-          )}
-
-          renderDateHeader={(date, defaultHeader) => (
-
-              <button
-
-                  type="button"
-
-                  className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
-
-                  onClick={() => handleHeaderClick(date)}
-
-                  aria-label={`Toggle selection for ${date}`}
-
-              >
-
-                  {defaultHeader}
-
-              </button>
-
-          )}
-
-        />
-
-  
-
-        <div className="text-xs text-gray-500 font-mono">
-
-            <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
-
-        </div>
-
+  return (
+    <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
+      <div>
+        <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
+            Select Your Available Time Slots
+        </h3>
+        <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
+            <>
+            <span className="md:hidden">
+                Long press & drag to select.
+            </span>
+            <span className="hidden md:inline">
+                Click and drag to select time slots, or click date headers to select a full day.
+            </span>
+            </>
+        </p>
       </div>
 
-    );
+      {!availableSlots && (
+        <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1">
+                  <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
+                  <input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    title="Start date"
+                  />
+                </div>
+                <span className="text-ink font-bold text-center hidden sm:block">→</span>
+                <div className="flex-1">
+                  <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
+                  <input
+                    id="endDate"
+                    name="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    title="End date"
+                  />
+                </div>
+              </div>
+            </div>
 
-  }
+            <div>
+              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1">
+                  <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
+                  <select
+                    id="startHour"
+                    name="startHour"
+                    value={startHour}
+                    onChange={(e) => setStartHour(parseInt(e.target.value))}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    title="Start hour"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{formatHour(i)}</option>
+                    ))}
+                  </select>
+                </div>
+                <span className="text-ink font-bold text-center hidden sm:block">→</span>
+                <div className="flex-1">
+                  <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
+                  <select
+                    id="endHour"
+                    name="endHour"
+                    value={endHour}
+                    onChange={(e) => setEndHour(parseInt(e.target.value))}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    title="End hour"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{formatHour(i)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <TimeSlotBottomPanel
+          selectedCells={selectedCells}
+          selectedSlotsByDate={selectedSlotsByDate}
+          onRemoveSlot={removeSlot}
+          onClearAll={() => {
+          setSelectedCells(new Set());
+          setShowBottomPanel(false);
+          }}
+          showBottomPanel={showBottomPanel}
+          onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
+      />
+      
+      <TimeGrid
+        startDate={startDate}
+        endDate={endDate}
+        startHour={startHour}
+        endHour={endHour}
+        slotDuration={slotDuration}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={handleMouseEnter}
+        onMouseUp={handleMouseUp}
+        renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
+          <TimeSlotCell
+            key={key}
+            date={date}
+            hour={hour}
+            slotLabel={slotLabel}
+            mode="select"
+            isSelected={isCellSelected(date, hour)}
+            isSelectable={isSlotSelectable(date, hour)}
+            onMouseDown={onMouseDownGrid}
+            onMouseEnter={onMouseEnterGrid}
+            onMouseUp={onMouseUpGrid}
+          />
+        )}
+        renderDateHeader={(date, defaultHeader) => (
+            <button
+                type="button"
+                className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
+                onClick={() => handleHeaderClick(date)}
+                aria-label={`Toggle selection for ${date}`}
+            >
+                {defaultHeader}
+            </button>
+        )}
+      />
+
+      <div className="text-xs text-gray-500 font-mono">
+          <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+      </div>
+    </div>
+  );
+}
