@@ -15,14 +15,18 @@ We follow the "HTML First" philosophy. The page shell (`Layout`, `Header`, `Text
 *   **`src/pages/`**: File-system routing. `new.astro` corresponds to `/new`.
 *   **`src/components/`**: React components and Astro snippets.
     *   `CreateEventForm.tsx`: The main "Island" controller.
-    *   `TimeSlotSelector.tsx`: The core calendar widget logic.
+    *   `TimeGrid.tsx`: Core component for rendering the generic calendar grid structure (weeks, days, time labels).
+    *   `TimeSlotCell.tsx`: Renders an individual time slot cell, handling mode-specific (selection/heatmap) visual representation and local interaction.
+    *   `TimeSlotSelector.tsx`: Component dedicated to handling time slot selection logic and state, utilizing `TimeGrid` and `TimeSlotCell`.
+    *   `Heatmap.tsx`: Component dedicated to handling heatmap data transformation and display logic, utilizing `TimeGrid` and `TimeSlotCell`.
 *   **`src/utils/`**: Pure helper functions (e.g., date manipulation using `date-fns`).
 
-### Key Logic: TimeSlotSelector
-*   **State**: Selected slots are stored as a `Set<string>` of **UTC ISO Strings** (`2025-12-05T09:00:00Z`).
-*   **Layout**: Uses a specific "Sticky Column" layout where the time labels are in a separate `div` from the scrollable date grid.
-*   **Mobile**: Implements custom "Long Press" logic for drag-selection on touch devices.
-*   **Heatmap Mode (Planned)**: The `TimeSlotSelector` is designed to be reusable for heatmap visualization, accepting `heatmapData` and `totalParticipants` props to render color intensity instead of selectable states. This ensures consistency and reusability.
+### Key Logic: Time Slot Components (TimeGrid, TimeSlotCell, TimeSlotSelector, Heatmap)
+The core calendar functionality is now split across several specialized components to reduce redundancy and improve modularity:
+*   **`TimeGrid.tsx`**: Provides the structural layout for the calendar grid. It generates rows (days) and columns (time slots) and handles overall grid navigation (e.g., week scrolling). It receives `renderCell` and `renderDateHeader` props to allow parent components to customize cell and header rendering.
+*   **`TimeSlotCell.tsx`**: This component renders a single interactive cell within the `TimeGrid`. It encapsulates the mode-specific (selection or heatmap) visual styling, content display (e.g., vote count), tooltips, and local event handling.
+*   **`TimeSlotSelector.tsx`**: This component manages the state and logic for selecting time slots. It acts as a wrapper around `TimeGrid`, passing `mode="select"` to `TimeSlotCell` via `TimeGrid`'s `renderCell` prop, and handles drag-to-select interactions. Selected slots are stored as a `Set<string>` of **UTC ISO Strings** (`YYYY-MM-DD_HH:MM-HH:MM`).
+*   **`Heatmap.tsx`**: This component handles the data transformation and display of availability heatmaps. It wraps `TimeGrid`, processes raw event response data into `heatmapData`, and passes `mode="heatmap"` to `TimeSlotCell` via `TimeGrid`'s `renderCell` prop. It also calculates minimum/maximum date/time ranges for `TimeGrid`.
 
 ---
 
@@ -180,13 +184,18 @@ The application's color palette is carefully crafted to evoke a Fujifilm-inspire
 
 ---
 
-## 7. Heatmap Visualization (Planned Implementation)
+## 7. Heatmap Visualization (Implemented)
 
-The `TimeSlotSelector` component will be extended to support a dedicated "heatmap" mode for the Result Page, providing a graphical overview of participant availability.
+The Result Page now features a graphical heatmap visualization of participant availability, leveraging the new modular component architecture.
 
-*   **Reusability**: `TimeSlotSelector` will be intelligently reused and extended rather than creating a separate component.
-*   **Props Expansion**: New props will include `mode: 'select' | 'heatmap'`, `heatmapData: Record<string, HeatmapCellData>`, and `totalParticipants: number`.
-*   **`HeatmapData` Structure**: A `HeatmapCellData` interface (`{ count: number; attendees: string[]; }`) will be used to store aggregated availability for each time slot. This pre-calculated data (done in the parent component like `EventResultView`) will ensure efficient rendering.
-*   **Visual Representation**: In heatmap mode, `<td>` elements will display varying shades of `film-accent` (e.g., using `bg-film-accent/[opacity]`) based on the `count` of available participants relative to `totalParticipants`.
-*   **Interaction**: In heatmap mode, selection interactions (click, drag, long-press) will be disabled. Hover tooltips will provide detailed information (e.g., "X people available").
-*   **Logic Separation**: The `TimeSlotSelector` will focus solely on rendering; the `EventResultView` will handle the aggregation of raw responses into `heatmapData`.
+*   **`Heatmap.tsx`**: This is the top-level component for heatmap display. It's responsible for:
+    *   Aggregating raw participant responses (from `EventResultView.tsx`) into `heatmapData`.
+    *   Calculating the overall minimum/maximum date and time ranges from the available data.
+    *   Rendering the `TimeGrid` component, and providing a `renderCell` prop that configures `TimeSlotCell` for `mode="heatmap"`.
+*   **`TimeGrid.tsx`**: Provides the underlying calendar grid structure, navigation, and default header rendering.
+*   **`TimeSlotCell.tsx`**: In `"heatmap"` mode, it renders each time slot cell with:
+    *   A background color intensity based on the ratio of available participants for that slot (`count / totalParticipants`). A non-linear scaling (`Math.pow(ratio, 0.6)`) is applied for smoother and more perceptually distinct gradients.
+    *   A numerical display of the `count` of available participants.
+    *   A hover tooltip detailing which participants are available for that specific slot.
+    *   All interactive selection features (click, drag) are disabled.
+*   **Reusability**: By using `TimeGrid` and `TimeSlotCell`, the heatmap visualization benefits from the same robust grid layout and cell-level logic as the `TimeSlotSelector`, ensuring consistency and minimizing code duplication.
