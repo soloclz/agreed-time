@@ -1,20 +1,7 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import TimeSlotSelector from './TimeSlotSelector';
-import type { TimeSlot } from '../types';
-
-// Helper to generate a simple UUID-like string
-const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-// Helper to generate a longer, more secure-looking token
-const generateAdminToken = () => generateId() + generateId() + generateId();
-// Helper to generate a 6-digit alphanumeric secure code
-const generateSecureCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
-
-interface EventCreationResult {
-  eventId: string;
-  adminToken: string;
-  secureCode: string;
-  eventTitle: string;
-}
+import type { TimeSlot, EventCreationResult } from '../types';
+import { eventService } from '../services/eventService';
 
 // Reusable Copy Button Component
 function CopyButton({ textToCopy, label }: { textToCopy: string; label?: string }) {
@@ -80,28 +67,22 @@ export default function CreateEventForm() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Longer delay for effect
-
-    const newEventId = generateId();
-    const newAdminToken = generateAdminToken();
-    const newSecureCode = generateSecureCode();
-
-    setEventCreationResult({
-      eventId: newEventId,
-      adminToken: newAdminToken,
-      secureCode: newSecureCode,
-      eventTitle: title,
-    });
-    
-    // Save admin token to localStorage for auto-login
     try {
-      localStorage.setItem(`agreed_time_admin_${newEventId}`, newAdminToken);
+      const result = await eventService.createEvent(title, description, selectedSlots);
+      
+      setEventCreationResult(result);
+      
+      // Save admin token to localStorage for auto-login
+      try {
+        localStorage.setItem(`agreed_time_admin_${result.eventId}`, result.adminToken);
+      } catch (error) {
+        console.error('Failed to save admin token to localStorage:', error);
+      }
     } catch (error) {
-      console.error('Failed to save admin token to localStorage:', error);
+      alert('Failed to create event. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   if (eventCreationResult) {

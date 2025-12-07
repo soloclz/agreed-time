@@ -1,35 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, addHours } from 'date-fns';
-
-interface Response {
-  name: string;
-  slots: string[]; // ISO strings
-  comment?: string;
-}
-
-interface EventData {
-  id: string;
-  title: string;
-  description: string;
-}
-
-// MOCK DATA
-const MOCK_EVENT_DATA: EventData = {
-  id: 'mock-event-id',
-  title: 'My Event Title', // Placeholder for a generic event title
-  description: 'Help us find the perfect time that works for everyone.', // Generic description
-};
-
-// Temporarily set to empty for empty state testing
-const MOCK_RESPONSES: Response[] = [
-  { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Prefer earlier' },
-  { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Only Tuesdays' },
-  { name: 'Charlie', slots: ['2025-12-08T03:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Wednesdays are best' },
-  { name: 'David', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
-  { name: 'Eve', slots: ['2025-12-10T09:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-12T02:00:00.000Z'], comment: 'Flexible!' },
-  { name: 'Frank', slots: ['2025-12-08T01:00:00.000Z', '2025-12-12T02:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
-  { name: 'Grace', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
-];
+import { eventService } from '../services/eventService';
+import type { EventData, ResponseData } from '../types';
+import Heatmap from './Heatmap';
 
 // Helper function to get the current timezone offset string (e.g., "GMT+8")
 function getTimezoneOffsetString(): string {
@@ -45,10 +18,10 @@ function getTimezoneOffsetString(): string {
   return `GMT${sign}${formattedHours}:${formattedMinutes}`;
 }
 
-import Heatmap from './Heatmap';
-
 export default function EventResultView({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
+  const [eventData, setEventData] = useState<EventData | null>(null);
+  const [responses, setResponses] = useState<ResponseData[]>([]);
   const [allSortedSlots, setAllSortedSlots] = useState<{ slot: string; count: number; attendees: string[] }[]>([]);
   const [timezoneOffsetString, setTimezoneOffsetString] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -59,35 +32,47 @@ export default function EventResultView({ eventId }: { eventId: string }) {
     setTimezoneOffsetString(getTimezoneOffsetString());
 
     // Check for admin token in localStorage
-    // In a real app, we would verify this token with the backend
     const adminToken = localStorage.getItem(`agreed_time_admin_${eventId}`);
     if (adminToken) {
       setIsAdmin(true);
     }
 
-    // Simulate calculation logic
-    setLoading(true);
-    setTimeout(() => {
-      // 1. Flatten all slots and count occurrences
-      const slotCounts = new Map<string, { count: number; attendees: string[] }>();
-      
-      MOCK_RESPONSES.forEach(response => {
-        response.slots.forEach(slot => {
-          const current = slotCounts.get(slot) || { count: 0, attendees: [] };
-          current.count++;
-          current.attendees.push(response.name);
-          slotCounts.set(slot, current);
-        });
-      });
+    const fetchResults = async () => {
+        setLoading(true);
+        try {
+            const result = await eventService.getEventResults(eventId);
+            if (result) {
+                setEventData(result.event);
+                setResponses(result.responses);
+                
+                // 1. Flatten all slots and count occurrences (Aggregation Logic)
+                // Ideally this could move to eventService or a util, but keeping here for now to match previous logic
+                const slotCounts = new Map<string, { count: number; attendees: string[] }>();
+                
+                result.responses.forEach(response => {
+                    response.slots.forEach(slot => {
+                    const current = slotCounts.get(slot) || { count: 0, attendees: [] };
+                    current.count++;
+                    current.attendees.push(response.name);
+                    slotCounts.set(slot, current);
+                    });
+                });
 
-      // 2. Sort by count (descending)
-      const sortedSlots = Array.from(slotCounts.entries())
-        .map(([slot, data]) => ({ slot, ...data }))
-        .sort((a, b) => b.count - a.count);
+                // 2. Sort by count (descending)
+                const sortedSlots = Array.from(slotCounts.entries())
+                    .map(([slot, data]) => ({ slot, ...data }))
+                    .sort((a, b) => b.count - a.count);
 
-      setAllSortedSlots(sortedSlots);
-      setLoading(false);
-    }, 800);
+                setAllSortedSlots(sortedSlots);
+            }
+        } catch (error) {
+            console.error("Failed to fetch event results", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchResults();
   }, [eventId]);
 
   const maxCount = useMemo(() => {
@@ -126,6 +111,10 @@ export default function EventResultView({ eventId }: { eventId: string }) {
     return <div className="text-center py-12 text-ink/60 font-serif">Calculating best times...</div>;
   }
 
+  if (!eventData) {
+      return <div className="text-center py-12 text-ink/60 font-serif">Event not found.</div>;
+  }
+
   return (
     <div className="space-y-12 relative">
       {/* Action Bar (always visible) */}
@@ -156,8 +145,8 @@ export default function EventResultView({ eventId }: { eventId: string }) {
 
       {/* Header (always visible) */}
       <div className="text-center space-y-4 -mt-6"> {/* Negative margin to pull up closer to actions */}
-        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{MOCK_EVENT_DATA.title}</h1>
-        <p className="text-ink/80 text-lg font-sans max-w-2xl mx-auto leading-relaxed">{MOCK_EVENT_DATA.description}</p>
+        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{eventData.title}</h1>
+        <p className="text-ink/80 text-lg font-sans max-w-2xl mx-auto leading-relaxed">{eventData.description}</p>
         {timezoneOffsetString && (
           <p className="text-sm text-ink/50 font-mono italic mt-2">
             All times are shown in your local timezone ({timezoneOffsetString}).
@@ -165,7 +154,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      {MOCK_RESPONSES.length === 0 ? (
+      {responses.length === 0 ? (
         <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-film-accent/70 mx-auto">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -206,7 +195,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
                       </div>
                       <div className="text-right w-full md:w-auto">
                         <span className="inline-block bg-film-accent text-white px-4 py-1.5 rounded-md text-sm font-bold mb-2 shadow-sm">
-                          {pick.count} / {MOCK_RESPONSES.length} Available
+                          {pick.count} / {responses.length} Available
                         </span>
                         <p className="text-sm text-ink/60 font-medium">
                           Includes: {pick.attendees.join(', ')}
@@ -252,9 +241,9 @@ export default function EventResultView({ eventId }: { eventId: string }) {
 
           {/* Participants List */}
           <section className="border-t border-film-border/50 pt-10">
-            <h3 className="text-2xl font-serif font-bold text-ink mb-6">Participants <span className="text-film-accent text-lg align-top">{MOCK_RESPONSES.length}</span></h3>
+            <h3 className="text-2xl font-serif font-bold text-ink mb-6">Participants <span className="text-film-accent text-lg align-top">{responses.length}</span></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {MOCK_RESPONSES.map((r, i) => (
+              {responses.map((r, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/60 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-serif text-sm">
                     {r.name.charAt(0).toUpperCase()}
@@ -270,7 +259,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
 
           {/* Heatmap Calendar View */}
           <section>
-             <Heatmap slots={allSortedSlots} totalParticipants={MOCK_RESPONSES.length} />
+             <Heatmap slots={allSortedSlots} totalParticipants={responses.length} />
           </section>
         </>
       )}
