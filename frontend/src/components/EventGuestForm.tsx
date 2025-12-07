@@ -1,62 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { TimeSlot } from '../types';
+import type { TimeSlot, EventData } from '../types';
 import TimeSlotSelector from './TimeSlotSelector';
-
-interface EventData {
-  id: string;
-  title: string;
-  description: string;
-  availableSlots: TimeSlot[];
-  slotDuration?: number; // Duration in minutes
-}
-
-// MOCK DATA - In a real app, this would come from an API call
-const MOCK_EVENT_DATA: EventData = {
-  id: 'mock-event-id',
-  title: 'Availability',
-  description: 'Select your available time slots.',
-  slotDuration: 60, // 1 hour slots
-  availableSlots: [
-    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '10:00' }, // Monday 9am-10am
-    { id: '2', date: '2025-12-08', startTime: '10:00', endTime: '11:00' }, // Monday 10am-11am
-    { id: '3', date: '2025-12-08', startTime: '11:00', endTime: '12:00' }, // Monday 11am-12pm
-    { id: '4', date: '2025-12-09', startTime: '13:00', endTime: '14:00' }, // Tuesday 1pm-2pm
-    { id: '5', date: '2025-12-09', startTime: '14:00', endTime: '15:00' }, // Tuesday 2pm-3pm
-    { id: '6', date: '2025-12-10', startTime: '17:00', endTime: '18:00' }, // Wednesday 5pm-6pm
-    { id: '7', date: '2025-12-11', startTime: '09:00', endTime: '10:00' }, // Thursday 9am-10am
-    { id: '8', date: '2025-12-11', startTime: '10:00', endTime: '11:00' }, // Thursday 10am-11am
-    { id: '9', date: '2025-12-11', startTime: '11:00', endTime: '12:00' }, // Thursday 11am-12pm
-  ]
-};
-
-// Example: 30-minute intervals
-const MOCK_EVENT_DATA_30MIN: EventData = {
-  id: 'mock-event-30min',
-  title: 'Quick Team Sync',
-  description: 'Short 30-minute slots for quick discussions.',
-  slotDuration: 30,
-  availableSlots: [
-    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '09:30' },
-    { id: '2', date: '2025-12-08', startTime: '09:30', endTime: '10:00' },
-    { id: '3', date: '2025-12-08', startTime: '10:00', endTime: '10:30' },
-    { id: '4', date: '2025-12-08', startTime: '14:00', endTime: '14:30' },
-    { id: '5', date: '2025-12-09', startTime: '15:00', endTime: '15:30' },
-  ]
-};
-
-// Example: Half-day intervals (4 hours)
-const MOCK_EVENT_DATA_HALF_DAY: EventData = {
-  id: 'mock-event-half-day',
-  title: 'Workshop Session',
-  description: 'Half-day workshop slots.',
-  slotDuration: 240, // 4 hours
-  availableSlots: [
-    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '13:00' }, // Morning
-    { id: '2', date: '2025-12-08', startTime: '13:00', endTime: '17:00' }, // Afternoon
-    { id: '3', date: '2025-12-09', startTime: '09:00', endTime: '13:00' },
-    { id: '4', date: '2025-12-10', startTime: '13:00', endTime: '17:00' },
-  ]
-};
+import { eventService } from '../services/eventService';
 
 export default function EventGuestForm({ eventId }: { eventId: string }) {
   const [eventData, setEventData] = useState<EventData | null>(null);
@@ -68,31 +13,27 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching event data from an API
-    setLoading(true);
-    setError(null);
-    setTimeout(() => {
-      let data: EventData | null = null;
-
-      if (eventId === MOCK_EVENT_DATA.id) {
-        data = MOCK_EVENT_DATA;
-      } else if (eventId === MOCK_EVENT_DATA_30MIN.id) {
-        data = MOCK_EVENT_DATA_30MIN;
-      } else if (eventId === MOCK_EVENT_DATA_HALF_DAY.id) {
-        data = MOCK_EVENT_DATA_HALF_DAY;
-      }
-
-      if (data) {
-        setEventData(data);
-        setLoading(false);
-      } else {
-        setError('Event not found.');
+    const fetchEvent = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await eventService.getEvent(eventId);
+        if (data) {
+          setEventData(data);
+        } else {
+          setError('Event not found.');
+        }
+      } catch (err) {
+        setError('Failed to load event data.');
+      } finally {
         setLoading(false);
       }
-    }, 1000); // Simulate network delay
+    };
+
+    fetchEvent();
   }, [eventId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim()) {
       alert('Please enter your name.');
@@ -103,16 +44,45 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
       return;
     }
 
-    console.log('Submitting guest availability:', {
-      eventId: eventData?.id,
-      guestName,
-      guestComment,
-      selectedSlots: selectedGuestSlots,
-    });
+    // Flatten the slot IDs or full slots? ResponseData expects strings (ISO slots potentially?)
+    // In EventResultView logic we used `slots` as ISO strings.
+    // TimeSlotSelector returns TimeSlot objects.
+    // We need to convert TimeSlot objects to the format expected by ResponseData.
+    // Based on Heatmap.tsx parsing, it expects ISO strings like "2025-12-08T09:00:00.000Z".
+    // But wait, `TimeSlotSelector` uses `TimeSlot` objects internally.
+    // Let's check `TimeSlot` definition again: { id: string, date: string, startTime: string, endTime: string }
+    // The `id` in TimeSlot usually is the ISO string key in previous implementations or just an ID.
+    
+    // Let's look at how MOCK_RESPONSES were structured:
+    // slots: ['2025-12-08T01:00:00.000Z', ...]
+    
+    // And TimeSlotSelector's `onSlotsChange` returns `TimeSlot[]`.
+    // The `id` property of `TimeSlot` constructed in `TimeSlotSelector` is `key` which is `${date}_${startTime}-${endTime}`.
+    // This is NOT an ISO string.
+    
+    // We need a way to convert the selection back to ISO strings if that's what the "Backend" expects.
+    // Or we update the `ResponseData` type to hold `TimeSlot[]` objects instead of string arrays.
+    // However, keeping it as strings is usually better for storage.
+    
+    // Construct ISO strings from TimeSlot:
+    // TimeSlot: date="2025-12-08", startTime="09:00"
+    // ISO: "2025-12-08T09:00:00.000Z" (assuming UTC context or local handled consistently)
+    
+    // For the purpose of this refactor, let's map them to ISO strings assuming simpler format or just use the IDs if consistent.
+    // Actually, `Heatmap.tsx` uses `parseISO(s.slot)`. So it expects standard ISO strings.
+    
+    const slotsAsIsoStrings = selectedGuestSlots.map(s => `${s.date}T${s.startTime}:00.000Z`); // Simplified ISO construction
 
-    // Simulate API submission
-    setSubmitted(true);
-    // In a real app, you'd send this to a backend API
+    try {
+      await eventService.submitResponse(eventId, {
+        name: guestName,
+        comment: guestComment,
+        slots: slotsAsIsoStrings, 
+      });
+      setSubmitted(true);
+    } catch (error) {
+      alert('Failed to submit response. Please try again.');
+    }
   };
 
   if (loading) {
