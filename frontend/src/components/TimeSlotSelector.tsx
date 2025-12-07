@@ -702,11 +702,9 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                                 aria-disabled={!selectable}
                                 data-date={date}
                                 data-hour={slot.startHour}
-                                style={{
-                                  backgroundColor: isSelected ? '#4CB5AB' : undefined
-                                }}
                                 className={`
                                   border-r border-b border-film-border w-16 h-12 box-border last:border-r-0 align-middle
+                                  ${isSelected ? 'bg-film-accent' : ''} /* Changed to use Tailwind class */
                                   ${!selectable
                                     ? 'bg-gray-100/50 cursor-not-allowed'
                                     : 'cursor-pointer transition-colors'
