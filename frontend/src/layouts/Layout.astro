@@ -37,8 +37,9 @@ const { title = 'AgreedTime' } = Astro.props;
 		
 		<header class="fixed top-0 left-0 w-full bg-paper z-40 border-b border-film-border shadow-sm">
 			<div class="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
-				<a href="/" class="flex items-center space-x-2">
-					<img src="/agreed-time-logo.svg" alt="AgreedTime Logo" class="h-8 sm:h-9" />
+				<a href="/" class="flex items-center gap-0 group">
+					<img src="/agreed-time-logo.svg" alt="AgreedTime Logo" class="h-8 w-8 sm:h-9 sm:w-9 transition-transform group-hover:scale-105" />
+					<span class="font-sans font-bold text-xl sm:text-2xl text-ink tracking-tight">AgreedTime</span>
 				</a>
 				<!-- Future: Mobile Menu Toggle / Auth Buttons -->
 				<nav>

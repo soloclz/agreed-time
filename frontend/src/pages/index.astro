@@ -3,16 +3,21 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Welcome to AgreedTime">
-	<main class="min-h-screen grid place-items-center bg-paper text-ink">
-		<div class="text-center space-y-6">
-			<h1 class="text-5xl font-bold font-serif">AgreedTime</h1>
-			<p class="text-xl font-sans text-ink/70">Modern scheduling made simple.</p>
-			<a 
-				href="/new" 
-				class="inline-block px-8 py-4 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg"
-			>
-				Create a New Event
-			</a>
+	<div class="min-h-[calc(100vh-4.5rem)] grid place-items-center bg-paper text-ink">
+		<div class="text-center space-y-8">
+			<img src="/agreed-time-logo.svg" alt="AgreedTime Logo" class="h-24 w-24 mx-auto" />
+			<p class="text-xl font-sans text-ink/70 max-w-md mx-auto leading-relaxed">
+				Modern scheduling made simple. <br/>
+				<span class="text-base text-ink/50">No signup required.</span>
+			</p>
+			<div class="pt-4">
+				<a 
+					href="/new" 
+					class="inline-block px-8 py-4 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-all duration-300 rounded-lg shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+				>
+					Create a New Event
+				</a>
+			</div>
 		</div>
-	</main>
+	</div>
 </Layout>
