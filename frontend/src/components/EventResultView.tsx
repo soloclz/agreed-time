@@ -21,9 +21,6 @@ const MOCK_EVENT_DATA: EventData = {
 };
 
 // Temporarily set to empty for empty state testing
-const MOCK_RESPONSES: Response[] = []; 
-// To test with data, uncomment the block below and comment out the empty array above
-/*
 const MOCK_RESPONSES: Response[] = [
   { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z'], comment: 'Prefer earlier' },
   { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z'], comment: 'Only Tuesdays' },
@@ -33,7 +30,6 @@ const MOCK_RESPONSES: Response[] = [
   { name: 'Frank', slots: ['2025-12-08T01:00:00.000Z', '2025-12-12T02:00:00.000Z'] },
   { name: 'Grace', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z'] },
 ];
-*/
 
 // Helper function to get the current timezone offset string (e.g., "GMT+8")
 function getTimezoneOffsetString(): string {
