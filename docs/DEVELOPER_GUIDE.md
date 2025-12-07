@@ -199,3 +199,25 @@ The Result Page now features a graphical heatmap visualization of participant av
     *   A hover tooltip detailing which participants are available for that specific slot.
     *   All interactive selection features (click, drag) are disabled.
 *   **Reusability**: By using `TimeGrid` and `TimeSlotCell`, the heatmap visualization benefits from the same robust grid layout and cell-level logic as the `TimeSlotSelector`, ensuring consistency and minimizing code duplication.
+
+---
+
+## 8. Data Layer & Services
+
+To prepare for future backend integration and maintain a clean separation of concerns, all data fetching and manipulation logic has been centralized.
+
+### 8.1 Event Service (`src/services/eventService.ts`)
+*   **Purpose**: Acts as the single source of truth for data operations. Components (like `EventGuestForm`, `EventResultView`) call methods on `eventService` rather than managing data fetching internally.
+*   **Methods**:
+    *   `getEvent(id)`: Retrieves event details.
+    *   `createEvent(...)`: Generates a new event with a unique ID and admin tokens.
+    *   `submitResponse(...)`: Saves a guest's availability.
+    *   `getEventResults(id)`: Retrieves aggregated results for an event.
+
+### 8.2 Mock Data Strategy (Current Phase)
+*   **In-Memory Store**: Currently, the service uses a simple JavaScript object (`eventsStore`, `responsesStore`) to store data during the session.
+*   **Persistence Limitation**: Because data is stored in memory, **refreshing the page (or hot-reloading) will clear all created events and responses**. This is expected behavior for the current prototype phase.
+*   **Transition Plan**: When the backend is ready, we will only need to update `eventService.ts` to make real API calls (e.g., using `fetch` or `axios`). The UI components will remain largely unchanged.
+
+### 8.3 Feature Deferral
+*   **Edit/Update**: Features like editing an event or modifying a guest response are intentionally deferred. These require robust authentication and state synchronization that are best implemented alongside a real database backend.
