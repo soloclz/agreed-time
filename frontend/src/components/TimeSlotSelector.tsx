@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import type { TimeSlot, HeatmapCellData } from '../types'; // Import HeatmapCellData
+import type { TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
+import TimeSlotCell from './TimeSlotCell';
+import TimeGrid from './TimeGrid';
 import {
   getTodayLocal,
   addDays,
-  parseLocalDate,
-  getFirstSunday,
-  getLastSaturday,
-  diffInDays,
-  formatDateDisplay,
   formatHour,
 } from '../utils/dateUtils';
 
@@ -17,27 +14,13 @@ interface TimeSlotSelectorProps {
   initialSlots?: TimeSlot[];
   availableSlots?: TimeSlot[]; // If provided, only these slots can be selected (Guest Mode)
   slotDuration?: number; // Duration in minutes (default: 60)
-  mode?: 'select' | 'heatmap'; // New: Mode for selector (select or heatmap)
-  heatmapData?: Record<string, HeatmapCellData>; // New: Data for heatmap display
-  totalParticipants?: number; // New: Total number of participants for heatmap intensity calculation
 }
-
-interface Week {
-  weekNumber: number;
-  startDate: Date;
-  dates: string[];
-}
-
-const MAX_WEEKS = 8;
 
 export default function TimeSlotSelector({ 
   onSlotsChange, 
   initialSlots = [], 
   availableSlots, 
   slotDuration = 60,
-  mode = 'select',
-  heatmapData = {},
-  totalParticipants = 0
 }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
@@ -93,7 +76,6 @@ export default function TimeSlotSelector({
   // Interaction state
   const isDragging = useRef(false);
   const dragMode = useRef<'select' | 'deselect'>('select');
-  const gridRef = useRef<HTMLDivElement>(null);
   const onSlotsChangeRef = useRef(onSlotsChange);
   const selectedCellsRef = useRef<Set<string>>(new Set());
   const longPressTimerRef = useRef<number | undefined>(undefined);
@@ -108,76 +90,12 @@ export default function TimeSlotSelector({
     selectedCellsRef.current = selectedCells;
   }, [selectedCells]);
 
-  // Generate weeks based on date range (timezone-safe)
-  const weeks = useMemo((): Week[] => {
-    if (!startDate || !endDate) return [];
-
-    const firstSundayStr = getFirstSunday(startDate);
-    const lastSaturdayStr = getLastSaturday(endDate);
-
-    const weeksArray: Week[] = [];
-    let currentDateStr = firstSundayStr;
-    let weekNum = 0;
-
-    while (currentDateStr <= lastSaturdayStr && weekNum < MAX_WEEKS) {
-      const weekDates: string[] = [];
-      for (let i = 0; i < 7; i++) {
-        weekDates.push(addDays(currentDateStr, i));
-      }
-      weeksArray.push({
-        weekNumber: weekNum,
-        startDate: parseLocalDate(currentDateStr),
-        dates: weekDates,
-      });
-      currentDateStr = addDays(currentDateStr, 7);
-      weekNum++;
-    }
-    return weeksArray;
-  }, [startDate, endDate]);
 
 
-  // Generate time slots based on slotDuration
-  const timeSlots = useMemo(() => {
-    const result: Array<{ startHour: number; endHour: number; label: string }> = [];
-    const durationInHours = slotDuration / 60;
 
-    let currentHour = startHour;
-    while (currentHour < endHour) {
-      const nextHour = Math.min(currentHour + durationInHours, endHour);
 
-      // Generate label
-      const startMinutes = Math.floor((currentHour % 1) * 60);
-      const endMinutes = Math.floor((nextHour % 1) * 60);
-      const startHourInt = Math.floor(currentHour);
-      const endHourInt = Math.floor(nextHour);
 
-      const startLabel = `${String(startHourInt).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
-      const endLabel = `${String(endHourInt).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
 
-      result.push({
-        startHour: currentHour,
-        endHour: nextHour,
-        label: `${startLabel}-${endLabel}`,
-      });
-
-      currentHour = nextHour;
-    }
-
-    return result;
-  }, [startHour, endHour, slotDuration]);
-
-  // Validate date range
-  const dateRangeError = useMemo(() => {
-    if (!startDate || !endDate) return null;
-
-    if (endDate < startDate) return 'End date cannot be before start date';
-
-    const days = diffInDays(startDate, endDate);
-    const diffWeeks = Math.ceil(days / 7);
-
-    if (diffWeeks > MAX_WEEKS) return `Date range cannot exceed ${MAX_WEEKS} weeks`;
-    return null;
-  }, [startDate, endDate]);
 
   // Initialize
   useEffect(() => {
@@ -226,12 +144,6 @@ export default function TimeSlotSelector({
   };
 
   const isSlotSelectable = (date: string, hour: number): boolean => {
-    // Read-only in heatmap mode
-    if (mode === 'heatmap') return false;
-
-    // 1. Basic range check
-    if (!isDateInRange(date)) return false;
-
     // 2. Guest Mode check: If availableSlots is provided, slot MUST be in it
     if (availableSlots && availableSlots.length > 0) {
       const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
@@ -251,9 +163,7 @@ export default function TimeSlotSelector({
     return selectedCells.has(getCellKey(date, startTime, endTime));
   };
 
-  const isDateInRange = (dateStr: string): boolean => {
-    return dateStr >= startDate && dateStr <= endDate;
-  };
+
 
   const toggleCell = (date: string, hour: number) => {
     if (!isSlotSelectable(date, hour)) return;
@@ -287,13 +197,22 @@ export default function TimeSlotSelector({
     });
   };
 
-  // Header Click Handler (Select/Deselect Day)
   const handleHeaderClick = (date: string) => {
-    if (mode === 'heatmap') return;
-    if (!isDateInRange(date)) return;
+    // Recalculate timeSlots for this day, as TimeGrid now owns the main timeSlots array
+    const timeSlotsForDay: Array<{ startHour: number; endHour: number; label: string }> = [];
+    const durationInHours = slotDuration / 60;
+    let currentHour = startHour;
+    while (currentHour < endHour) {
+      const nextHour = Math.min(currentHour + durationInHours, endHour);
+      timeSlotsForDay.push({
+        startHour: currentHour,
+        endHour: nextHour,
+        label: '' // Label not needed for this logic
+      });
+      currentHour = nextHour;
+    }
 
-    // Filter slots that are actually selectable
-    const selectableSlots = timeSlots.filter(slot => isSlotSelectable(date, slot.startHour));
+    const selectableSlots = timeSlotsForDay.filter(slot => isSlotSelectable(date, slot.startHour));
     if (selectableSlots.length === 0) return;
 
     const allCellsInColumn = selectableSlots.map(slot => {
@@ -307,7 +226,8 @@ export default function TimeSlotSelector({
       if (allSelected) {
         // Deselect all
         allCellsInColumn.forEach(key => newSet.delete(key));
-      } else {
+      }
+      else {
         // Select all
         allCellsInColumn.forEach(key => newSet.add(key));
       }
@@ -317,9 +237,7 @@ export default function TimeSlotSelector({
 
   // Interaction Handlers
   const handleMouseDown = (e: React.MouseEvent, date: string, hour: number) => {
-    if (mode === 'heatmap') return;
     if (e.button !== 0) return; // Only left click
-    if (!isDateInRange(date)) return;
 
     e.preventDefault(); // Prevent text selection
     isDragging.current = true;
@@ -330,8 +248,8 @@ export default function TimeSlotSelector({
   };
 
   const handleMouseEnter = (date: string, hour: number) => {
-    if (mode === 'heatmap') return;
-    if (isDragging.current && isDateInRange(date)) {
+    // `isDateInRange` check implicitly handled by `isSlotSelectable`
+    if (isDragging.current) {
       setCell(date, hour, dragMode.current === 'select');
     }
   };
@@ -340,11 +258,8 @@ export default function TimeSlotSelector({
     isDragging.current = false;
   };
 
-  // Native Touch Event Handlers with { passive: false }
   useEffect(() => {
-    if (mode === 'heatmap') return;
-
-    const grid = gridRef.current;
+    const grid = document.querySelector('.time-grid-scroll-area'); // Target the scrollable area of TimeGrid
     if (!grid) return;
 
     // Helper to check selection using the ref (fresh state)
@@ -354,8 +269,9 @@ export default function TimeSlotSelector({
       return selectedCellsRef.current.has(key);
     };
 
-    const handleNativeTouchStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement;
+    const handleNativeTouchStart = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      const target = touchEvent.target as HTMLElement;
       const td = target.closest('td');
       if (!td) return;
 
@@ -364,7 +280,7 @@ export default function TimeSlotSelector({
       if (!date || !hourStr) return;
       
       // Record start position for scroll detection
-      const touch = e.touches[0];
+      const touch = touchEvent.touches[0];
       touchStartPositionRef.current = { x: touch.clientX, y: touch.clientY };
 
       // Clear any existing timer
@@ -375,7 +291,6 @@ export default function TimeSlotSelector({
       // Start Long Press Timer (500ms)
       longPressTimerRef.current = window.setTimeout(() => {
         const hour = parseFloat(hourStr);
-        if (!isDateInRange(date)) return;
 
         // Long press confirmed: Enter drag mode
         isDragging.current = true;
@@ -391,8 +306,9 @@ export default function TimeSlotSelector({
       }, 500);
     };
 
-    const handleNativeTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
+    const handleNativeTouchMove = (e: Event) => {
+      const touchEvent = e as TouchEvent;
+      const touch = touchEvent.touches[0];
       
       // Check if user is scrolling (moved significantly before long press fired)
       if (touchStartPositionRef.current && !isDragging.current) {
@@ -424,20 +340,18 @@ export default function TimeSlotSelector({
 
           if (date && hourStr) {
             const hour = parseFloat(hourStr);
-            if (isDateInRange(date)) {
-              const currentSelected = isCellSelectedFresh(date, hour);
-              const shouldSelect = dragMode.current === 'select';
+            const currentSelected = isCellSelectedFresh(date, hour);
+            const shouldSelect = dragMode.current === 'select';
 
-              if (currentSelected !== shouldSelect) {
-                setCell(date, hour, shouldSelect);
-              }
+            if (currentSelected !== shouldSelect) {
+              setCell(date, hour, shouldSelect);
             }
           }
         }
       }
     };
 
-    const handleNativeTouchEnd = () => {
+    const handleNativeTouchEnd = (_e: Event) => {
       // Cancel timer if finger lifted early (tap)
       if (longPressTimerRef.current) {
         window.clearTimeout(longPressTimerRef.current);
@@ -458,20 +372,11 @@ export default function TimeSlotSelector({
       grid.removeEventListener('touchmove', handleNativeTouchMove);
       grid.removeEventListener('touchend', handleNativeTouchEnd);
     };
-  }, [startDate, endDate, mode]);
+  }, [startDate, endDate]); // `mode` removed from dependencies // removed `mode` from dependencies
 
-  // Global mouse up listener
-  useEffect(() => {
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, []);
 
-  // Format helpers
-  const formatWeekRange = (week: Week): string => {
-    const start = parseLocalDate(week.dates[0]);
-    const end = parseLocalDate(week.dates[6]);
-    return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
-  };
+
+
 
   // Group selected slots
   const selectedSlotsByDate = useMemo(() => {
@@ -495,337 +400,296 @@ export default function TimeSlotSelector({
     return grouped;
   }, [selectedCells]);
 
-  if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
+    if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
-  return (
-    <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
-      <div>
-        <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
-            {mode === 'heatmap' ? 'Availability Heatmap' : 'Select Your Available Time Slots'}
-        </h3>
-        <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
-            {mode === 'heatmap' ? (
-                'Darker red indicates more people are available.'
-            ) : (
-                <>
-                <span className="md:hidden">
-                    Long press & drag to select.
-                </span>
-                <span className="hidden md:inline">
-                    Click and drag to select time slots, or click date headers to select a full day.
-                </span>
-                </>
-            )}
-        </p>
-      </div>
+  
 
-      {!availableSlots && (
-        <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex-1">
-                  <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
-                  <input
-                    id="startDate"
-                    name="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-                    title="Start date"
-                  />
-                </div>
-                <span className="text-ink font-bold text-center hidden sm:block">→</span>
-                <div className="flex-1">
-                  <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
-                  <input
-                    id="endDate"
-                    name="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-                    title="End date"
-                  />
-                </div>
-              </div>
-              {dateRangeError && (
-                <p className="text-xs text-red-600 mt-2 font-mono font-bold">{dateRangeError}</p>
-              )}
-            </div>
+    return (
 
-            <div>
-              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex-1">
-                  <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
-                  <select
-                    id="startHour"
-                    name="startHour"
-                    value={startHour}
-                    onChange={(e) => setStartHour(parseInt(e.target.value))}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-                    title="Start hour"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{formatHour(i)}</option>
-                    ))}
-                  </select>
-                </div>
-                <span className="text-ink font-bold text-center hidden sm:block">→</span>
-                <div className="flex-1">
-                  <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
-                  <select
-                    id="endHour"
-                    name="endHour"
-                    value={endHour}
-                    onChange={(e) => setEndHour(parseInt(e.target.value))}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-                    title="End hour"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{formatHour(i)}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
+
+        <div>
+
+          <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
+
+              Select Your Available Time Slots
+
+          </h3>
+
+          <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
+
+              <>
+
+              <span className="md:hidden">
+
+                  Long press & drag to select.
+
+              </span>
+
+              <span className="hidden md:inline">
+
+                  Click and drag to select time slots, or click date headers to select a full day.
+
+              </span>
+
+              </>
+
+          </p>
+
         </div>
-      )}
 
-      {mode === 'select' && (
-        <TimeSlotBottomPanel
-            selectedCells={selectedCells}
-            selectedSlotsByDate={selectedSlotsByDate}
-            onRemoveSlot={removeSlot}
-            onClearAll={() => {
-            setSelectedCells(new Set());
-            setShowBottomPanel(false);
-            }}
-            showBottomPanel={showBottomPanel}
-            onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
-        />
-      )}
+  
 
-      {weeks.length > 1 && (
-        <div className="flex items-center justify-between font-mono text-xs sm:text-sm gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (gridRef.current) {
-                gridRef.current.scrollBy({ left: -800, behavior: 'smooth' });
-              }
-            }}
-            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
-            aria-label="Scroll to previous week"
-          >
-            ← <span className="hidden sm:inline">PREV</span>
-          </button>
-          <span className="text-ink font-bold text-xs sm:text-sm">
-            {weeks.length} {weeks.length === 1 ? 'WEEK' : 'WEEKS'}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              if (gridRef.current) {
-                gridRef.current.scrollBy({ left: 800, behavior: 'smooth' });
-              }
-            }}
-            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
-            aria-label="Scroll to next week"
-          >
-            <span className="hidden sm:inline">NEXT</span> →
-          </button>
-        </div>
-      )}
+        {!availableSlots && (
 
-      {!dateRangeError && (
-        <div className="flex border border-film-border bg-paper relative overflow-hidden rounded-sm">
-          {/* Left: Fixed Time Column */}
-          <div className="flex-shrink-0 z-30 bg-paper border-r border-film-border shadow-sm">
-            {/* Placeholder for Week Title alignment */}
-            <div className="bg-paper px-3 py-3 text-sm font-serif font-bold text-transparent border-b border-film-border tracking-wide select-none">
-              &nbsp;
-            </div>
-            <table className="border-collapse">
-              <thead>
-                <tr>
-                  <th className="border-b border-film-border bg-paper px-3 text-xs font-mono font-bold text-ink h-12 box-border align-middle">
-                    TIME
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {timeSlots.map((slot, index) => (
-                  <tr key={index}>
-                    <th className="border-b border-film-border bg-paper px-3 text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-middle">
-                      {slot.label}
-                    </th>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
 
-          {/* Right: Scrollable Grid */}
-          <div
-            ref={gridRef}
-            className="overflow-x-auto flex-1"
-          >
-            <div className="flex">
-              {weeks.map((week, weekIndex) => (
-                <div
-                  key={week.weekNumber}
-                  className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l border-film-border' : ''}`}
-                >
-                  <div className="bg-paper px-4 py-3 text-sm font-serif font-bold text-ink border-b border-film-border tracking-wide whitespace-nowrap">
-                    WEEK {week.weekNumber + 1}: {formatWeekRange(week)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+              <div>
+
+                <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+                  <div className="flex-1">
+
+                    <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
+
+                    <input
+
+                      id="startDate"
+
+                      name="startDate"
+
+                      type="date"
+
+                      value={startDate}
+
+                      onChange={(e) => setStartDate(e.target.value)}
+
+                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+
+                      title="Start date"
+
+                    />
+
                   </div>
 
-                  <table className="border-collapse">
-                    <thead>
-                      <tr>
-                        {week.dates.map(date => {
-                          const inRange = isDateInRange(date);
-                          return (
-                            <th
-                              key={date}
-                              className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
-                            >
-                              {inRange ? (
-                                <button
-                                  type="button"
-                                  className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
-                                  onClick={() => handleHeaderClick(date)}
-                                  aria-label={`Toggle selection for ${date}`}
-                                >
-                                  {formatDateDisplay(date)}
-                                </button>
-                              ) : (
-                                <div className="w-full h-full px-4 flex items-center justify-center">
-                                  {formatDateDisplay(date)}
-                                </div>
-                              )}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timeSlots.map((slot, slotIndex) => (
-                        <tr key={slotIndex}>
-                          {week.dates.map(date => {
-                            const { startTime, endTime } = getTimeSlotFromHour(slot.startHour, slotDuration);
-                            const key = getCellKey(date, startTime, endTime);
-                            
-                            // Selection Mode Logic
-                            const isSelected = isCellSelected(date, slot.startHour);
-                            const selectable = isSlotSelectable(date, slot.startHour);
+                  <span className="text-ink font-bold text-center hidden sm:block">→</span>
 
-                            // Heatmap Mode Logic
-                            const cellData = heatmapData ? heatmapData[key] : undefined;
-                            const count = cellData?.count || 0;
-                            
-                            // Calculate opacity with a non-linear scale for smoother perception
-                            // 1. Get raw ratio (0 to 1)
-                            const rawRatio = totalParticipants > 0 ? count / totalParticipants : 0;
-                            
-                            // 2. Apply power curve (power < 1 boosts lower values, making differences more visible)
-                            //    e.g. 0.2^0.6 ≈ 0.38, 0.5^0.6 ≈ 0.66, 0.8^0.6 ≈ 0.87
-                            const scaledOpacity = Math.pow(rawRatio, 0.6);
+                  <div className="flex-1">
 
-                            // 3. Ensure minimum visibility for any non-zero count (e.g. 0.15)
-                            //    and cap at 1.0
-                            const finalOpacity = count > 0 
-                                ? Math.min(1, Math.max(0.15, scaledOpacity)) 
-                                : 0;
-                                
-                            const hasVotes = count > 0;
+                    <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
 
-                            return (
-                              <td
-                                key={`${date}_${slotIndex}`}
-                                role="gridcell"
-                                aria-selected={isSelected}
-                                aria-disabled={!selectable}
-                                data-date={date}
-                                data-hour={slot.startHour}
-                                className={`
-                                  relative group
-                                  border-r border-b border-film-border w-16 h-12 box-border last:border-r-0 align-middle
-                                  ${mode === 'select' ? (
-                                    isSelected ? 'bg-film-accent' : 
-                                    !selectable ? 'bg-gray-100/50 cursor-not-allowed pattern-diagonal-lines opacity-50' : 
-                                    'cursor-pointer transition-colors bg-film-light hover:bg-white active:bg-white'
-                                  ) : (
-                                     // Heatmap mode base style
-                                     'transition-colors'
-                                  )}
-                                `}
-                                style={mode === 'heatmap' ? {
-                                    backgroundColor: hasVotes ? `rgba(225, 29, 72, ${finalOpacity})` : 'transparent'
-                                } : undefined}
-                                onMouseDown={(e) => selectable && handleMouseDown(e, date, slot.startHour)}
-                                onMouseEnter={() => selectable && handleMouseEnter(date, slot.startHour)}
-                                onMouseUp={handleMouseUp}
-                              >
-                                {mode === 'heatmap' && hasVotes && (
-                                    <>
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <span className={`text-xs font-bold ${finalOpacity > 0.6 ? 'text-white' : 'text-film-accent'}`}>
-                                                {count}
-                                            </span>
-                                        </div>
-                                        {/* Tooltip */}
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-[200px] bg-ink text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none shadow-lg">
-                                            <div className="font-bold mb-1">{date} @ {slot.label}</div>
-                                            <div className="text-white/80 whitespace-normal">
-                                                {cellData?.attendees.join(', ')}
-                                            </div>
-                                            {/* Arrow */}
-                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-ink"></div>
-                                        </div>
-                                    </>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    <input
+
+                      id="endDate"
+
+                      name="endDate"
+
+                      type="date"
+
+                      value={endDate}
+
+                      onChange={(e) => setEndDate(e.target.value)}
+
+                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+
+                      title="End date"
+
+                    />
+
+                  </div>
+
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {mode === 'select' && (
+              </div>
+
+  
+
+              <div>
+
+                <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+                  <div className="flex-1">
+
+                    <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
+
+                    <select
+
+                      id="startHour"
+
+                      name="startHour"
+
+                      value={startHour}
+
+                      onChange={(e) => setStartHour(parseInt(e.target.value))}
+
+                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+
+                      title="Start hour"
+
+                    >
+
+                      {Array.from({ length: 24 }, (_, i) => (
+
+                        <option key={i} value={i}>{formatHour(i)}</option>
+
+                      ))}
+
+                    </select>
+
+                  </div>
+
+                  <span className="text-ink font-bold text-center hidden sm:block">→</span>
+
+                  <div className="flex-1">
+
+                    <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
+
+                    <select
+
+                      id="endHour"
+
+                      name="endHour"
+
+                      value={endHour}
+
+                      onChange={(e) => setEndHour(parseInt(e.target.value))}
+
+                      className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+
+                      title="End hour"
+
+                    >
+
+                      {Array.from({ length: 24 }, (_, i) => (
+
+                        <option key={i} value={i}>{formatHour(i)}</option>
+
+                      ))}
+
+                    </select>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
+  
+
+        <TimeSlotBottomPanel
+
+            selectedCells={selectedCells}
+
+            selectedSlotsByDate={selectedSlotsByDate}
+
+            onRemoveSlot={removeSlot}
+
+            onClearAll={() => {
+
+            setSelectedCells(new Set());
+
+            setShowBottomPanel(false);
+
+            }}
+
+            showBottomPanel={showBottomPanel}
+
+            onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
+
+        />
+
+        
+
+        <TimeGrid
+
+          startDate={startDate}
+
+          endDate={endDate}
+
+          startHour={startHour}
+
+          endHour={endHour}
+
+          slotDuration={slotDuration}
+
+          onMouseDown={handleMouseDown}
+
+          onMouseEnter={handleMouseEnter}
+
+          onMouseUp={handleMouseUp}
+
+          renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
+
+            <TimeSlotCell
+
+              key={key}
+
+              date={date}
+
+              hour={hour}
+
+              slotLabel={slotLabel}
+
+              mode="select"
+
+              isSelected={isCellSelected(date, hour)}
+
+              isSelectable={isSlotSelectable(date, hour)}
+
+              onMouseDown={onMouseDownGrid}
+
+              onMouseEnter={onMouseEnterGrid}
+
+              onMouseUp={onMouseUpGrid}
+
+            />
+
+          )}
+
+          renderDateHeader={(date, defaultHeader) => (
+
+              <button
+
+                  type="button"
+
+                  className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
+
+                  onClick={() => handleHeaderClick(date)}
+
+                  aria-label={`Toggle selection for ${date}`}
+
+              >
+
+                  {defaultHeader}
+
+              </button>
+
+          )}
+
+        />
+
+  
+
         <div className="text-xs text-gray-500 font-mono">
+
             <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+
         </div>
-      )}
-       
-       {mode === 'heatmap' && (
-        <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60">
-            <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div> {/* Approx opacity for 25% participation */}
-                <span>Few</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.83)]"></div> {/* Approx opacity for 75% participation */}
-                <span>Most</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,1.0)]"></div> {/* Full opacity for 100% participation */}
-                <span>All ({totalParticipants})</span>
-            </div>
-        </div>
-       )}
-    </div>
-  );
-}
+
+      </div>
+
+    );
+
+  }
