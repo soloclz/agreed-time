@@ -1,17 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import type { TimeSlot } from '../types';
+import type { TimeSlot, HeatmapCellData } from '../types'; // Import HeatmapCellData
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import {
   getTodayLocal,
   addDays,
   parseLocalDate,
-  formatLocalDate,
   getFirstSunday,
   getLastSaturday,
   diffInDays,
   formatDateDisplay,
   formatHour,
-  formatHourTime,
 } from '../utils/dateUtils';
 
 interface TimeSlotSelectorProps {
@@ -19,6 +17,9 @@ interface TimeSlotSelectorProps {
   initialSlots?: TimeSlot[];
   availableSlots?: TimeSlot[]; // If provided, only these slots can be selected (Guest Mode)
   slotDuration?: number; // Duration in minutes (default: 60)
+  mode?: 'select' | 'heatmap'; // New: Mode for selector (select or heatmap)
+  heatmapData?: Record<string, HeatmapCellData>; // New: Data for heatmap display
+  totalParticipants?: number; // New: Total number of participants for heatmap intensity calculation
 }
 
 interface Week {
@@ -29,7 +30,15 @@ interface Week {
 
 const MAX_WEEKS = 8;
 
-export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], availableSlots, slotDuration = 60 }: TimeSlotSelectorProps) {
+export default function TimeSlotSelector({ 
+  onSlotsChange, 
+  initialSlots = [], 
+  availableSlots, 
+  slotDuration = 60,
+  mode = 'select',
+  heatmapData = {},
+  totalParticipants = 0
+}: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
 
@@ -217,6 +226,9 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   };
 
   const isSlotSelectable = (date: string, hour: number): boolean => {
+    // Read-only in heatmap mode
+    if (mode === 'heatmap') return false;
+
     // 1. Basic range check
     if (!isDateInRange(date)) return false;
 
@@ -277,6 +289,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   // Header Click Handler (Select/Deselect Day)
   const handleHeaderClick = (date: string) => {
+    if (mode === 'heatmap') return;
     if (!isDateInRange(date)) return;
 
     // Filter slots that are actually selectable
@@ -304,6 +317,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   // Interaction Handlers
   const handleMouseDown = (e: React.MouseEvent, date: string, hour: number) => {
+    if (mode === 'heatmap') return;
     if (e.button !== 0) return; // Only left click
     if (!isDateInRange(date)) return;
 
@@ -316,6 +330,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   };
 
   const handleMouseEnter = (date: string, hour: number) => {
+    if (mode === 'heatmap') return;
     if (isDragging.current && isDateInRange(date)) {
       setCell(date, hour, dragMode.current === 'select');
     }
@@ -327,6 +342,8 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
 
   // Native Touch Event Handlers with { passive: false }
   useEffect(() => {
+    if (mode === 'heatmap') return;
+
     const grid = gridRef.current;
     if (!grid) return;
 
@@ -420,7 +437,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
       }
     };
 
-    const handleNativeTouchEnd = (e: TouchEvent) => {
+    const handleNativeTouchEnd = () => {
       // Cancel timer if finger lifted early (tap)
       if (longPressTimerRef.current) {
         window.clearTimeout(longPressTimerRef.current);
@@ -441,7 +458,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
       grid.removeEventListener('touchmove', handleNativeTouchMove);
       grid.removeEventListener('touchend', handleNativeTouchEnd);
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, mode]);
 
   // Global mouse up listener
   useEffect(() => {
@@ -483,14 +500,22 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
       <div>
-        <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">Select Your Available Time Slots</h3>
+        <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
+            {mode === 'heatmap' ? 'Availability Heatmap' : 'Select Your Available Time Slots'}
+        </h3>
         <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
-          <span className="md:hidden">
-            Long press & drag to select.
-          </span>
-          <span className="hidden md:inline">
-            Click and drag to select time slots, or click date headers to select a full day.
-          </span>
+            {mode === 'heatmap' ? (
+                'Darker red indicates more people are available.'
+            ) : (
+                <>
+                <span className="md:hidden">
+                    Long press & drag to select.
+                </span>
+                <span className="hidden md:inline">
+                    Click and drag to select time slots, or click date headers to select a full day.
+                </span>
+                </>
+            )}
         </p>
       </div>
 
@@ -571,17 +596,19 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
         </div>
       )}
 
-      <TimeSlotBottomPanel
-        selectedCells={selectedCells}
-        selectedSlotsByDate={selectedSlotsByDate}
-        onRemoveSlot={removeSlot}
-        onClearAll={() => {
-          setSelectedCells(new Set());
-          setShowBottomPanel(false);
-        }}
-        showBottomPanel={showBottomPanel}
-        onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
-      />
+      {mode === 'select' && (
+        <TimeSlotBottomPanel
+            selectedCells={selectedCells}
+            selectedSlotsByDate={selectedSlotsByDate}
+            onRemoveSlot={removeSlot}
+            onClearAll={() => {
+            setSelectedCells(new Set());
+            setShowBottomPanel(false);
+            }}
+            showBottomPanel={showBottomPanel}
+            onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
+        />
+      )}
 
       {weeks.length > 1 && (
         <div className="flex items-center justify-between font-mono text-xs sm:text-sm gap-2">
@@ -691,8 +718,32 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                       {timeSlots.map((slot, slotIndex) => (
                         <tr key={slotIndex}>
                           {week.dates.map(date => {
+                            const { startTime, endTime } = getTimeSlotFromHour(slot.startHour, slotDuration);
+                            const key = getCellKey(date, startTime, endTime);
+                            
+                            // Selection Mode Logic
                             const isSelected = isCellSelected(date, slot.startHour);
                             const selectable = isSlotSelectable(date, slot.startHour);
+
+                            // Heatmap Mode Logic
+                            const cellData = heatmapData ? heatmapData[key] : undefined;
+                            const count = cellData?.count || 0;
+                            
+                            // Calculate opacity with a non-linear scale for smoother perception
+                            // 1. Get raw ratio (0 to 1)
+                            const rawRatio = totalParticipants > 0 ? count / totalParticipants : 0;
+                            
+                            // 2. Apply power curve (power < 1 boosts lower values, making differences more visible)
+                            //    e.g. 0.2^0.6 ≈ 0.38, 0.5^0.6 ≈ 0.66, 0.8^0.6 ≈ 0.87
+                            const scaledOpacity = Math.pow(rawRatio, 0.6);
+
+                            // 3. Ensure minimum visibility for any non-zero count (e.g. 0.15)
+                            //    and cap at 1.0
+                            const finalOpacity = count > 0 
+                                ? Math.min(1, Math.max(0.15, scaledOpacity)) 
+                                : 0;
+                                
+                            const hasVotes = count > 0;
 
                             return (
                               <td
@@ -703,25 +754,43 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
                                 data-date={date}
                                 data-hour={slot.startHour}
                                 className={`
+                                  relative group
                                   border-r border-b border-film-border w-16 h-12 box-border last:border-r-0 align-middle
-                                  ${isSelected ? 'bg-film-accent' : ''} /* Changed to use Tailwind class */
-                                  ${!selectable
-                                    ? 'bg-gray-100/50 cursor-not-allowed'
-                                    : 'cursor-pointer transition-colors'
-                                  }
-                                  ${selectable && !isSelected
-                                    ? 'bg-film-light hover:bg-white active:bg-white'
-                                    : ''
-                                  }
-                                  ${!selectable && !isSelected
-                                    ? 'pattern-diagonal-lines opacity-50'
-                                    : ''
-                                  }
+                                  ${mode === 'select' ? (
+                                    isSelected ? 'bg-film-accent' : 
+                                    !selectable ? 'bg-gray-100/50 cursor-not-allowed pattern-diagonal-lines opacity-50' : 
+                                    'cursor-pointer transition-colors bg-film-light hover:bg-white active:bg-white'
+                                  ) : (
+                                     // Heatmap mode base style
+                                     'transition-colors'
+                                  )}
                                 `}
+                                style={mode === 'heatmap' ? {
+                                    backgroundColor: hasVotes ? `rgba(225, 29, 72, ${finalOpacity})` : 'transparent'
+                                } : undefined}
                                 onMouseDown={(e) => selectable && handleMouseDown(e, date, slot.startHour)}
                                 onMouseEnter={() => selectable && handleMouseEnter(date, slot.startHour)}
                                 onMouseUp={handleMouseUp}
-                              />
+                              >
+                                {mode === 'heatmap' && hasVotes && (
+                                    <>
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <span className={`text-xs font-bold ${finalOpacity > 0.6 ? 'text-white' : 'text-film-accent'}`}>
+                                                {count}
+                                            </span>
+                                        </div>
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-[200px] bg-ink text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none shadow-lg">
+                                            <div className="font-bold mb-1">{date} @ {slot.label}</div>
+                                            <div className="text-white/80 whitespace-normal">
+                                                {cellData?.attendees.join(', ')}
+                                            </div>
+                                            {/* Arrow */}
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-ink"></div>
+                                        </div>
+                                    </>
+                                )}
+                              </td>
                             );
                           })}
                         </tr>
@@ -735,9 +804,28 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
         </div>
       )}
 
-      <div className="text-xs text-gray-500 font-mono">
-        <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
-      </div>
+      {mode === 'select' && (
+        <div className="text-xs text-gray-500 font-mono">
+            <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+        </div>
+      )}
+       
+       {mode === 'heatmap' && (
+        <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60">
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div> {/* Approx opacity for 25% participation */}
+                <span>Few</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.83)]"></div> {/* Approx opacity for 75% participation */}
+                <span>Most</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,1.0)]"></div> {/* Full opacity for 100% participation */}
+                <span>All ({totalParticipants})</span>
+            </div>
+        </div>
+       )}
     </div>
   );
 }
