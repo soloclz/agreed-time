@@ -35,8 +35,8 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
       const endTime = format(addMinutes(dateObj, 60), 'HH:mm');
       const hour = dateObj.getHours();
 
-      currentMinDate = Math.min(currentMinDate.localeCompare(dateStr), 0) === 0 ? currentMinDate : dateStr;
-      currentMaxDate = Math.max(currentMaxDate.localeCompare(dateStr), 0) === 0 ? currentMaxDate : dateStr;
+      if (dateStr < currentMinDate) currentMinDate = dateStr;
+      if (dateStr > currentMaxDate) currentMaxDate = dateStr;
       currentMinHour = Math.min(currentMinHour, hour);
       currentMaxHour = Math.max(currentMaxHour, hour);
       
