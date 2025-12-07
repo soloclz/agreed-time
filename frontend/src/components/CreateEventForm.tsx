@@ -87,7 +87,7 @@ export default function CreateEventForm() {
 
   if (eventCreationResult) {
     const guestLink = `${window.location.origin}/event/${eventCreationResult.eventId}`;
-    const adminLink = `${window.location.origin}/event/${eventCreationResult.eventId}/manage?token=${eventCreationResult.adminToken}`;
+    const adminLink = `${window.location.origin}/event/${eventCreationResult.eventId}/result?token=${eventCreationResult.adminToken}`;
     const resultLink = `${window.location.origin}/event/${eventCreationResult.eventId}/result`;
 
     return (
