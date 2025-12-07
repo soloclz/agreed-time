@@ -68,4 +68,48 @@ We follow the **[Conventional Commits](https://www.conventionalcommits.org/)** s
 2.  **Build for Production**: `npm run build`
 3.  **Preview Build**: `npm run preview`
 
-For detailed product specifications, see [PRODUCT_SPEC.md](./PRODUCT_SPEC.md).
+---
+
+## 5. Event Access and Management Strategy
+
+This section outlines the planned approach for managing access to event pages, balancing ease-of-use with necessary security and privacy considerations, especially before a full user authentication system is in place.
+
+### 5.1 User Flows & Page Roles
+
+*   **Create Event Page (`/new`)**:
+    *   Allows users (organizers) to define event details and availability.
+    *   Upon successful creation, an event ID (`:id`) is generated.
+*   **Guest Submission Page (`/event/:id`)**:
+    *   Accessible via a public invitation link.
+    *   Allows attendees to submit their available time slots and optional comments.
+*   **Event Result Page (`/event/:id/result`)**:
+    *   Displays aggregated availability, best time recommendations, and participant responses.
+    *   **Core Vision**: To evolve into a heatmap visualization of time slot intersections. Initially, it will provide a list-based summary.
+
+### 5.2 Access Control Mechanism (Hybrid Model)
+
+To provide a balance between frictionless anonymous usage and future member-based management, a hybrid access control model will be implemented:
+
+1.  **Public Event ID (`:id`)**:
+    *   Generated for every event.
+    *   Used for public-facing links, primarily the Guest Submission Page (`/event/:id`).
+    *   The Event Result Page (`/event/:id/result`) may or may not be publicly accessible, depending on the organizer's privacy preference (defaulting to publicly viewable results for ease of sharing).
+
+2.  **`adminToken` (Long Secret String)**:
+    *   A unique, long, and unguessable token (e.g., UUID) generated upon event creation.
+    *   **Purpose**: Provides direct, secret-link-based access to event management features (e.g., `event/:id/manage?token=adminToken`) without requiring a login. This is primarily for **anonymous organizers**.
+    *   **Usage**: The organizer saves this link or its token to re-access full management capabilities.
+
+3.  **`secureCode` (Short, 6-Digit Code)**:
+    *   A short, memorable alphanumeric code generated upon event creation.
+    *   **Purpose**: Serves as a recovery or "claiming" mechanism, primarily for **anonymous organizers**.
+    *   **Usage**:
+        *   **Recovery**: If an organizer loses their `adminToken` link, they can use the Event ID and `secureCode` to regain access to management features (e.g., via a "Lookup" page).
+        *   **Claiming (Future)**: When a user registers an account, they can "claim" ownership of an existing event by providing its Event ID and `secureCode`, associating it with their user account.
+
+### 5.3 Initial Implementation & Future Enhancements
+
+*   **Current State**: Events are created anonymously.
+*   **Initial Display on Event Creation Success**: The system will present both the public Guest Link and the Admin Link (containing the `adminToken`). The `secureCode` will also be displayed with instructions to save it.
+*   **Future - Member Integration**: Once a user authentication system is in place, if an event is created by a logged-in member, the `adminToken` and `secureCode` will still be generated but may not be explicitly shown to the user (as their account login provides management access). Members will manage events from a personalized dashboard.
+*   **Future - "Claim Event" Feature**: A dedicated interface for members to link existing events to their accounts using the `secureCode`.
