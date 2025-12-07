@@ -17,6 +17,7 @@ import {
 interface TimeSlotSelectorProps {
   onSlotsChange?: (slots: TimeSlot[]) => void;
   initialSlots?: TimeSlot[];
+  availableSlots?: Set<string>; // If provided, only these slots can be selected (Guest Mode)
 }
 
 interface Week {
@@ -27,7 +28,7 @@ interface Week {
 
 const MAX_WEEKS = 8;
 
-export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: TimeSlotSelectorProps) {
+export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], availableSlots }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
 
@@ -150,6 +151,20 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
 
   const getCellKey = (date: string, hour: number): string => `${date}_${hour}`;
 
+  const isSlotSelectable = (date: string, hour: number): boolean => {
+    // 1. Basic range check
+    if (!isDateInRange(date)) return false;
+
+    // 2. Guest Mode check: If availableSlots is provided, slot MUST be in it
+    if (availableSlots) {
+      const key = getCellKey(date, hour);
+      return availableSlots.has(key);
+    }
+
+    // 3. Organizer Mode: All range-valid slots are selectable
+    return true;
+  };
+
   const isCellSelected = (date: string, hour: number): boolean => {
     return selectedCells.has(getCellKey(date, hour));
   };
@@ -159,7 +174,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   };
 
   const toggleCell = (date: string, hour: number) => {
-    if (!isDateInRange(date)) return;
+    if (!isSlotSelectable(date, hour)) return;
     const key = getCellKey(date, hour);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
@@ -170,7 +185,7 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   };
 
   const setCell = (date: string, hour: number, selected: boolean) => {
-    if (!isDateInRange(date)) return;
+    if (!isSlotSelectable(date, hour)) return;
     const key = getCellKey(date, hour);
     setSelectedCells(prev => {
       const newSet = new Set(prev);
@@ -192,7 +207,11 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
   const handleHeaderClick = (date: string) => {
     if (!isDateInRange(date)) return;
 
-    const allCellsInColumn = hours.map(hour => getCellKey(date, hour));
+    // Filter slots that are actually selectable
+    const selectableHours = hours.filter(hour => isSlotSelectable(date, hour));
+    if (selectableHours.length === 0) return;
+
+    const allCellsInColumn = selectableHours.map(hour => getCellKey(date, hour));
     const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
 
     setSelectedCells(prev => {
@@ -591,28 +610,36 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [] }: T
                         <tr key={hour}>
                           {week.dates.map(date => {
                             const isSelected = isCellSelected(date, hour);
-                            const inRange = isDateInRange(date);
+                            const selectable = isSlotSelectable(date, hour);
+                            
                             return (
                               <td
                                 key={`${date}_${hour}`}
                                 role="gridcell"
                                 aria-selected={isSelected}
+                                aria-disabled={!selectable}
                                 data-date={date}
                                 data-hour={hour}
                                 style={{
                                   backgroundColor: isSelected ? '#4CB5AB' : undefined
                                 }}
                                 className={`
-                                  border-r border-b border-film-border w-16 h-12 cursor-pointer transition-colors box-border last:border-r-0
-                                  ${!inRange
-                                    ? 'bg-gray-100/80 cursor-not-allowed pattern-diagonal-lines'
-                                    : isSelected
-                                    ? ''
-                                    : 'bg-film-light hover:bg-white active:bg-white'
+                                  border-r border-b border-film-border w-16 h-12 box-border last:border-r-0
+                                  ${!selectable
+                                    ? 'bg-gray-100/50 cursor-not-allowed'
+                                    : 'cursor-pointer transition-colors'
+                                  }
+                                  ${selectable && !isSelected
+                                    ? 'bg-film-light hover:bg-white active:bg-white'
+                                    : ''
+                                  }
+                                  ${!selectable && !isSelected
+                                    ? 'pattern-diagonal-lines opacity-50' 
+                                    : ''
                                   }
                                 `}
-                                onMouseDown={(e) => handleMouseDown(e, date, hour)}
-                                onMouseEnter={() => handleMouseEnter(date, hour)}
+                                onMouseDown={(e) => selectable && handleMouseDown(e, date, hour)}
+                                onMouseEnter={() => selectable && handleMouseEnter(date, hour)}
                                 onMouseUp={handleMouseUp}
                               />
                             );
