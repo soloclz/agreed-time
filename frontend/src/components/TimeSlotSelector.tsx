@@ -37,13 +37,37 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
   const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
-    const today = getTodayLocal();
-    const future = addDays(today, 27); // 4 weeks by default
+    // Guest Mode: Calculate date/time range from availableSlots
+    if (availableSlots && availableSlots.size > 0) {
+      const dates: string[] = [];
+      const hours: number[] = [];
 
-    setStartDate(today);
-    setEndDate(future);
+      availableSlots.forEach(key => {
+        const [date, hourStr] = key.split('_');
+        dates.push(date);
+        hours.push(parseInt(hourStr));
+      });
+
+      const minDate = dates.reduce((min, date) => date < min ? date : min, dates[0]);
+      const maxDate = dates.reduce((max, date) => date > max ? date : max, dates[0]);
+      const minHour = Math.min(...hours);
+      const maxHour = Math.max(...hours);
+
+      setStartDate(minDate);
+      setEndDate(maxDate);
+      setStartHour(minHour);
+      setEndHour(maxHour);
+    } else {
+      // Organizer Mode: Default to 4 weeks from today
+      const today = getTodayLocal();
+      const future = addDays(today, 27); // 4 weeks by default
+
+      setStartDate(today);
+      setEndDate(future);
+    }
+
     setIsMounted(true);
-  }, []);
+  }, [availableSlots]);
 
   // Time range controls (hours)
   const [startHour, setStartHour] = useState(9);
@@ -417,80 +441,82 @@ export default function TimeSlotSelector({ onSlotsChange, initialSlots = [], ava
         </p>
       </div>
 
-      <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <div>
-            <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex-1">
-                <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
-                <input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-                  title="Start date"
-                />
+      {!availableSlots && (
+        <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div>
+              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1">
+                  <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
+                  <input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    title="Start date"
+                  />
+                </div>
+                <span className="text-ink font-bold text-center hidden sm:block">→</span>
+                <div className="flex-1">
+                  <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
+                  <input
+                    id="endDate"
+                    name="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    title="End date"
+                  />
+                </div>
               </div>
-              <span className="text-ink font-bold text-center hidden sm:block">→</span>
-              <div className="flex-1">
-                <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
-                <input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
-                  title="End date"
-                />
-              </div>
+              {dateRangeError && (
+                <p className="text-xs text-red-600 mt-2 font-mono font-bold">{dateRangeError}</p>
+              )}
             </div>
-            {dateRangeError && (
-              <p className="text-xs text-red-600 mt-2 font-mono font-bold">{dateRangeError}</p>
-            )}
-          </div>
 
-          <div>
-            <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="flex-1">
-                <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
-                <select
-                  id="startHour"
-                  name="startHour"
-                  value={startHour}
-                  onChange={(e) => setStartHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-                  title="Start hour"
-                >
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={i}>{formatHour(i)}</option>
-                  ))}
-                </select>
-              </div>
-              <span className="text-ink font-bold text-center hidden sm:block">→</span>
-              <div className="flex-1">
-                <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
-                <select
-                  id="endHour"
-                  name="endHour"
-                  value={endHour}
-                  onChange={(e) => setEndHour(parseInt(e.target.value))}
-                  className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
-                  title="End hour"
-                >
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={i}>{formatHour(i)}</option>
-                  ))}
-                </select>
+            <div>
+              <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex-1">
+                  <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
+                  <select
+                    id="startHour"
+                    name="startHour"
+                    value={startHour}
+                    onChange={(e) => setStartHour(parseInt(e.target.value))}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    title="Start hour"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{formatHour(i)}</option>
+                    ))}
+                  </select>
+                </div>
+                <span className="text-ink font-bold text-center hidden sm:block">→</span>
+                <div className="flex-1">
+                  <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
+                  <select
+                    id="endHour"
+                    name="endHour"
+                    value={endHour}
+                    onChange={(e) => setEndHour(parseInt(e.target.value))}
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    title="End hour"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>{formatHour(i)}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <TimeSlotBottomPanel
         selectedCells={selectedCells}
