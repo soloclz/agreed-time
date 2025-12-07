@@ -94,6 +94,13 @@ export default function CreateEventForm() {
       eventTitle: title,
     });
     
+    // Save admin token to localStorage for auto-login
+    try {
+      localStorage.setItem(`agreed_time_admin_${newEventId}`, newAdminToken);
+    } catch (error) {
+      console.error('Failed to save admin token to localStorage:', error);
+    }
+
     setIsSubmitting(false);
   };
 
