@@ -5,6 +5,11 @@ export interface TimeSlot {
   endTime: string; // "HH:MM"
 }
 
+export interface HeatmapCellData {
+  count: number;
+  attendees: string[];
+}
+
 export interface GridCell {
   date: string;
   hour: number;
