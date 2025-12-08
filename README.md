@@ -15,6 +15,9 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
 *   Node.js & npm
 *   Rust (Cargo)
 
+### Environment Setup
+Before running the backend, ensure you have a `.env` file in the `backend/` directory with your database connection string and other settings. A template for required variables is typically available or can be inferred from `backend/src/config.rs`.
+
 ### Running Locally
 
 1.  **Start Database**:
