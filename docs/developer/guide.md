@@ -75,7 +75,7 @@ We follow the **[Conventional Commits](https://www.conventionalcommits.org/)** s
 
 ---
 
-## 5. Event Access and Management Strategy
+## 5. Event Access and Management Strategy (current implementation)
 
 This section outlines the planned approach for managing access to event pages, balancing ease-of-use with necessary security and privacy considerations, especially before a full user authentication system is in place.
 
@@ -83,70 +83,29 @@ This section outlines the planned approach for managing access to event pages, b
 
 *   **Create Event Page (`/new`)**:
     *   Allows users (organizers) to define event details and availability.
-    *   Upon successful creation, an event ID (`:id`) is generated.
-*   **Guest Submission Page (`/event/:id`)**:
-    *   Accessible via a public invitation link.
-    *   Allows attendees to submit their available time slots and optional comments.
-*   **Event Result Page (`/event/:id/result`)**:
-    *   Displays aggregated availability, best time recommendations, and participant responses.
-    *   **Core Vision**: To evolve into a heatmap visualization of time slot intersections. Initially, it will provide a list-based summary.
+    *   On success, backend returns `public_token` (guest link) and `organizer_token` (owner link).
+*   **Guest Submission Page (`/event/:public_token`)**:
+    *   Accessible via the public invitation link.
+    *   Lets attendees submit available time slots and optional comments.
+*   **Event Result Page**:
+    *   Planned to show aggregated availability/heatmap. Currently the frontend placeholder depends on a real results API (not wired yet).
 
-### 5.2 Access Control Mechanism (Hybrid Model)
+### 5.2 Access Control (current tokens)
 
-To provide a balance between frictionless anonymous usage and future member-based management, a hybrid access control model will be implemented.
+*   **Public token** (`public_token`): used for guest/participant views.
+*   **Organizer token** (`organizer_token`): capability URL for owner actions (future manage/finalize flows). There is no secure code at the moment.
 
-#### 5.2.1 Public Event ID (`:id`)
-*   Generated for every event.
-*   Used for public-facing links, primarily the Guest Submission Page (`/event/:id`).
-*   The Event Result Page (`/event/:id/result`) may or may not be publicly accessible, depending on the organizer's privacy preference. Defaulting to publicly viewable results for ease of sharing is common, but private access will be supported via the management flows.
+### 5.3 User Experience Notes (today)
 
-#### 5.2.2 `adminToken` (Long Secret String)
-*   A unique, long, and unguessable token (e.g., UUID) generated upon event creation.
-*   **Purpose**: Provides direct, secret-link-based access to event management features (e.g., `/event/:id/manage?token=adminToken`) without requiring a login. This is primarily for **anonymous organizers**.
-*   **Best Practice**: This "Capability URL" design is a standard and effective pattern for frictionless access in stateless/anonymous applications (e.g., Doodle, Rallly).
-*   **Security**: Relies on the secrecy of the token. Token must be sufficiently long and random. Transport via HTTPS is mandatory.
-*   **Usage**: The organizer saves this link or its token to re-access full management capabilities. This link provides management rights.
-
-#### 5.2.3 `secureCode` (Short, 6-Digit Code)
-*   A short, memorable alphanumeric code generated upon event creation.
-*   **Purpose**: Serves as a recovery or "claiming" mechanism, primarily for **anonymous organizers**.
-*   **Validation**: `secureCode` alone is insufficient; it must be combined with the `eventId` for validation (`ID + Code` pattern).
-*   **Best Practice**: `secureCode` should never be exposed in the URL. It must be entered manually into a dedicated input field or modal.
-*   **Storage (Future Backend)**: When stored in a database, `secureCode` (like any password) must be salted and hashed.
-*   **Usage**: If an organizer loses their `adminToken` link, they can use the `eventId` and `secureCode` to regain access to management features (e.g., via a "Lookup" page or directly on the event page).
-
-### 5.3 User Experience Flows & Implementation Details
-
-*   **Event Creation Success Screen (`/new` post-submit)**:
-    *   Displays the public Guest Link (for participants to respond).
-    *   Displays the Admin Link (containing the `adminToken`), masked from direct view with a "Copy Admin Link" button for enhanced security against shoulder-surfing. A clear warning against sharing this link is provided.
-    *   Displays the `secureCode`, initially masked (e.g., `******`) with a toggle to reveal. The recovery instruction is context-driven, guiding users to use the code directly on their event page for admin access.
-    *   A "Go to Event Results" button navigates to the `event/:id/result` page.
-
-*   **Result Link Revelation**:
-    *   The Result Link (`/event/:id/result`) is generally **not actively exposed on the event creation success screen** to avoid overwhelming the user or causing confusion about which link to share.
-    *   **Recommended Revelation Points**:
-        1.  **Admin/Manage Page (Future)**: The primary place for the organizer to retrieve and share the Result Link, especially for publicly shared results.
-        2.  **Result Page Itself**: A "Share Results" button on the `event/:id/result` page itself allows anyone (organizer or participant) to copy the Result Link. This is a common and intuitive practice.
-
-*   **Admin Link Invalid/Expired Handling (Graceful Degradation - Future Backend)**:
-    *   If a user accesses `/event/:id/manage?token=invalid-token`, instead of showing an error, the system will redirect them to the public Result Page (`/event/:id/result`).
-    *   A prominent banner message on the Result Page should then inform the user: *"The admin link you used is invalid or expired. You are viewing the public results instead."* This provides a user-friendly fallback.
-
-*   **Frontend Organizer Identification (Cookie/LocalStorage - Immediate Future)**:
-    *   To improve convenience for the organizer, upon successful event creation (or successful `adminToken`/`secureCode` validation), a flag (`agreed_time_admin_${eventId}`) containing the `adminToken` will be stored in the browser's LocalStorage or a secure Cookie.
-    *   This allows the same browser to automatically identify as the event's organizer for that `eventId` in subsequent visits, providing management capabilities without needing to re-enter the token. This offers a "sticky session" for the owner on a specific browser.
+*   Creation success should show/copy the public link and organizer link; avoid exposing organizer token broadly.
+*   Result sharing is expected to be via the public link; a dedicated manage page is not implemented yet.
+*   A future “sticky organizer” flag could be stored in LocalStorage (e.g., `agreed_time_admin_${eventId}`) once organizer flows are built.
 
 ### 5.4 Future Enhancements
 
-*   **Member Integration**: Once a user authentication system is in place, if an event is created by a logged-in member, the `adminToken` and `secureCode` will still be generated but may not be explicitly shown to the user (as their account login provides management access). Members will manage events from a personalized dashboard.
-*   **"Claim Event" Feature**: A dedicated interface for members to link existing events to their accounts using the `secureCode`.
-*   **Backend API**: Implementation of actual API endpoints for event creation, response submission, and result retrieval, replacing current mock data.
-*   **Heatmap Visualization**: Enhance the Result Page to graphically display availability intersections.
-*   **Edit Participant Response**: Allow participants to modify their previously submitted time slots.
-*   **Event Expiry/Deadline**: Option for organizers to set a deadline for submissions.
-*   **Social Sharing Buttons**: Integrate direct share options for Guest Link and (public) Result Link.
-*   **Email Reminders**: Option to send links/updates via email.
+*   Owner dashboard/manage page (finalize/delete) powered by `organizer_token`.
+*   Actual results API for aggregation/heatmap and participant list.
+*   Optional auth-backed ownership instead of pure capability links.
 
 ---
 
@@ -176,11 +135,12 @@ The application's color palette is carefully crafted to evoke a Fujifilm-inspire
     *   `film-light`: `#FFFFFF` (Pure white for elements like input backgrounds and card interiors, creating layered depth).
 *   **Consistency**: All UI components, including `TimeSlotSelector` (selected slot color) and `EventResultView`, now automatically utilize this palette, ensuring a unified visual experience.
 
-### 6.3 Event Result Page Enhancements
+### 6.3 Event Result Page (current state)
 
-*   **Empty State Handling**: `EventResultView.tsx` now conditionally renders a user-friendly empty state when no responses have been submitted. This includes a clear message ("No responses yet!"), an illustrative icon, and a call to action. For admins, a "Go to Guest Link" button is provided.
-*   **Share Results Button**: A prominent "Share Results" button is available on the Result Page, allowing any viewer to easily copy the current page's URL to their clipboard.
-*   **Admin Action Buttons**: For identified event administrators (via LocalStorage token), "Finalize" and "Delete" action buttons are displayed. These are currently simulated with alerts for demonstration purposes.
+*   **Heatmap & aggregation are blocked until backend API is ready**: `eventService.getEventResults` currently returns `null`, so `EventResultView` renders a placeholder/“not found” state in practice.
+*   **Share Results Button**: Present, but copies the current URL; adjust once real result link behavior is defined.
+*   **Admin Action Buttons**: “Finalize”/“Delete” are simulated alerts for now. Replace with organizer-token-backed API calls when available.
+*   **Empty State Handling**: UI copy and CTA exist, but require a real responses API to display meaningful data.
 
 ---
 
@@ -207,17 +167,14 @@ The Result Page now features a graphical heatmap visualization of participant av
 To prepare for future backend integration and maintain a clean separation of concerns, all data fetching and manipulation logic has been centralized.
 
 ### 8.1 Event Service (`src/services/eventService.ts`)
-*   **Purpose**: Acts as the single source of truth for data operations. Components (like `EventGuestForm`, `EventResultView`) call methods on `eventService` rather than managing data fetching internally.
-*   **Methods**:
-    *   `getEvent(id)`: Retrieves event details.
-    *   `createEvent(...)`: Generates a new event with a unique ID and admin tokens.
-    *   `submitResponse(...)`: Saves a guest's availability.
-    *   `getEventResults(id)`: Retrieves aggregated results for an event.
+*   **Purpose**: Central entry for data operations used by components (`EventGuestForm`, `EventResultView`, etc.).
+*   **Current behavior**:
+    *   `getEvent` and `createEvent` call real backend APIs (`/api/events/{public_token}` and `/api/events`).
+    *   `submitResponse` and `getEventResults` are still mocked; the latter returns `null`, so result pages do not show real data yet.
 
 ### 8.2 Mock Data Strategy (Current Phase)
-*   **In-Memory Store**: Currently, the service uses a simple JavaScript object (`eventsStore`, `responsesStore`) to store data during the session.
-*   **Persistence Limitation**: Because data is stored in memory, **refreshing the page (or hot-reloading) will clear all created events and responses**. This is expected behavior for the current prototype phase.
-*   **Transition Plan**: When the backend is ready, we will only need to update `eventService.ts` to make real API calls (e.g., using `fetch` or `axios`). The UI components will remain largely unchanged.
+*   Only responses/results remain mocked; there is no `eventsStore` anymore. `responsesStore` is an in-memory placeholder used by `submitResponse`.
+*   **Transition Plan**: Wire `submitResponse`/`getEventResults` to real endpoints once backend is ready; UI components should stay mostly unchanged.
 
 ### 8.3 Feature Deferral
 *   **Edit/Update**: Features like editing an event or modifying a guest response are intentionally deferred. These require robust authentication and state synchronization that are best implemented alongside a real database backend.
@@ -252,11 +209,13 @@ backend/
 │   │   └── mod.rs        # Data models (Event, CreateEventRequest, etc.)
 │   ├── handlers/
 │   │   ├── mod.rs        # Request handlers
-│   │   └── health.rs     # Health check endpoint
+│   │   ├── health.rs     # Health check endpoint
+│   │   └── events.rs     # Event creation/fetch
 │   └── routes/
 │       └── mod.rs        # Route definitions
 ├── Cargo.toml            # Dependencies and project metadata
-└── .env.example          # Environment variables template
+├── Cargo.lock            # Locked dependencies
+└── .env (local, not committed) # Environment variables
 ```
 
 ### 9.3 Core Concepts
@@ -283,19 +242,18 @@ Unified error type `AppError` with automatic JSON error responses:
 #### Routing (`routes/mod.rs`)
 Routes are defined using Axum's routing system:
 *   `GET /health`: Health check endpoint
-*   `POST /api/events`: Create event (placeholder)
+*   `POST /api/events`: Create event
+*   `GET /api/events/{public_token}`: Fetch event by public token
 
 ### 9.4 Development Workflow
 
 #### Environment Setup
 ```bash
-# 1. Create .env file
-cp .env.example .env
-
-# 2. Configure database URL and CORS
-# Edit .env:
+# Create .env file (manually)
 # DATABASE_URL=postgres://localhost/agreed_time
 # ALLOWED_ORIGINS=http://localhost:4321
+# PORT=3000
+# HOST=0.0.0.0
 ```
 
 #### Running the Server
@@ -383,8 +341,8 @@ async fn main() -> Result<()> {
 
 ### 9.7 Next Steps (Backend)
 
-*   [ ] Implement database schema and migrations
-*   [ ] Create event CRUD endpoints
+*   [x] Implement database schema and migrations
+*   [ ] Create event CRUD endpoints (update/delete/respond/finalize)
 *   [ ] Add authentication/authorization
 *   [ ] Implement response submission logic
 *   [ ] Add result aggregation queries
