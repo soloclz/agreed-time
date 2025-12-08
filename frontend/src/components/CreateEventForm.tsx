@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import TimeSlotSelector from './TimeSlotSelector';
-import type { TimeSlot, EventCreationResult } from '../types';
+import type { TimeSlot, ApiTimeSlot, CreateEventSuccessResponse } from '../types'; // Updated imports
 import { eventService } from '../services/eventService';
 
 // Reusable Copy Button Component
@@ -28,10 +28,9 @@ function CopyButton({ textToCopy, label }: { textToCopy: string; label?: string 
 export default function CreateEventForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]); // Still uses old TimeSlot for selector
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [eventCreationResult, setEventCreationResult] = useState<EventCreationResult | null>(null);
-  const [showSecureCode, setShowSecureCode] = useState(false);
+  const [eventCreationResult, setEventCreationResult] = useState<CreateEventSuccessResponse | null>(null); // Updated type
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSlotsChange = useCallback((slots: TimeSlot[]) => {
@@ -68,17 +67,43 @@ export default function CreateEventForm() {
     setIsSubmitting(true);
 
     try {
-      const result = await eventService.createEvent(title, description, selectedSlots);
+      // Get user's current timezone
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      // Convert old TimeSlot[] format to new ApiTimeSlot[] format (ISO 8601 UTC string)
+      const apiTimeSlots: ApiTimeSlot[] = selectedSlots.map(slot => {
+        // Construct a local date-time string
+        const startLocal = `${slot.date}T${slot.startTime}:00`;
+        const endLocal = `${slot.date}T${slot.endTime}:00`;
+
+        // Create Date objects (parsed as local time)
+        const startDate = new Date(startLocal);
+        const endDate = new Date(endLocal);
+
+        // Convert to ISO 8601 UTC string
+        return {
+          start_at: startDate.toISOString(),
+          end_at: endDate.toISOString()
+        };
+      });
+
+      const result = await eventService.createEvent(
+        title,
+        description,
+        userTimeZone, // Pass user's timezone as metadata
+        apiTimeSlots
+      );
       
       setEventCreationResult(result);
       
       // Save admin token to localStorage for auto-login
       try {
-        localStorage.setItem(`agreed_time_admin_${result.eventId}`, result.adminToken);
+        localStorage.setItem(`agreed_time_admin_${result.id}`, result.organizer_token); // Updated keys
       } catch (error) {
         console.error('Failed to save admin token to localStorage:', error);
       }
     } catch (error) {
+      console.error("Event creation failed:", error); // Log actual error
       alert('Failed to create event. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -86,15 +111,15 @@ export default function CreateEventForm() {
   };
 
   if (eventCreationResult) {
-    const guestLink = `${window.location.origin}/event/${eventCreationResult.eventId}`;
-    const adminLink = `${window.location.origin}/event/${eventCreationResult.eventId}/result?token=${eventCreationResult.adminToken}`;
-    const resultLink = `${window.location.origin}/event/${eventCreationResult.eventId}/result`;
+    const guestLink = `${window.location.origin}/event/${eventCreationResult.id}`; // Updated ID field
+    const adminLink = `${window.location.origin}/manage/${eventCreationResult.organizer_token}`; // Updated ID and token fields
+    const resultLink = `${window.location.origin}/event/${eventCreationResult.id}/result`; // Updated ID field
 
     return (
       <div className="space-y-8 p-6 bg-paper rounded-lg shadow-md text-ink">
         <h2 className="text-3xl font-serif font-bold text-film-accent text-center mb-4">Event Created Successfully!</h2>
         <p className="text-lg text-center font-sans">
-          Your event "<span className="font-bold">{eventCreationResult.eventTitle}</span>" is ready.
+          Your event "<span className="font-bold">{title}</span>" is ready. {/* Use title from state */}
         </p>
 
         <div className="space-y-6">
@@ -119,37 +144,6 @@ export default function CreateEventForm() {
             <p className="text-xs text-ink/70 mt-2 font-sans italic">
               This link gives you full control. <span className="font-bold text-red-500">Do not share it.</span>
             </p>
-          </div>
-
-          {/* Secure Code (Masked with toggle) */}
-          <div className="bg-film-light border border-film-border rounded-lg p-4 text-center">
-            <p className="font-bold text-ink mb-2 font-serif">Your Recovery Code:</p>
-            <div className="flex items-center justify-center gap-3">
-                <p className="text-4xl font-mono font-bold text-film-accent tracking-widest bg-film-accent/5 py-4 px-6 rounded-lg select-none">
-                {showSecureCode ? eventCreationResult.secureCode : '******'}
-                </p>
-                <button
-                    type="button"
-                    onClick={() => setShowSecureCode(!showSecureCode)}
-                    className="p-3 bg-film-accent/10 text-film-accent rounded-lg hover:bg-film-accent/20 transition-colors"
-                    aria-label={showSecureCode ? "Hide secure code" : "Show secure code"}
-                >
-                    {showSecureCode ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98.02A1.5 1.5 0 002.25 5.5v13.75A1.5 1.5 0 003.98 21h16.04A1.5 1.5 0 0022 19.25V5.5a1.5 1.5 0 00-1.73-.78L3.98.02zm0 1.5l1.5-1.5M7.5 10a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
-                        </svg>
-                    ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    )}
-                </button>
-            </div>
-            <p className="text-xs text-ink/70 mt-4 font-sans italic">
-              You can use this code to access the admin menu directly from your event page. Please save it.
-            </p>
-            <CopyButton textToCopy={eventCreationResult.secureCode} label="Copy Code" />
           </div>
 
           {/* Go to Results Button */}
