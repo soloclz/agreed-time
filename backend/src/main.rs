@@ -1,0 +1,54 @@
+mod config;
+mod db;
+mod error;
+mod handlers;
+mod models;
+mod routes;
+
+use config::Config;
+use tower_http::cors::{Any, CorsLayer};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Initialize tracing
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "agreed_time_backend=debug,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    // Load configuration
+    let config = Config::from_env()?;
+    tracing::info!("Configuration loaded: {:?}", config);
+
+    // Create database pool (lazy - won't connect until first query)
+    let pool = db::create_pool_lazy(&config.database_url);
+    tracing::info!("Database connection pool created (lazy)");
+
+    // Setup CORS
+    let cors = CorsLayer::new()
+        .allow_origin(
+            config
+                .allowed_origins
+                .iter()
+                .map(|origin| origin.parse().unwrap())
+                .collect::<Vec<_>>(),
+        )
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    // Create router
+    let app = routes::create_router(pool).layer(cors);
+
+    // Start server
+    let addr = config.addr();
+    tracing::info!("Starting server on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
+}

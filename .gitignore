@@ -1,3 +1,9 @@
 .gemini/
 .DS_Store
 node_modules/
+
+# Rust
+backend/target/
+backend/Cargo.lock
+backend/**/*.rs.bk
+backend/.env
