@@ -12,49 +12,50 @@ export interface CreateEventPayload {
   time_slots: ApiTimeSlot[];
 }
 
+// ... existing types ...
+
 export interface CreateEventSuccessResponse {
   id: string; // UUID
   public_token: string;
   organizer_token: string;
 }
 
-// --- Remaining types for other parts of the application (will be updated as APIs are implemented) ---
+// Types for Fetching Event (GET /api/events/:token)
+export interface ApiTimeSlotWithId extends ApiTimeSlot {
+  id: number;
+  event_id: string;
+}
+
+export interface EventResponse {
+  id: string;
+  title: string;
+  description?: string;
+  time_zone?: string;
+  state: EventState;
+  time_slots: ApiTimeSlotWithId[];
+}
+
+// --- UI Types ---
 
 export interface TimeSlot {
   id: string;
-  date: string; // "YYYY-MM-DD"
-  startTime: string; // "HH:MM"
-  endTime: string; // "HH:MM"
+  date: string; // "YYYY-MM-DD" (Local)
+  startTime: string; // "HH:MM" (Local)
+  endTime: string; // "HH:MM" (Local)
 }
 
-export interface HeatmapCellData {
-  count: number;
-  attendees: string[];
-}
-
-export interface GridCell {
-  date: string;
-  hour: number;
-  isSelected: boolean;
-}
-
-export interface TimeRange {
-  startHour: number;
-  endHour: number;
-}
-
-export interface TimeSlotConfig {
-  slotDuration: number; // Duration in minutes: 30, 60, 120, 240 (half-day), 480 (full-day)
-  displayMode?: 'hourly' | 'half-hourly' | 'half-day' | 'full-day';
-}
+// ... existing types ...
 
 export interface EventData {
   id: string;
   title: string;
   description: string;
-  availableSlots: TimeSlot[]; // This will need to be ApiTimeSlot[] later
+  availableSlots: TimeSlot[]; // Transformed for UI
   slotDuration?: number; // Duration in minutes
+  timeZone?: string; // Metadata
 }
+
+// ... existing types ...
 
 export interface ResponseData {
   name: string;
