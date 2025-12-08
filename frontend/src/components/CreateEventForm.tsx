@@ -111,9 +111,9 @@ export default function CreateEventForm() {
   };
 
   if (eventCreationResult) {
-    const guestLink = `${window.location.origin}/event/${eventCreationResult.id}`; // Updated ID field
+    const guestLink = `${window.location.origin}/event/${eventCreationResult.public_token}`; // Updated to use public_token
     const adminLink = `${window.location.origin}/manage/${eventCreationResult.organizer_token}`; // Updated ID and token fields
-    const resultLink = `${window.location.origin}/event/${eventCreationResult.id}/result`; // Updated ID field
+    const resultLink = `${window.location.origin}/event/${eventCreationResult.public_token}/result`; // Updated to use public_token
 
     return (
       <div className="space-y-8 p-6 bg-paper rounded-lg shadow-md text-ink">
