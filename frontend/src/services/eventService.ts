@@ -1,80 +1,78 @@
-import type { EventData, ResponseData, TimeSlot, EventCreationResult } from '../types';
+import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEventSuccessResponse } from '../types';
 
-// MOCK DATA
+// API base URL - adjust as needed for production vs development
+// For local development, assume backend is on port 3000
+const API_BASE_URL = 'http://localhost:3000/api';
+
+// --- MOCK DATA (only for getEvent, submitResponse, getEventResults for now) ---
+// Note: MOCK_EVENT_DATA and MOCK_RESPONSES might need updates to align with new ApiTimeSlot if these mocks are to be truly used
 const MOCK_EVENT_DATA: EventData = {
   id: 'mock-event-id',
-  title: 'My Event Title',
-  description: 'Help us find the perfect time that works for everyone.',
+  title: 'My Mock Event Title',
+  description: 'Help us find the perfect time that works for everyone (Mock).',
   slotDuration: 60,
-  availableSlots: [
-    { id: '1', date: '2025-12-08', startTime: '09:00', endTime: '10:00' },
-    { id: '2', date: '2025-12-08', startTime: '10:00', endTime: '11:00' },
-    { id: '3', date: '2025-12-08', startTime: '11:00', endTime: '12:00' },
-    { id: '4', date: '2025-12-09', startTime: '13:00', endTime: '14:00' },
-    { id: '5', date: '2025-12-09', startTime: '14:00', endTime: '15:00' },
-    { id: '6', date: '2025-12-10', startTime: '17:00', endTime: '18:00' },
-    { id: '7', date: '2025-12-11', startTime: '09:00', endTime: '10:00' },
-    { id: '8', date: '2025-12-11', startTime: '10:00', endTime: '11:00' },
-    { id: '9', date: '2025-12-11', startTime: '11:00', endTime: '12:00' },
-  ]
+  availableSlots: [], // No longer relevant for new ApiTimeSlot structure
 };
 
 const MOCK_RESPONSES: ResponseData[] = [
+  // ... (keep existing mock responses or simplify if not used)
   { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Prefer earlier' },
   { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Only Tuesdays' },
   { name: 'Charlie', slots: ['2025-12-08T03:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Wednesdays are best' },
   { name: 'David', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
-  { name: 'Eve', slots: ['2025-12-10T09:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-12T02:00:00.000Z'], comment: 'Flexible!' },
+  { name: 'Eve', slots: ['2025-12-10T09:00:00.000Z', '2025-12-11T01:00:00:00.000Z', '2025-12-12T02:00:00.000Z'], comment: 'Flexible!' },
   { name: 'Frank', slots: ['2025-12-08T01:00:00.000Z', '2025-12-12T02:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
   { name: 'Grace', slots: ['2025-12-09T05:00:00.000Z', '2025-12-11T01:00:00.000Z', '2025-12-10T09:00:00.000Z'] },
 ];
 
+
 // In-memory store for created events (simulates DB for the session)
-const eventsStore: Record<string, EventData> = {
-  [MOCK_EVENT_DATA.id]: MOCK_EVENT_DATA
-};
+const eventsStore: Record<string, EventData> = {}; // Initialize empty
 
-const responsesStore: Record<string, ResponseData[]> = {
-  [MOCK_EVENT_DATA.id]: MOCK_RESPONSES
-};
+const responsesStore: Record<string, ResponseData[]> = {}; // Initialize empty
 
-// Simulates network delay
+// Simulates network delay (only for mock functions)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const eventService = {
   getEvent: async (id: string): Promise<EventData | null> => {
-    await delay(500);
+    await delay(500); // Simulate network delay
+    console.warn('Using mock for getEvent');
     return eventsStore[id] || null;
   },
 
-  createEvent: async (title: string, description: string, availableSlots: TimeSlot[]): Promise<EventCreationResult> => {
-    await delay(1000);
-    
-    const newEventId = Math.random().toString(36).substring(2, 15);
-    const newAdminToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-    const newSecureCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    const newEvent: EventData = {
-      id: newEventId,
+  createEvent: async (
+    title: string,
+    description: string | undefined,
+    timeZone: string | undefined,
+    timeSlots: ApiTimeSlot[]
+  ): Promise<CreateEventSuccessResponse> => {
+    const payload: CreateEventPayload = {
       title,
-      description,
-      availableSlots,
-      slotDuration: 60 // Default for now
+      description: description || undefined, // Ensure undefined if empty
+      time_zone: timeZone || undefined, // Ensure undefined if empty
+      time_slots: timeSlots,
     };
 
-    eventsStore[newEventId] = newEvent;
-    responsesStore[newEventId] = []; // Initialize empty responses
+    const response = await fetch(`${API_BASE_URL}/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
 
-    return {
-      eventId: newEventId,
-      adminToken: newAdminToken,
-      secureCode: newSecureCode,
-      eventTitle: title,
-    };
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create event');
+    }
+
+    return response.json() as Promise<CreateEventSuccessResponse>;
   },
 
   submitResponse: async (eventId: string, response: ResponseData): Promise<void> => {
-    await delay(800);
+    await delay(800); // Simulate network delay
+    console.warn('Using mock for submitResponse');
     if (!responsesStore[eventId]) {
         responsesStore[eventId] = [];
     }
@@ -82,7 +80,8 @@ export const eventService = {
   },
 
   getEventResults: async (eventId: string): Promise<{ event: EventData, responses: ResponseData[] } | null> => {
-    await delay(800);
+    await delay(800); // Simulate network delay
+    console.warn('Using mock for getEventResults');
     const event = eventsStore[eventId];
     if (!event) return null;
     
