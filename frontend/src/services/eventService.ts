@@ -2,7 +2,7 @@ import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEv
 
 // API base URL - adjust as needed for production vs development
 // For local development, assume backend is on port 3000
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = '/api';
 
 // --- MOCK DATA (only for getEvent, submitResponse, getEventResults for now) ---
 // Note: MOCK_EVENT_DATA and MOCK_RESPONSES might need updates to align with new ApiTimeSlot if these mocks are to be truly used

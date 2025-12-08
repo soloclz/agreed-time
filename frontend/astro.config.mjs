@@ -7,6 +7,15 @@ import tailwind from '@astrojs/tailwind';
 export default defineConfig({
 	integrations: [react(), tailwind()],
 	vite: {
+		server: {
+			proxy: {
+				'/api': {
+					target: 'http://localhost:3000',
+					changeOrigin: true,
+					// rewrite: (path) => path.replace(/^\/api/, ''), // 後端路徑本身就是 /api，所以不需要 rewrite
+				}
+			}
+		},
 		build: {
 			// Enable cache busting with content hashing
 			assetsInlineLimit: 0,
