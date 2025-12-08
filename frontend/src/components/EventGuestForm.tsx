@@ -3,7 +3,7 @@ import type { TimeSlot, EventData } from '../types';
 import TimeSlotSelector from './TimeSlotSelector';
 import { eventService } from '../services/eventService';
 
-export default function EventGuestForm({ eventId }: { eventId: string }) {
+export default function EventGuestForm({ publicToken }: { publicToken: string }) { // Changed eventId to publicToken
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
       setLoading(true);
       setError(null);
       try {
-        const data = await eventService.getEvent(eventId);
+        const data = await eventService.getEvent(publicToken); // Use publicToken here
         if (data) {
           setEventData(data);
         } else {
@@ -31,7 +31,7 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
     };
 
     fetchEvent();
-  }, [eventId]);
+  }, [publicToken]); // Changed dependency to publicToken
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,33 +44,6 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
       return;
     }
 
-    // Flatten the slot IDs or full slots? ResponseData expects strings (ISO slots potentially?)
-    // In EventResultView logic we used `slots` as ISO strings.
-    // TimeSlotSelector returns TimeSlot objects.
-    // We need to convert TimeSlot objects to the format expected by ResponseData.
-    // Based on Heatmap.tsx parsing, it expects ISO strings like "2025-12-08T09:00:00.000Z".
-    // But wait, `TimeSlotSelector` uses `TimeSlot` objects internally.
-    // Let's check `TimeSlot` definition again: { id: string, date: string, startTime: string, endTime: string }
-    // The `id` in TimeSlot usually is the ISO string key in previous implementations or just an ID.
-    
-    // Let's look at how MOCK_RESPONSES were structured:
-    // slots: ['2025-12-08T01:00:00.000Z', ...]
-    
-    // And TimeSlotSelector's `onSlotsChange` returns `TimeSlot[]`.
-    // The `id` property of `TimeSlot` constructed in `TimeSlotSelector` is `key` which is `${date}_${startTime}-${endTime}`.
-    // This is NOT an ISO string.
-    
-    // We need a way to convert the selection back to ISO strings if that's what the "Backend" expects.
-    // Or we update the `ResponseData` type to hold `TimeSlot[]` objects instead of string arrays.
-    // However, keeping it as strings is usually better for storage.
-    
-    // Construct ISO strings from TimeSlot:
-    // TimeSlot: date="2025-12-08", startTime="09:00"
-    // ISO: "2025-12-08T09:00:00.000Z" (assuming UTC context or local handled consistently)
-    
-    // For the purpose of this refactor, let's map them to ISO strings assuming simpler format or just use the IDs if consistent.
-    // Actually, `Heatmap.tsx` uses `parseISO(s.slot)`. So it expects standard ISO strings.
-    
     // Correctly convert local TimeSlot objects to ISO 8601 UTC strings
     const slotsAsIsoStrings = selectedGuestSlots.map(slot => {
       // Construct a local date-time string
@@ -84,7 +57,7 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
     });
 
     try {
-      await eventService.submitResponse(eventId, {
+      await eventService.submitResponse(publicToken, { // Use publicToken here
         name: guestName,
         comment: guestComment,
         slots: slotsAsIsoStrings, 
@@ -108,7 +81,7 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
       <div className="text-center py-12 text-green-600 space-y-4">
         <h2 className="text-3xl font-bold font-serif">Thank you!</h2>
         <p className="text-lg">Your availability has been submitted for "{eventData?.title}".</p>
-        <p className="text-sm text-gray-500">Event ID: {eventId}</p>
+        <p className="text-sm text-gray-500">Event ID: {publicToken}</p> {/* Use publicToken for display */}
       </div>
     );
   }
