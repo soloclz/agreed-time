@@ -38,3 +38,24 @@ pub struct CreateEventResponse {
     pub organizer_token: String,
 }
 
+// 為了輸出給前端，我們需要一個帶有 ID 和詳細時間的 TimeSlot 結構
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TimeSlot {
+    pub id: i64,
+    pub event_id: Uuid, // Also include event_id for clarity
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+}
+
+// 這是回傳給前端的完整活動資料 (Participant View)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventResponse {
+    pub id: Uuid, // Include event ID
+    pub title: String,
+    pub description: Option<String>,
+    pub time_zone: Option<String>,
+    pub state: String,
+    pub time_slots: Vec<TimeSlot>, // Use the new TimeSlot struct
+}
+
+

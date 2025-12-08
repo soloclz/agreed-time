@@ -10,5 +10,6 @@ pub fn create_router(pool: PgPool) -> Router {
     Router::new()
         .route("/health", get(handlers::health::health_check))
         .route("/api/events", post(handlers::create_event))
+        .route("/api/events/:public_token", get(handlers::get_event))
         .with_state(pool)
 }

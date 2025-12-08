@@ -1,11 +1,17 @@
-use axum::{extract::State, Json};
-use sqlx::{PgPool, Transaction};
-use crate::{
-    error::AppResult,
-    models::{CreateEventRequest, CreateEventResponse, Event},
+use axum::{
+    extract::{Path, State},
+    Json,
 };
+use chrono::Utc; // For current timestamp
+use sqlx::{PgPool, Transaction};
 use uuid::Uuid;
-use chrono::Utc;
+
+use crate::{
+    error::{AppError, AppResult}, // Import AppError
+    models::{
+        CreateEventRequest, CreateEventResponse, Event, EventResponse, TimeSlot, TimeSlotRequest,
+    }, // Added EventResponse, TimeSlot
+};
 
 // Helper to generate unique string tokens for public and organizer access.
 fn generate_token() -> String {
@@ -70,5 +76,47 @@ pub async fn create_event(
         id: event_id,
         public_token,
         organizer_token,
+    }))
+}
+
+pub async fn get_event(
+    State(pool): State<PgPool>,
+    Path(public_token): Path<String>,
+) -> AppResult<Json<EventResponse>> {
+    // Fetch the event
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        FROM events
+        WHERE public_token = $1
+        "#,
+        public_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound(format!("Event with public token {} not found", public_token)))?;
+
+    // Fetch time slots for the event
+    let time_slots = sqlx::query_as!(
+        TimeSlot,
+        r#"
+        SELECT id, event_id, start_at, end_at
+        FROM time_slots
+        WHERE event_id = $1
+        ORDER BY start_at
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    Ok(Json(EventResponse {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        time_zone: event.time_zone,
+        state: event.state,
+        time_slots,
     }))
 }
