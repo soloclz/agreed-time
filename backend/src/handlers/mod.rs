@@ -1,8 +1,8 @@
 use axum::{extract::State, Json};
-use sqlx::{PgPool, Transaction};
+use sqlx::PgPool;
 use crate::{
     error::AppResult,
-    models::{CreateEventRequest, CreateEventResponse, Event, TimeSlotRequest},
+    models::{CreateEventRequest, CreateEventResponse, Event},
 };
 use uuid::Uuid;
 use chrono::Utc; // For current timestamp
