@@ -221,3 +221,198 @@ To prepare for future backend integration and maintain a clean separation of con
 
 ### 8.3 Feature Deferral
 *   **Edit/Update**: Features like editing an event or modifying a guest response are intentionally deferred. These require robust authentication and state synchronization that are best implemented alongside a real database backend.
+
+---
+
+## 9. Backend Architecture (Rust + Axum)
+
+The backend is built with **Rust** and **Axum** web framework, following a modular architecture pattern.
+
+### 9.1 Tech Stack
+
+*   **Language**: Rust (Edition 2024)
+*   **Web Framework**: Axum 0.8
+*   **Async Runtime**: Tokio
+*   **Database**: PostgreSQL (via SQLx)
+*   **Error Handling**: anyhow + thiserror
+*   **Logging**: tracing + tracing-subscriber
+*   **CORS**: tower-http
+
+### 9.2 Project Structure
+
+```
+backend/
+├── src/
+│   ├── main.rs           # Application entry point, server setup
+│   ├── config.rs         # Environment variable configuration
+│   ├── error.rs          # Unified error handling (AppError, AppResult)
+│   ├── db/
+│   │   └── mod.rs        # Database connection pool management
+│   ├── models/
+│   │   └── mod.rs        # Data models (Event, CreateEventRequest, etc.)
+│   ├── handlers/
+│   │   ├── mod.rs        # Request handlers
+│   │   └── health.rs     # Health check endpoint
+│   └── routes/
+│       └── mod.rs        # Route definitions
+├── Cargo.toml            # Dependencies and project metadata
+└── .env.example          # Environment variables template
+```
+
+### 9.3 Core Concepts
+
+#### Configuration (`config.rs`)
+Environment variables are loaded from `.env` file using `dotenvy`:
+*   `DATABASE_URL`: PostgreSQL connection string
+*   `PORT`: Server port (default: 3000)
+*   `HOST`: Server host (default: 0.0.0.0)
+*   `ALLOWED_ORIGINS`: Comma-separated CORS origins (e.g., `http://localhost:4321`)
+
+#### Error Handling (`error.rs`)
+Unified error type `AppError` with automatic JSON error responses:
+*   `Database(sqlx::Error)`: Database errors
+*   `NotFound`: Resource not found (404)
+*   `BadRequest(String)`: Invalid request (400)
+*   `InternalServer`: Internal server error (500)
+
+#### Database (`db/mod.rs`)
+*   Uses SQLx with lazy connection pooling
+*   Supports PostgreSQL with async queries
+*   Connection pool configuration: max 5 connections
+
+#### Routing (`routes/mod.rs`)
+Routes are defined using Axum's routing system:
+*   `GET /health`: Health check endpoint
+*   `POST /api/events`: Create event (placeholder)
+
+### 9.4 Development Workflow
+
+#### Environment Setup
+```bash
+# 1. Create .env file
+cp .env.example .env
+
+# 2. Configure database URL and CORS
+# Edit .env:
+# DATABASE_URL=postgres://localhost/agreed_time
+# ALLOWED_ORIGINS=http://localhost:4321
+```
+
+#### Running the Server
+```bash
+cd backend
+cargo run
+# Server starts on http://localhost:3000
+```
+
+#### Testing Endpoints
+```bash
+# Health check
+curl http://localhost:3000/health
+# Response: {"status":"ok","service":"agreed-time-backend"}
+```
+
+### 9.5 Frontend-Backend Integration
+
+#### Development Setup
+Two servers must run simultaneously:
+
+**Terminal 1 - Frontend**:
+```bash
+cd frontend
+npm run dev
+# Astro dev server: http://localhost:4321
+```
+
+**Terminal 2 - Backend**:
+```bash
+cd backend
+cargo run
+# Axum API server: http://localhost:3000
+```
+
+#### CORS Configuration
+The backend is configured to allow requests from the frontend origin:
+*   Development: `http://localhost:4321`
+*   Production: `https://agreed-time.vercel.app` (configurable via `ALLOWED_ORIGINS`)
+
+#### API Communication
+Frontend calls backend APIs using `fetch()`:
+```typescript
+// Example: frontend/src/services/eventService.ts
+const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+
+async function createEvent(data) {
+  const response = await fetch(`${API_URL}/api/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+}
+```
+
+### 9.6 Key Rust Concepts
+
+#### Ownership and Borrowing
+*   **Ownership**: Each value has a single owner; when owner goes out of scope, value is dropped
+*   **Borrowing**: References (`&T`) allow reading without taking ownership
+*   **Mutable Borrowing**: `&mut T` allows modification
+
+#### Error Handling with `?` Operator
+```rust
+let config = Config::from_env()?;
+// If error, immediately returns Err to caller
+```
+
+#### Async/Await
+```rust
+#[tokio::main]
+async fn main() -> Result<()> {
+    let listener = TcpListener::bind("0.0.0.0:3000").await?;
+    // .await suspends until operation completes
+}
+```
+
+#### Iterators (Lazy Evaluation)
+```rust
+"a,b,c".split(',')           // Creates iterator (lazy)
+    .map(|s| s.trim())       // Transform (still lazy)
+    .collect::<Vec<_>>()     // Execute and collect
+```
+
+### 9.7 Next Steps (Backend)
+
+*   [ ] Implement database schema and migrations
+*   [ ] Create event CRUD endpoints
+*   [ ] Add authentication/authorization
+*   [ ] Implement response submission logic
+*   [ ] Add result aggregation queries
+*   [ ] Set up automated testing
+*   [ ] Configure deployment to VPS
+
+---
+
+## 10. Deployment Strategy
+
+### 10.1 Frontend Deployment
+*   **Platform**: Vercel (recommended)
+*   **Build Command**: `npm run build`
+*   **Output Directory**: `dist/`
+*   **Environment Variables**: `PUBLIC_API_URL`
+
+### 10.2 Backend Deployment
+*   **Platform**: VPS (self-hosted)
+*   **Database**: PostgreSQL on same VPS
+*   **CI/CD**: GitHub Actions
+    *   Trigger: Push to `main` branch (path: `backend/**`)
+    *   Build: Compile Rust binary
+    *   Deploy: SSH to VPS, restart systemd service
+*   **Environment**: Production `.env` on VPS
+
+### 10.3 Development vs Production
+
+| Environment | Frontend | Backend | Database |
+|------------|----------|---------|----------|
+| Development | `npm run dev` (localhost:4321) | `cargo run` (localhost:3000) | Local PostgreSQL |
+| Production | Vercel CDN | VPS (Rust binary) | PostgreSQL on VPS |
