@@ -4,9 +4,8 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
 
 ## Documentation
 
-*   **[Developer Guide](./docs/DEVELOPER_GUIDE.md)**: Architecture, code standards, and contribution workflow.
-*   **[Product Spec](./docs/PRODUCT_SPEC.md)**: Functional requirements and design specifications.
-*   **[Learning Notes](./docs/learning/)**: Technical deep dives and architectural decisions.
+*   **[Developer Guide](./docs/developer/guide.md)**: Architecture, code standards, and contribution workflow.
+*   **[Product Spec](./docs/product/spec.md)**: Functional requirements and design specifications.
 
 ## Getting Started
 
