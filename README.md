@@ -17,9 +17,16 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
     - [ ] Read-only calendar mode
     - [x] Availability overlay ("painting" on top of organizer's slots)
     - [x] Heatmap visualization
-- [ ] **Backend Integration**
-    - [ ] Database schema design
-    - [ ] API routes (Astro Actions)
+- [x] **Backend Infrastructure**
+    - [x] Rust + Axum project initialization
+    - [x] Modular architecture (routes, handlers, models, db)
+    - [x] CORS configuration
+    - [x] Error handling and logging
+    - [ ] Database schema and migrations
+    - [ ] API endpoints implementation
+    - [ ] Authentication system
 - [ ] **Advanced Features**
     - [ ] Public Roadmap Page (`/roadmap`)
     - [ ] Timezone auto-detection for guests
+    - [ ] GitHub Actions CI/CD
+    - [ ] VPS deployment
