@@ -3,14 +3,14 @@ use axum::{
     Json,
 };
 use chrono::Utc; // For current timestamp
-use sqlx::{PgPool, Transaction};
+use sqlx::PgPool; // Transaction is not used directly here, PgPool's begin() returns it
 use uuid::Uuid;
 
 use crate::{
     error::{AppError, AppResult}, // Import AppError
     models::{
-        CreateEventRequest, CreateEventResponse, Event, EventResponse, TimeSlot, TimeSlotRequest,
-    }, // Added EventResponse, TimeSlot
+        CreateEventRequest, CreateEventResponse, Event, EventResponse, TimeSlot,
+    }, // TimeSlotRequest removed as it's not directly used here
 };
 
 // Helper to generate unique string tokens for public and organizer access.
@@ -95,7 +95,7 @@ pub async fn get_event(
     )
     .fetch_optional(&pool)
     .await?
-    .ok_or_else(|| AppError::NotFound(format!("Event with public token {} not found", public_token)))?;
+    .ok_or_else(|| AppError::NotFound)?; // Corrected: No arguments for AppError::NotFound
 
     // Fetch time slots for the event
     let time_slots = sqlx::query_as!(
