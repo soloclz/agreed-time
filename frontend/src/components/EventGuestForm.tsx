@@ -71,7 +71,17 @@ export default function EventGuestForm({ eventId }: { eventId: string }) {
     // For the purpose of this refactor, let's map them to ISO strings assuming simpler format or just use the IDs if consistent.
     // Actually, `Heatmap.tsx` uses `parseISO(s.slot)`. So it expects standard ISO strings.
     
-    const slotsAsIsoStrings = selectedGuestSlots.map(s => `${s.date}T${s.startTime}:00.000Z`); // Simplified ISO construction
+    // Correctly convert local TimeSlot objects to ISO 8601 UTC strings
+    const slotsAsIsoStrings = selectedGuestSlots.map(slot => {
+      // Construct a local date-time string
+      const startLocal = `${slot.date}T${slot.startTime}:00`; 
+      
+      // new Date() will parse this as local time
+      const startDate = new Date(startLocal); 
+      
+      // toISOString() converts it to UTC and returns in ISO 8601 format
+      return startDate.toISOString();
+    });
 
     try {
       await eventService.submitResponse(eventId, {
