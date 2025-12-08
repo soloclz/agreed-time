@@ -23,6 +23,5 @@ pnpm-debug.log*
 
 # Rust
 backend/target/
-backend/Cargo.lock
 backend/**/*.rs.bk
 backend/.env
