@@ -1,6 +1,22 @@
+# General
 .gemini/
 .DS_Store
+.idea/
+
+# Dependencies
 node_modules/
+
+# Frontend (Astro)
+frontend/dist/
+frontend/.astro/
+frontend/.env
+frontend/.env.production
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Rust
 backend/target/
