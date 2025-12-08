@@ -90,6 +90,28 @@ export default function TimeSlotSelector({
     selectedCellsRef.current = selectedCells;
   }, [selectedCells]);
 
+  // Clean up selected cells that fall outside the new date range
+  useEffect(() => {
+    if (!startDate || !endDate) return;
+
+    setSelectedCells(prev => {
+      const newSet = new Set<string>();
+      let hasChanges = false;
+
+      prev.forEach(key => {
+        const [datePart] = key.split('_');
+        // Simple string comparison for YYYY-MM-DD works correctly for filtering
+        if (datePart >= startDate && datePart <= endDate) {
+          newSet.add(key);
+        } else {
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? newSet : prev;
+    });
+  }, [startDate, endDate]);
+
 
 
 
@@ -144,6 +166,11 @@ export default function TimeSlotSelector({
   };
 
   const isSlotSelectable = (date: string, hour: number): boolean => {
+    // 1. Range Check (New!) - Ensure date is within the selected range for Organizer Mode
+    if (date < startDate || date > endDate) {
+      return false; 
+    }
+
     // 2. Guest Mode check: If availableSlots is provided, slot MUST be in it
     if (availableSlots && availableSlots.length > 0) {
       const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
@@ -154,7 +181,7 @@ export default function TimeSlotSelector({
       );
     }
 
-    // 3. Organizer Mode: All range-valid slots are selectable
+    // 3. Organizer Mode: All range-valid slots are selectable (after the range check above)
     return true;
   };
 
