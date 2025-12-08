@@ -43,7 +43,6 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
     - [x] Mobile long-press selection
     - [x] UTC timezone storage
 - [x] **Guest Response View**
-    - [ ] Read-only calendar mode
     - [x] Availability overlay ("painting" on top of organizer's slots)
     - [x] Heatmap visualization
 - [x] **Backend Infrastructure**
