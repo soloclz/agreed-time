@@ -3,6 +3,9 @@
 .DS_Store
 .idea/
 
+# Learning Notes (Ignored by default)
+/docs/learning/
+
 # Dependencies
 node_modules/
 
