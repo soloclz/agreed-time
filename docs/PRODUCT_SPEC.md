@@ -15,6 +15,20 @@
 - **Deployment target:** Static Astro site with backend API at a separate origin (e.g. `https://api.agreedtime.example`), or same origin with `/api` prefix.
 
 ---
+## 1.x Time Handling Strategy
+
+To ensure accuracy and consistency across different time zones, the application adheres to the following principles for time management:
+
+- **Database Storage**: All time-related data stored in the backend database (e.g., `time_slots.start_at`, `time_slots.end_at`) will use `TIMESTAMPTZ` (timestamp with time zone) PostgreSQL data type. This means all times are internally stored in **UTC (Coordinated Universal Time)**.
+- **API Communication**: The backend API will expose and expect time-related data in **ISO 8601 format (UTC)** (e.g., `2025-12-08T09:00:00Z`).
+- **Frontend Presentation**: The frontend is responsible for:
+    - Receiving UTC time data from the API.
+    - Converting UTC times to the **user's local timezone** for display in the UI (e.g., the Time Grid).
+    - Handling display adjustments for dates and times that may cross local day boundaries due to timezone conversion (e.g., a UTC time on Dec 10 might display as Dec 9 in a user's local timezone).
+- **`events.time_zone` field**: The `time_zone` field in the `events` table (e.g., "Asia/Taipei") will serve as **metadata for user interface context only**. It indicates the original timezone the event organizer used for planning and can be displayed to users for clarity, but it is **not used for backend time calculations or conversions**.
+
+
+---
 
 ## 2. Routes (Frontend)
 

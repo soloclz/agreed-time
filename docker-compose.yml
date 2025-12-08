@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:18-alpine # 已更新為 18-alpine
+    container_name: agreed_time_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: agreed_time
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:
