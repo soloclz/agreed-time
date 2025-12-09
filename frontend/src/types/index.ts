@@ -123,5 +123,6 @@ export interface OrganizerEventResponse {
   time_slots: ApiTimeSlotWithParticipants[];
   participants: ParticipantInfo[];
   total_participants: number;
+  created_at: string; // ISO 8601 timestamp
 }
 
