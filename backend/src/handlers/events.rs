@@ -197,24 +197,11 @@ pub async fn submit_availability(
     Ok(())
 }
 
-pub async fn get_event_results(
-    State(pool): State<PgPool>,
-    Path(public_token): Path<String>,
-) -> AppResult<Json<EventResultsResponse>> {
-    // Fetch the event
-    let event = sqlx::query_as!(
-        Event,
-        r#"
-        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
-        FROM events
-        WHERE public_token = $1
-        "#,
-        public_token
-    )
-    .fetch_optional(&pool)
-    .await?
-    .ok_or_else(|| AppError::NotFound)?;
-
+async fn fetch_event_details(
+    pool: &PgPool,
+    event_id: Uuid,
+    organizer_name: &str,
+) -> AppResult<(Vec<TimeSlotWithParticipants>, Vec<ParticipantInfo>, i64)> {
     // Get total number of unique participants
     let total_participants = sqlx::query_scalar!(
         r#"
@@ -222,9 +209,9 @@ pub async fn get_event_results(
         FROM availability
         WHERE event_id = $1
         "#,
-        event.id
+        event_id
     )
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await?;
 
     // Fetch time slots with participant names
@@ -242,9 +229,9 @@ pub async fn get_event_results(
         GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
         ORDER BY ts.start_at
         "#,
-        event.id
+        event_id
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await?;
 
     let time_slots = time_slots_raw
@@ -267,9 +254,9 @@ pub async fn get_event_results(
         WHERE event_id = $1
         ORDER BY participant_name, created_at DESC
         "#,
-        event.id
+        event_id
     )
-    .fetch_all(&pool)
+    .fetch_all(pool)
     .await?;
 
     let participants = participants_raw
@@ -277,9 +264,33 @@ pub async fn get_event_results(
         .map(|row| ParticipantInfo {
             name: row.participant_name.clone(),
             comment: row.comment,
-            is_organizer: row.participant_name == event.organizer_name,
+            is_organizer: row.participant_name == organizer_name,
         })
         .collect();
+
+    Ok((time_slots, participants, total_participants))
+}
+
+pub async fn get_event_results(
+    State(pool): State<PgPool>,
+    Path(public_token): Path<String>,
+) -> AppResult<Json<EventResultsResponse>> {
+    // Fetch the event
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        FROM events
+        WHERE public_token = $1
+        "#,
+        public_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    let (time_slots, participants, total_participants) =
+        fetch_event_details(&pool, event.id, &event.organizer_name).await?;
 
     Ok(Json(EventResultsResponse {
         id: event.id,
@@ -311,71 +322,8 @@ pub async fn get_organizer_event(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    // Get total number of unique participants
-    let total_participants = sqlx::query_scalar!(
-        r#"
-        SELECT COUNT(DISTINCT participant_name) as "count!"
-        FROM availability
-        WHERE event_id = $1
-        "#,
-        event.id
-    )
-    .fetch_one(&pool)
-    .await?;
-
-    // Fetch time slots with participant names
-    let time_slots_raw = sqlx::query!(
-        r#"
-        SELECT
-            ts.id,
-            ts.event_id,
-            ts.start_at,
-            ts.end_at,
-            COALESCE(array_agg(a.participant_name) FILTER (WHERE a.participant_name IS NOT NULL), ARRAY[]::text[]) as "participants!"
-        FROM time_slots ts
-        LEFT JOIN availability a ON ts.id = a.time_slot_id
-        WHERE ts.event_id = $1
-        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
-        ORDER BY ts.start_at
-        "#,
-        event.id
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    let time_slots = time_slots_raw
-        .into_iter()
-        .map(|row| TimeSlotWithParticipants {
-            id: row.id,
-            event_id: row.event_id,
-            start_at: row.start_at,
-            end_at: row.end_at,
-            availability_count: row.participants.len() as i64,
-            participants: row.participants,
-        })
-        .collect();
-
-    // Fetch unique participants with their comments
-    let participants_raw = sqlx::query!(
-        r#"
-        SELECT DISTINCT ON (participant_name) participant_name, comment
-        FROM availability
-        WHERE event_id = $1
-        ORDER BY participant_name, created_at DESC
-        "#,
-        event.id
-    )
-    .fetch_all(&pool)
-    .await?;
-
-    let participants = participants_raw
-        .into_iter()
-        .map(|row| ParticipantInfo {
-            name: row.participant_name.clone(),
-            comment: row.comment,
-            is_organizer: row.participant_name == event.organizer_name,
-        })
-        .collect();
+    let (time_slots, participants, total_participants) =
+        fetch_event_details(&pool, event.id, &event.organizer_name).await?;
 
     Ok(Json(OrganizerEventResponse {
         id: event.id,

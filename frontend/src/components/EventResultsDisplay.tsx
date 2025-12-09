@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format, parseISO, addHours } from 'date-fns';
 import type { EventResultsResponse, OrganizerEventResponse } from '../types';
 import Heatmap from './Heatmap';
+import { findOrganizerName, filterOrganizerOnlySlots, isOrganizerOnly as checkIsOrganizerOnly } from '../utils/eventUtils';
 
 interface EventResultsDisplayProps {
   data: EventResultsResponse | OrganizerEventResponse;
@@ -31,34 +32,17 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
 
   // Find organizer's name
   const organizerName = useMemo(() => {
-    return data.participants.find(p => p.is_organizer)?.name;
+    return findOrganizerName(data.participants);
   }, [data.participants]);
 
-  // Check if a slot only has the organizer
-  const isOrganizerOnlySlot = (slot: { count: number; attendees: string[] }) => {
-    return slot.count === 1 && slot.attendees.length === 1 && slot.attendees[0] === organizerName;
-  };
-
   const topPicks = useMemo(() => {
-    let slots = allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
-
-    // If there are multiple participants, filter out organizer-only slots
-    if (totalParticipants > 1) {
-      slots = slots.filter(slot => !isOrganizerOnlySlot(slot));
-    }
-
-    return slots;
+    const slots = allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
+    return filterOrganizerOnlySlots(slots, totalParticipants, organizerName);
   }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
 
   const otherOptions = useMemo(() => {
-    let slots = allSortedSlots.filter(slot => slot.count < maxCount);
-
-    // If there are multiple participants, filter out organizer-only slots
-    if (totalParticipants > 1) {
-      slots = slots.filter(slot => !isOrganizerOnlySlot(slot));
-    }
-
-    return slots;
+    const slots = allSortedSlots.filter(slot => slot.count < maxCount);
+    return filterOrganizerOnlySlots(slots, totalParticipants, organizerName);
   }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
 
   const handleShare = () => {
@@ -69,7 +53,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
   };
 
   // Check if only the organizer has responded
-  const isOrganizerOnly = totalParticipants === 1 && data.participants[0]?.is_organizer === true;
+  const isOrganizerOnly = checkIsOrganizerOnly(totalParticipants, data.participants);
 
   return (
     <div className="space-y-12 relative">
