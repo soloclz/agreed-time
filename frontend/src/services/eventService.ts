@@ -99,6 +99,7 @@ export const eventService = {
     const payload: SubmitAvailabilityPayload = {
       participant_name: responseData.name,
       time_slot_ids: responseData.slots.map(id => parseInt(id, 10)), // Convert string IDs to numbers
+      comment: responseData.comment,
     };
 
     const apiResponse = await fetch(`${API_BASE_URL}/events/${publicToken}/availability`, {

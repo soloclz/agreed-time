@@ -197,13 +197,14 @@ export default function EventResultView({ publicToken }: { publicToken: string }
           <section className="border-t border-film-border/50 pt-10">
             <h3 className="text-2xl font-serif font-bold text-ink mb-6">Participants <span className="text-film-accent text-lg align-top">{totalParticipants}</span></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {Array.from(new Set(allSortedSlots.flatMap(slot => slot.attendees))).map((name, i) => (
+              {resultsData.participants.map((participant, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/60 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-serif text-sm">
-                    {name.charAt(0).toUpperCase()}
+                    {participant.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-bold text-ink">{name}</p>
+                    <p className="font-bold text-ink">{participant.name}</p>
+                    {participant.comment && <p className="text-ink/60 text-sm italic mt-1">"{participant.comment}"</p>}
                   </div>
                 </div>
               ))}
