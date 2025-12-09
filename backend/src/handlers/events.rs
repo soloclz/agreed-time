@@ -10,7 +10,7 @@ use crate::{
     error::{AppError, AppResult}, // Import AppError
     models::{
         CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
-        SubmitAvailabilityRequest, TimeSlot, TimeSlotWithParticipants,
+        ParticipantInfo, SubmitAvailabilityRequest, TimeSlot, TimeSlotWithParticipants,
     }, // TimeSlotRequest removed as it's not directly used here
 };
 
@@ -157,10 +157,11 @@ pub async fn submit_availability(
     // Insert new availability entries
     for time_slot_id in payload.time_slot_ids {
         sqlx::query!(
-            "INSERT INTO availability (event_id, time_slot_id, participant_name) VALUES ($1, $2, $3)",
+            "INSERT INTO availability (event_id, time_slot_id, participant_name, comment) VALUES ($1, $2, $3, $4)",
             event_id,
             time_slot_id,
-            payload.participant_name
+            payload.participant_name,
+            payload.comment
         )
         .execute(&mut *transaction)
         .await?;
@@ -233,6 +234,27 @@ pub async fn get_event_results(
         })
         .collect();
 
+    // Fetch unique participants with their comments
+    let participants_raw = sqlx::query!(
+        r#"
+        SELECT DISTINCT ON (participant_name) participant_name, comment
+        FROM availability
+        WHERE event_id = $1
+        ORDER BY participant_name, created_at DESC
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let participants = participants_raw
+        .into_iter()
+        .map(|row| ParticipantInfo {
+            name: row.participant_name,
+            comment: row.comment,
+        })
+        .collect();
+
     Ok(Json(EventResultsResponse {
         id: event.id,
         title: event.title,
@@ -240,6 +262,7 @@ pub async fn get_event_results(
         time_zone: event.time_zone,
         state: event.state,
         time_slots,
+        participants,
         total_participants,
     }))
 }
