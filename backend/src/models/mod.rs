@@ -63,6 +63,7 @@ pub struct EventResponse {
 pub struct SubmitAvailabilityRequest {
     pub participant_name: String,
     pub time_slot_ids: Vec<i64>,
+    pub comment: Option<String>,
 }
 
 // For results view: time slot with participant names
@@ -76,6 +77,13 @@ pub struct TimeSlotWithParticipants {
     pub participants: Vec<String>, // List of participant names
 }
 
+// Participant information for results view
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParticipantInfo {
+    pub name: String,
+    pub comment: Option<String>,
+}
+
 // For results view: complete event results
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EventResultsResponse {
@@ -85,6 +93,7 @@ pub struct EventResultsResponse {
     pub time_zone: Option<String>,
     pub state: String,
     pub time_slots: Vec<TimeSlotWithParticipants>,
+    pub participants: Vec<ParticipantInfo>, // List of all participants with their comments
     pub total_participants: i64, // Total unique participants
 }
 
