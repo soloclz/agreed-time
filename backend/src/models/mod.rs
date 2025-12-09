@@ -113,6 +113,7 @@ pub struct OrganizerEventResponse {
     pub time_slots: Vec<TimeSlotWithParticipants>, // Detailed slots with participants
     pub participants: Vec<ParticipantInfo>,        // All participants with comments
     pub total_participants: i64,
+    pub created_at: DateTime<Utc>, // Event creation timestamp for expiration display
 }
 
 

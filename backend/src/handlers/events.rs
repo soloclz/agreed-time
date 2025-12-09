@@ -388,6 +388,7 @@ pub async fn get_organizer_event(
         time_slots,
         participants,
         total_participants,
+        created_at: event.created_at,
     }))
 }
 
