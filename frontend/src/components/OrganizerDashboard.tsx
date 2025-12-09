@@ -144,22 +144,17 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                      Share this link
                    </span>
                 </label>
-                <div className="flex gap-2">
-                   <input 
-                     readOnly 
-                     value={publicEventDisplayUrl} 
-                     className="flex-1 text-base p-3 border-2 border-film-accent/30 focus:border-film-accent rounded-lg bg-paper text-ink font-mono shadow-sm transition-colors"
-                     onClick={(e) => e.currentTarget.select()}
-                   />
+                <div className="flex items-center gap-2">
                    <button 
                      onClick={() => {
                        navigator.clipboard.writeText(publicEventUrl);
-                       alert('Link copied!');
+                       alert('Invitation link copied!');
                      }} 
-                     className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-all active:scale-95"
+                     className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-lg flex-grow sm:flex-grow-0"
                    >
-                     Copy
+                     Copy Invitation Link
                    </button>
+                   <span className="text-sm text-ink/50 font-mono hidden sm:block">({publicEventDisplayUrl})</span>
                 </div>
                 <p className="text-sm text-ink/60">
                    Send this link to anyone you want to invite. They can view the event details and select their available times.
@@ -167,24 +162,19 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
              </div>
 
              {/* Secondary: Results Link */}
-             <div className="flex flex-col gap-1 pt-2">
+             <div className="flex flex-col gap-1 pt-4">
                 <span className="text-xs font-bold text-ink/40 uppercase tracking-wider">Advanced: Read-only Results Link</span>
-                <div className="flex gap-2 items-center">
-                   <input 
-                     readOnly 
-                     value={publicResultsDisplayUrl} 
-                     className="flex-1 text-xs p-2 border border-film-border rounded bg-gray-50 text-ink/50 font-mono focus:outline-none focus:border-film-border" 
-                     onClick={(e) => e.currentTarget.select()}
-                   />
+                <div className="flex items-center gap-2">
                    <button 
                      onClick={() => {
                         navigator.clipboard.writeText(publicResultsUrl);
                         alert('Results link copied!');
                      }} 
-                     className="text-xs bg-white border border-film-border hover:bg-gray-50 px-3 py-2 rounded text-ink/60 font-medium transition-colors"
+                     className="text-sm bg-white border border-film-border hover:bg-gray-50 px-4 py-2 rounded text-ink/70 font-medium transition-colors shadow-sm"
                    >
                      Copy Result Link
                    </button>
+                   <span className="text-xs text-ink/50 font-mono hidden sm:block">({publicResultsDisplayUrl})</span>
                 </div>
              </div>
           </div>
