@@ -8,6 +8,7 @@ export interface ApiTimeSlot {
 export interface CreateEventPayload {
   title: string;
   description?: string;
+  organizer_name?: string; // Organizer's name (defaults to "Organizer")
   time_zone?: string; // Optional metadata for UI display
   time_slots: ApiTimeSlot[];
 }
@@ -97,6 +98,7 @@ export interface ApiTimeSlotWithParticipants extends ApiTimeSlotWithId {
 export interface ParticipantInfo {
   name: string;
   comment?: string;
+  is_organizer: boolean;
 }
 
 export interface EventResultsResponse {
