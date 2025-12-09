@@ -84,11 +84,18 @@ export interface SubmitAvailabilityPayload {
 
   time_slot_ids: number[]; // Backend expects i64, so numbers
 
+  comment?: string;
+
 }
 
 // Types for Event Results API
 export interface ApiTimeSlotWithParticipants extends ApiTimeSlotWithId {
   participants: string[]; // List of participant names
+}
+
+export interface ParticipantInfo {
+  name: string;
+  comment?: string;
 }
 
 export interface EventResultsResponse {
@@ -98,5 +105,6 @@ export interface EventResultsResponse {
   time_zone?: string;
   state: EventState;
   time_slots: ApiTimeSlotWithParticipants[];
+  participants: ParticipantInfo[]; // List of all participants with comments
   total_participants: number;
 }
