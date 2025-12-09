@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     error::{AppError, AppResult}, // Import AppError
     models::{
-        CreateEventRequest, CreateEventResponse, Event, EventResponse, TimeSlot,
+        CreateEventRequest, CreateEventResponse, Event, EventResponse, SubmitAvailabilityRequest, TimeSlot,
     }, // TimeSlotRequest removed as it's not directly used here
 };
 
@@ -119,4 +119,46 @@ pub async fn get_event(
         state: event.state,
         time_slots,
     }))
+}
+
+pub async fn submit_availability(
+    State(pool): State<PgPool>,
+    Path(public_token): Path<String>,
+    Json(payload): Json<SubmitAvailabilityRequest>,
+) -> AppResult<()> {
+    let mut transaction = pool.begin().await?;
+
+    // Find the event by public_token
+    let event_id = sqlx::query_scalar!(
+        "SELECT id FROM events WHERE public_token = $1",
+        public_token
+    )
+    .fetch_optional(&mut *transaction)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // Delete existing availability for this participant and event
+    sqlx::query!(
+        "DELETE FROM availability WHERE event_id = $1 AND participant_name = $2",
+        event_id,
+        payload.participant_name
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    // Insert new availability entries
+    for time_slot_id in payload.time_slot_ids {
+        sqlx::query!(
+            "INSERT INTO availability (event_id, time_slot_id, participant_name) VALUES ($1, $2, $3)",
+            event_id,
+            time_slot_id,
+            payload.participant_name
+        )
+        .execute(&mut *transaction)
+        .await?;
+    }
+
+    transaction.commit().await?;
+
+    Ok(())
 }

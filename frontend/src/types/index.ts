@@ -47,18 +47,39 @@ export interface TimeSlot {
 // ... existing types ...
 
 export interface EventData {
+
   id: string;
+
   title: string;
+
   description: string;
+
   availableSlots: TimeSlot[]; // Transformed for UI
+
   slotDuration?: number; // Duration in minutes
+
   timeZone?: string; // Metadata
+
 }
 
-// ... existing types ...
+
 
 export interface ResponseData {
+
   name: string;
-  slots: string[]; // ISO strings (or IDs if we switch to IDs later, but currently ISO strings from MOCK)
+
+  slots: string[]; // This will store the TimeSlot.id (which are strings)
+
   comment?: string;
+
+}
+
+
+
+export interface SubmitAvailabilityPayload {
+
+  participant_name: string;
+
+  time_slot_ids: number[]; // Backend expects i64, so numbers
+
 }

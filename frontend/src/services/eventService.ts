@@ -1,21 +1,8 @@
-import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEventSuccessResponse, EventResponse, TimeSlot } from '../types';
+import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEventSuccessResponse, EventResponse, TimeSlot, SubmitAvailabilityPayload } from '../types';
 
 // API base URL - adjust as needed for production vs development
 // For local development, assume backend is on port 3000 (via proxy)
 const API_BASE_URL = '/api';
-
-// --- MOCK DATA (only for submitResponse, getEventResults for now) ---
-const MOCK_RESPONSES: ResponseData[] = [
-  // ... (keep existing mock responses or simplify if not used)
-  { name: 'Alice', slots: ['2025-12-08T01:00:00.000Z', '2025-12-08T02:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Prefer earlier' },
-  { name: 'Bob', slots: ['2025-12-08T02:00:00.000Z', '2025-12-09T05:00:00.000Z', '2025-12-10T09:00:00.000Z'], comment: 'Only Tuesdays' },
-];
-
-// In-memory store for created events (simulates DB for the session)
-const responsesStore: Record<string, ResponseData[]> = {}; // Initialize empty
-
-// Simulates network delay (only for mock functions)
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const eventService = {
   // Fetch event by public token (Real API)
@@ -35,14 +22,12 @@ export const eventService = {
 
       // Transform API data (UTC) to UI data (Local Time)
       const availableSlots: TimeSlot[] = eventResponse.time_slots.map(slot => {
+        // Convert UTC to local time for display
         const startDate = new Date(slot.start_at);
         const endDate = new Date(slot.end_at);
 
         // Extract YYYY-MM-DD
-        const year = startDate.getFullYear();
-        const month = String(startDate.getMonth() + 1).padStart(2, '0');
-        const day = String(startDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
+        const dateStr = startDate.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
         // Extract HH:MM
         const startHour = String(startDate.getHours()).padStart(2, '0');
@@ -103,20 +88,31 @@ export const eventService = {
     return response.json() as Promise<CreateEventSuccessResponse>;
   },
 
-  submitResponse: async (eventId: string, response: ResponseData): Promise<void> => {
-    await delay(800); // Simulate network delay
-    console.warn('Using mock for submitResponse');
-    if (!responsesStore[eventId]) {
-        responsesStore[eventId] = [];
+  submitResponse: async (publicToken: string, responseData: ResponseData): Promise<void> => {
+    const payload: SubmitAvailabilityPayload = {
+      participant_name: responseData.name,
+      time_slot_ids: responseData.slots.map(id => parseInt(id, 10)), // Convert string IDs to numbers
+    };
+
+    const apiResponse = await fetch(`${API_BASE_URL}/events/${publicToken}/availability`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!apiResponse.ok) {
+      const errorDetail = await apiResponse.json();
+      throw new Error(errorDetail.message || `Failed to submit response: ${apiResponse.statusText}`);
     }
-    responsesStore[eventId].push(response);
   },
 
-  getEventResults: async (eventId: string): Promise<{ event: EventData, responses: ResponseData[] } | null> => {
-    await delay(800); // Simulate network delay
+  // This function is currently not implemented and still relies on mock data.
+  // We need to implement getEventResults with API call later.
+  getEventResults: async (publicToken: string): Promise<{ event: EventData, responses: ResponseData[] } | null> => {
     console.warn('Using mock for getEventResults');
-    // This mock is broken now since eventsStore is removed. 
-    // We need to implement getEventResults with API call later.
     return null; 
   }
 };
+
