@@ -31,23 +31,27 @@ pub async fn create_event(
     let organizer_token = generate_token();
     let current_time = Utc::now();
 
+    // Determine organizer name (default to "Organizer" if not provided)
+    let organizer_name = payload.organizer_name.clone().unwrap_or_else(|| "Organizer".to_string());
+
     // Insert the new event
     sqlx::query_as!(
         Event,
         r#"
         INSERT INTO events (
-            id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+            id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         )
         VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         )
-        RETURNING id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        RETURNING id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         "#,
         event_id,
         public_token,
         organizer_token,
         payload.title,
         payload.description,
+        organizer_name,
         // For MVP, directly set state to 'open' as discussed
         "open",
         payload.time_zone,
@@ -57,16 +61,36 @@ pub async fn create_event(
     .fetch_one(&mut *transaction)
     .await?;
 
-    // Insert time slots
+    // Insert time slots and collect their IDs for creating organizer availability
+    let mut time_slot_ids = Vec::new();
     for time_slot in payload.time_slots {
-        sqlx::query!(
+        let time_slot_id = sqlx::query_scalar!(
             r#"
             INSERT INTO time_slots (event_id, start_at, end_at)
             VALUES ($1, $2, $3)
+            RETURNING id
             "#,
             event_id,
             time_slot.start_at,
             time_slot.end_at
+        )
+        .fetch_one(&mut *transaction)
+        .await?;
+
+        time_slot_ids.push(time_slot_id);
+    }
+
+    // Create organizer availability records for all time slots
+    for time_slot_id in time_slot_ids {
+        sqlx::query!(
+            r#"
+            INSERT INTO availability (event_id, time_slot_id, participant_name, comment)
+            VALUES ($1, $2, $3, $4)
+            "#,
+            event_id,
+            time_slot_id,
+            organizer_name,
+            None::<String> // Organizer doesn't have a comment
         )
         .execute(&mut *transaction)
         .await?;
@@ -89,7 +113,7 @@ pub async fn get_event(
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         FROM events
         WHERE public_token = $1
         "#,
@@ -181,7 +205,7 @@ pub async fn get_event_results(
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         FROM events
         WHERE public_token = $1
         "#,
@@ -251,8 +275,9 @@ pub async fn get_event_results(
     let participants = participants_raw
         .into_iter()
         .map(|row| ParticipantInfo {
-            name: row.participant_name,
+            name: row.participant_name.clone(),
             comment: row.comment,
+            is_organizer: row.participant_name == event.organizer_name,
         })
         .collect();
 
@@ -276,7 +301,7 @@ pub async fn get_organizer_event(
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         FROM events
         WHERE organizer_token = $1
         "#,
@@ -346,8 +371,9 @@ pub async fn get_organizer_event(
     let participants = participants_raw
         .into_iter()
         .map(|row| ParticipantInfo {
-            name: row.participant_name,
+            name: row.participant_name.clone(),
             comment: row.comment,
+            is_organizer: row.participant_name == event.organizer_name,
         })
         .collect();
 
@@ -375,7 +401,7 @@ pub async fn close_event(
         UPDATE events
         SET state = 'closed', updated_at = NOW()
         WHERE organizer_token = $1
-        RETURNING id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        RETURNING id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
         "#,
         organizer_token
     )
