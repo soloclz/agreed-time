@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
+import toast from 'react-hot-toast';
 import TimeSlotSelector from './TimeSlotSelector';
 import type { TimeSlot, ApiTimeSlot } from '../types';
 import { eventService } from '../services/eventService';
@@ -32,12 +33,12 @@ export default function CreateEventForm() {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('Please enter a title for your event');
+      toast.error('Please enter a title for your event');
       return;
     }
 
     if (selectedSlots.length === 0) {
-      alert('Please select at least one time slot');
+      toast.error('Please select at least one time slot');
       return;
     }
 
@@ -78,12 +79,13 @@ export default function CreateEventForm() {
         console.error('Failed to save admin token to localStorage:', error);
       }
 
+      toast.success('Event created successfully!');
       // Direct redirect to manage page
       window.location.href = `/manage/${result.organizer_token}`;
 
     } catch (error) {
       console.error("Event creation failed:", error);
-      alert('Failed to create event. Please try again.');
+      toast.error('Failed to create event. Please try again.');
       setIsSubmitting(false);
     }
   };

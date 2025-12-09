@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import type { TimeSlot, EventData } from '../types';
 import TimeSlotSelector from './TimeSlotSelector';
 import { eventService } from '../services/eventService';
@@ -27,8 +28,9 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         } else {
           setError('Event not found.');
         }
-      } catch (err) {
-        setError('Failed to load event data.');
+      } catch (err: any) { // Catch any for clearer error message
+        setError(`Failed to load event data: ${err.message}`);
+        toast.error(`Failed to load event: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -40,11 +42,11 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim()) {
-      alert('Please enter your name.');
+      toast.error('Please enter your name.');
       return;
     }
     if (selectedGuestSlots.length === 0) {
-      alert('Please select at least one time slot.');
+      toast.error('Please select at least one time slot.');
       return;
     }
 
@@ -58,8 +60,9 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         slots: selectedSlotIds, 
       });
       setSubmitted(true);
-    } catch (error) {
-      alert('Failed to submit response. Please try again.');
+      toast.success('Your availability has been submitted!');
+    } catch (err: any) { // Catch any for clearer error message
+      toast.error(`Failed to submit response: ${err.message}`);
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast'; // Import toast
 import type { OrganizerEventResponse } from '../types';
 import { eventService } from '../services/eventService';
 import { getTimezoneOffsetString } from '../utils/dateUtils';
@@ -35,6 +36,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false); // State for confirmation modal
   const [timezoneOffsetString, setTimezoneOffsetString] = useState<string>('');
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
       } catch (err: any) {
         setError(`Failed to load organizer event data: ${err.message}`);
         console.error(err);
+        toast.error(`Failed to load event: ${err.message}`); // Use toast for error
       } finally {
         setLoading(false);
       }
@@ -61,12 +64,9 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
     fetchOrganizerEvent();
   }, [organizerToken]);
 
-  const handleCloseEvent = async () => {
-    if (!organizerData || organizerData.state === 'closed') return;
-
-    if (!confirm('Are you sure you want to close this event? Participants will no longer be able to submit availability.')) {
-      return;
-    }
+  const confirmCloseEvent = async () => {
+    setShowConfirmModal(false); // Close modal
+    if (!organizerData) return;
 
     setIsClosing(true);
     try {
@@ -75,10 +75,10 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
       if (updatedData) {
         setOrganizerData(updatedData);
       }
-      alert('Event has been closed successfully!');
+      toast.success('Event has been closed successfully!');
     } catch (err: any) {
       setError(`Failed to close event: ${err.message}`);
-      alert(`Failed to close event: ${err.message}`);
+      toast.error(`Failed to close event: ${err.message}`); // Use toast for error
     } finally {
       setIsClosing(false);
     }
@@ -126,7 +126,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
               
               {organizerData.state === 'open' && (
                 <button
-                  onClick={handleCloseEvent}
+                  onClick={() => setShowConfirmModal(true)} // Open modal on click
                   disabled={isClosing}
                   className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded shadow hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
@@ -148,7 +148,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                    <button 
                      onClick={() => {
                        navigator.clipboard.writeText(publicEventUrl);
-                       alert('Invitation link copied!');
+                       toast.success('Invitation link copied!'); // Use toast
                      }} 
                      className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-lg flex-grow sm:flex-grow-0"
                    >
@@ -168,7 +168,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                    <button 
                      onClick={() => {
                         navigator.clipboard.writeText(publicResultsUrl);
-                        alert('Results link copied!');
+                        toast.success('Results link copied!'); // Use toast
                      }} 
                      className="text-sm bg-white border border-film-border hover:bg-gray-50 px-4 py-2 rounded text-ink/70 font-medium transition-colors shadow-sm"
                    >
@@ -188,6 +188,34 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
           publicToken={organizerData.public_token} 
           timezoneOffsetString={timezoneOffsetString} 
        />
+
+       {/* Confirmation Modal for closing event */}
+       {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 sm:p-8 w-full max-w-sm space-y-4">
+            <h3 className="text-xl font-bold text-ink font-serif">Confirm Close Event</h3>
+            <p className="text-ink/80 text-sm">
+              Are you sure you want to close this event "{organizerData.title}"?
+              Participants will no longer be able to submit or update their availability.
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCloseEvent}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Close Event
+              </button>
+            </div>
+          </div>
+        </div>
+       )}
     </div>
   );
 }
