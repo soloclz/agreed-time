@@ -39,13 +39,8 @@ async fn main() -> anyhow::Result<()> {
 
             let result = sqlx::query!(
                 r#"
-                DELETE FROM events 
-                WHERE id IN (
-                    SELECT event_id 
-                    FROM time_slots 
-                    GROUP BY event_id 
-                    HAVING MAX(end_at) < NOW() - INTERVAL '7 days'
-                )
+                DELETE FROM events
+                WHERE created_at < NOW() - INTERVAL '7 days'
                 "#
             )
             .execute(&pool_for_cleanup)
