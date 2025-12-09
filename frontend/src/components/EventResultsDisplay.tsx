@@ -12,6 +12,8 @@ interface EventResultsDisplayProps {
 export default function EventResultsDisplay({ data, publicToken, timezoneOffsetString }: EventResultsDisplayProps) {
   const [copiedShare, setCopiedShare] = useState(false);
 
+  const totalParticipants = data.total_participants;
+
   const allSortedSlots = useMemo(() => {
      return data.time_slots
       .map(slot => ({
@@ -27,13 +29,37 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
     return allSortedSlots[0].count;
   }, [allSortedSlots]);
 
+  // Find organizer's name
+  const organizerName = useMemo(() => {
+    return data.participants.find(p => p.is_organizer)?.name;
+  }, [data.participants]);
+
+  // Check if a slot only has the organizer
+  const isOrganizerOnlySlot = (slot: { count: number; attendees: string[] }) => {
+    return slot.count === 1 && slot.attendees.length === 1 && slot.attendees[0] === organizerName;
+  };
+
   const topPicks = useMemo(() => {
-    return allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
-  }, [allSortedSlots, maxCount]);
+    let slots = allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
+
+    // If there are multiple participants, filter out organizer-only slots
+    if (totalParticipants > 1) {
+      slots = slots.filter(slot => !isOrganizerOnlySlot(slot));
+    }
+
+    return slots;
+  }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
 
   const otherOptions = useMemo(() => {
-    return allSortedSlots.filter(slot => slot.count < maxCount);
-  }, [allSortedSlots, maxCount]);
+    let slots = allSortedSlots.filter(slot => slot.count < maxCount);
+
+    // If there are multiple participants, filter out organizer-only slots
+    if (totalParticipants > 1) {
+      slots = slots.filter(slot => !isOrganizerOnlySlot(slot));
+    }
+
+    return slots;
+  }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
 
   const handleShare = () => {
     const url = `${window.location.origin}/event/${publicToken}/result`;
@@ -42,7 +68,8 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
     setTimeout(() => setCopiedShare(false), 2000);
   };
 
-  const totalParticipants = data.total_participants;
+  // Check if only the organizer has responded
+  const isOrganizerOnly = totalParticipants === 1 && data.participants[0]?.is_organizer === true;
 
   return (
     <div className="space-y-12 relative">
@@ -68,6 +95,17 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
             <h3 className="text-2xl font-serif font-bold text-ink">No responses yet!</h3>
             <p className="text-ink/70 font-sans max-w-md mx-auto">
               Share the guest link with your participants to start collecting responses.
+            </p>
+        </div>
+      ) : isOrganizerOnly ? (
+        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-film-accent/70 mx-auto">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+
+            <h3 className="text-2xl font-serif font-bold text-ink">Waiting for participants</h3>
+            <p className="text-ink/70 font-sans max-w-md mx-auto">
+              Only the organizer has filled in their availability. Share the guest link to collect responses from other participants.
             </p>
         </div>
       ) : (
