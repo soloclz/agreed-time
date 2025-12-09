@@ -112,8 +112,8 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                   <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                     Organizer Dashboard
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase border ${
-                      organizerData.state === 'open' 
-                      ? 'bg-green-100 text-green-700 border-green-200' 
+                      organizerData.state === 'open'
+                      ? 'bg-green-100 text-green-700 border-green-200'
                       : 'bg-red-100 text-red-700 border-red-200'
                     }`}>
                       {organizerData.state}
@@ -122,6 +122,14 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                   <p className="text-sm text-ink/60 mt-1">
                     Manage your event and view results below.
                   </p>
+                  {organizerData.created_at && (
+                    <p className="text-xs text-ink/50 mt-2 flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      This event will expire on {new Date(new Date(organizerData.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (7 days after creation)
+                    </p>
+                  )}
               </div>
               
               {organizerData.state === 'open' && (
