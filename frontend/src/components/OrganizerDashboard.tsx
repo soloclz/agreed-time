@@ -4,6 +4,28 @@ import { eventService } from '../services/eventService';
 import { getTimezoneOffsetString } from '../utils/dateUtils';
 import EventResultsDisplay from './EventResultsDisplay';
 
+// Helper function to truncate URL for display
+const truncateUrl = (url: string, maxLength = 40) => {
+    const urlObj = new URL(url);
+    const path = urlObj.pathname;
+    const hostname = urlObj.hostname;
+
+    // Prioritize showing full hostname + relevant part of token
+    const pathSegments = path.split('/');
+    if (pathSegments.length >= 3 && (pathSegments[1] === 'event' || pathSegments[1] === 'manage')) {
+        const token = pathSegments[pathSegments.length - 1];
+        if (token.length > 8) { // if token is long, show start...end
+            const start = token.substring(0, 4);
+            const end = token.substring(token.length - 4);
+            return `${hostname}${pathSegments.slice(0, -1).join('/')}/${start}...${end}`;
+        }
+    }
+    // Fallback to general truncation if path not typical or token short
+    if (url.length <= maxLength) return url;
+    return `${hostname}${path.substring(0, maxLength - hostname.length - 5)}...`;
+};
+
+
 interface OrganizerDashboardProps {
   organizerToken: string;
 }
@@ -77,6 +99,10 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   const publicEventUrl = `${window.location.origin}/event/${organizerData.public_token}`;
   const publicResultsUrl = `${window.location.origin}/event/${organizerData.public_token}/result`;
 
+  // Truncated URLs for display
+  const publicEventDisplayUrl = truncateUrl(publicEventUrl);
+  const publicResultsDisplayUrl = truncateUrl(publicResultsUrl);
+
   return (
     <div className="space-y-8 bg-paper p-4 sm:p-6 rounded-lg shadow-md">
        {/* Admin Controls Section */}
@@ -121,7 +147,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                 <div className="flex gap-2">
                    <input 
                      readOnly 
-                     value={publicEventUrl} 
+                     value={publicEventDisplayUrl} 
                      className="flex-1 text-base p-3 border-2 border-film-accent/30 focus:border-film-accent rounded-lg bg-paper text-ink font-mono shadow-sm transition-colors"
                      onClick={(e) => e.currentTarget.select()}
                    />
@@ -146,7 +172,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                 <div className="flex gap-2 items-center">
                    <input 
                      readOnly 
-                     value={publicResultsUrl} 
+                     value={publicResultsDisplayUrl} 
                      className="flex-1 text-xs p-2 border border-film-border rounded bg-gray-50 text-ink/50 font-mono focus:outline-none focus:border-film-border" 
                      onClick={(e) => e.currentTarget.select()}
                    />
@@ -175,3 +201,4 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
     </div>
   );
 }
+
