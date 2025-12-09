@@ -145,8 +145,15 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
                   <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-serif text-sm">
                     {participant.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-bold text-ink">{participant.name}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-ink">{participant.name}</p>
+                      {participant.is_organizer && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-film-accent/10 text-film-accent border border-film-accent/20">
+                          Organizer
+                        </span>
+                      )}
+                    </div>
                     {participant.comment && <p className="text-ink/60 text-sm italic mt-1">"{participant.comment}"</p>}
                   </div>
                 </div>
