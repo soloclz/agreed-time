@@ -61,7 +61,7 @@ pub struct EventResponse {
     pub time_slots: Vec<TimeSlot>, // Use the new TimeSlot struct
 }
 
-#[derive(Debug, Deserialize)] // Only need Deserialize for incoming request
+#[derive(Debug, Serialize, Deserialize)] // Need both for testing
 pub struct SubmitAvailabilityRequest {
     pub participant_name: String,
     pub time_slot_ids: Vec<i64>,
