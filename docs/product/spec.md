@@ -62,26 +62,27 @@ Optional future route (not required for first UI pass, can be a simple section o
 
 ### 3.1. Event State
 
-The backend returns a `state` for each event, one of:
+The backend returns a `state` for each event. To simplify the flow, there are only two states:
 
-- `draft`
 - `open`
-- `finalized`
-- `archived` (future, treat as read-only)
+- `closed`
 
 Frontend behavior by state:
 
-- `draft`:
-  - Organizer can edit title/description and add/remove time slots.
-  - Participants **should not** see this state (no public access if draft, or show "Not open yet").
 - `open`:
-  - Participants can submit / update availability.
-  - Organizer can view aggregated results and later finalize.
-- `finalized`:
-  - All views become read-only.
-  - Final selection is highlighted.
-- `archived`:
-  - Treat as read-only; can show an info message that event is closed permanently.
+  - **Organizer**: Can edit title/description, add/remove time slots, and view aggregated results. Can "Close" the event to finalize it.
+  - **Participants**: Can submit / update availability.
+- `closed`:
+  - **All Users**: The event becomes read-only.
+  - **Redirect**: Accessing the participant view (`/event/[public_token]`) should automatically redirect to the result view (`/event/[public_token]/result`).
+
+### 3.1.x Data Retention (Auto-Deletion)
+
+To maintain system hygiene and privacy:
+
+- **Policy**: Events and all associated data (time slots, participants, availability) are **automatically deleted** from the database.
+- **Condition**: 7 days after the **latest date** in the event's defined Time Slots.
+  - *Example*: If an event has slots on Dec 10 and Dec 12, the event expires on Dec 19 (12 + 7).
 
 ### 3.2. Availability Status
 
@@ -550,6 +551,49 @@ Similar to public event GET, but includes internal IDs:
      - Large visual emphasis on selected slots in grid
    - Show aggregated data as read-only context.
    - Show public link for reference.
+
+---
+
+### 4.4. `/event/[public_token]/result` – Event Result View
+
+**Purpose**
+- Display the aggregated results of the event availability.
+- Show the best meeting times ("Top Picks").
+- Provide a detailed heatmap of availability.
+- List participants and their comments.
+
+**UI Sections**
+
+1. **Header**
+   - Event title and description.
+   - **Timezone Context**: Clearly states that "All times are shown in your local timezone".
+
+2. **Top Picks (Best Times)**
+   - Highlights the time slots with the highest availability (e.g., 100% attendance).
+   - Display:
+     - Date and Time (e.g., "Dec 24, 2025", "Friday, 14:00 - 15:00").
+     - "Available" count (e.g., "5/5 Available").
+     - List of attendees for this specific slot.
+
+3. **Other Options**
+   - A list of remaining time slots sorted by popularity (vote count).
+   - Shows date/time and vote count (e.g., "4 votes").
+   - Hover/detail view shows who can attend.
+
+4. **Participants List**
+   - Displays a grid/list of all participants.
+   - Shows `display_name` and their avatar (initial).
+   - **Comments**: Displays the optional comment provided by the participant (e.g., "I'll be late").
+
+5. **Heatmap**
+   - A visual grid (TimeGrid component reuse) showing availability intensity.
+   - **Visuals**:
+     - Color intensity represents the number of available participants (e.g., Dark Red = All, Light Red = Few).
+     - Non-interactive (read-only) version of the selection grid.
+   - **Legend**: Clearly labels "Few", "Most", and "All" with corresponding color swatches.
+
+6. **Action Bar**
+   - **Share Results**: Button to copy the result page URL to clipboard.
 
 ---
 
