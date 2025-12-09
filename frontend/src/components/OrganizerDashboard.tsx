@@ -138,12 +138,12 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
           <div className="space-y-6 pt-4">
              {/* Primary: Invitation Link */}
              <div className="flex flex-col gap-2">
-                <label className="text-base font-bold text-ink flex items-center gap-2">
+                <div className="text-base font-bold text-ink flex items-center gap-2">
                    Invite Participants
                    <span className="text-xs font-normal bg-film-accent/10 text-film-accent px-2 py-0.5 rounded-full border border-film-accent/20">
                      Share this link
                    </span>
-                </label>
+                </div>
                 <div className="flex items-center gap-2">
                    <button 
                      onClick={() => {
