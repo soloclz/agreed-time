@@ -44,23 +44,14 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       return;
     }
 
-    // Correctly convert local TimeSlot objects to ISO 8601 UTC strings
-    const slotsAsIsoStrings = selectedGuestSlots.map(slot => {
-      // Construct a local date-time string
-      const startLocal = `${slot.date}T${slot.startTime}:00`; 
-      
-      // new Date() will parse this as local time
-      const startDate = new Date(startLocal); 
-      
-      // toISOString() converts it to UTC and returns in ISO 8601 format
-      return startDate.toISOString();
-    });
+    // Map selectedGuestSlots to their IDs (which are strings)
+    const selectedSlotIds = selectedGuestSlots.map(slot => slot.id);
 
     try {
       await eventService.submitResponse(publicToken, { // Use publicToken here
         name: guestName,
         comment: guestComment,
-        slots: slotsAsIsoStrings, 
+        slots: selectedSlotIds, 
       });
       setSubmitted(true);
     } catch (error) {

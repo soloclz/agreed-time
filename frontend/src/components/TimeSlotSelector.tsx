@@ -29,6 +29,23 @@ export default function TimeSlotSelector({
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
+  // Helper to generate time slot key
+  const getCellKey = (date: string, startTime: string, endTime: string): string =>
+    `${date}_${startTime}-${endTime}`;
+
+  // Create a lookup map for available slots to preserve original IDs
+  const availableSlotsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (availableSlots) {
+      console.log('Building availableSlotsMap with slots:', availableSlots.length);
+      availableSlots.forEach(slot => {
+        const key = getCellKey(slot.date, slot.startTime, slot.endTime);
+        map.set(key, slot.id);
+      });
+    }
+    return map;
+  }, [availableSlots]);
+
   useEffect(() => {
     // Guest Mode: Calculate date/time range from availableSlots
     if (availableSlots && availableSlots.length > 0) {
@@ -136,8 +153,14 @@ export default function TimeSlotSelector({
       const slots: TimeSlot[] = Array.from(selectedCells).map(key => {
         const [datePart, timePart] = key.split('_');
         const [startTime, endTime] = timePart.split('-');
+        const originalId = availableSlotsMap.get(key);
+        
+        if (!originalId && availableSlots && availableSlots.length > 0) {
+             console.warn(`[TimeSlotSelector] ID lookup failed for key: ${key}. Map has ${availableSlotsMap.size} entries.`);
+        }
+
         return {
-          id: key,
+          id: originalId || key, // Use original ID if available
           date: datePart,
           startTime,
           endTime,
@@ -145,11 +168,7 @@ export default function TimeSlotSelector({
       });
       onSlotsChangeRef.current(slots);
     }
-  }, [selectedCells]);
-
-  // Helper to generate time slot key
-  const getCellKey = (date: string, startTime: string, endTime: string): string =>
-    `${date}_${startTime}-${endTime}`;
+  }, [selectedCells, availableSlotsMap]);
 
   // Helper to convert hour to time slot with duration
   const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
@@ -415,7 +434,7 @@ export default function TimeSlotSelector({
         grouped[datePart] = [];
       }
       grouped[datePart].push({
-        id: key,
+        id: availableSlotsMap.get(key) || key, // Use original ID if available
         date: datePart,
         startTime,
         endTime,
@@ -425,7 +444,7 @@ export default function TimeSlotSelector({
       grouped[date].sort((a, b) => a.startTime.localeCompare(b.startTime));
     });
     return grouped;
-  }, [selectedCells]);
+  }, [selectedCells, availableSlotsMap]);
 
     if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
