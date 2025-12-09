@@ -7,6 +7,7 @@ import { eventService } from '../services/eventService';
 export default function CreateEventForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [organizerName, setOrganizerName] = useState('Organizer');
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,6 +69,7 @@ export default function CreateEventForm() {
       const result = await eventService.createEvent(
         title,
         description,
+        organizerName,
         userTimeZone, // Pass user's timezone as metadata
         apiTimeSlots
       );
@@ -128,6 +130,22 @@ export default function CreateEventForm() {
             placeholder="Add any details about the event..."
             rows={1}
             className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="organizerName" className="block text-sm font-medium text-ink mb-2 font-serif">
+            Your name (optional)
+          </label>
+          <input
+            id="organizerName"
+            name="organizerName"
+            type="text"
+            value={organizerName}
+            onChange={(e) => setOrganizerName(e.target.value)}
+            placeholder="Organizer"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono rounded-t-sm placeholder-gray-400 text-ink"
+            autoComplete="name"
           />
         </div>
       </div>

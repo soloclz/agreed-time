@@ -64,12 +64,14 @@ export const eventService = {
   createEvent: async (
     title: string,
     description: string | undefined,
+    organizerName: string | undefined,
     timeZone: string | undefined,
     timeSlots: ApiTimeSlot[]
   ): Promise<CreateEventSuccessResponse> => {
     const payload: CreateEventPayload = {
       title,
       description: description || undefined,
+      organizer_name: organizerName || undefined,
       time_zone: timeZone || undefined,
       time_slots: timeSlots,
     };
