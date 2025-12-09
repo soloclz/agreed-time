@@ -10,6 +10,7 @@ pub struct Event {
     pub organizer_token: String,
     pub title: String,
     pub description: Option<String>,
+    pub organizer_name: String, // Organizer's name
     pub state: String, // 'open', 'finalized', etc.
     pub time_zone: Option<String>, // Metadata for UI display
     pub created_at: DateTime<Utc>,
@@ -26,6 +27,7 @@ pub struct TimeSlotRequest {
 pub struct CreateEventRequest {
     pub title: String,
     pub description: Option<String>,
+    pub organizer_name: Option<String>, // Organizer's name (defaults to "Organizer")
     pub time_zone: Option<String>, // Organizer's original timezone
     pub time_slots: Vec<TimeSlotRequest>,
 }
@@ -82,6 +84,7 @@ pub struct TimeSlotWithParticipants {
 pub struct ParticipantInfo {
     pub name: String,
     pub comment: Option<String>,
+    pub is_organizer: bool, // Whether this participant is the organizer
 }
 
 // For results view: complete event results
