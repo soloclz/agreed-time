@@ -28,6 +28,42 @@ async fn main() -> anyhow::Result<()> {
     let pool = db::create_pool_lazy(&config.database_url);
     tracing::info!("Database connection pool created (lazy)");
 
+    // Start background task for auto-deletion
+    let pool_for_cleanup = pool.clone();
+    tokio::spawn(async move {
+        // Run every hour
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            tracing::info!("Running auto-deletion task...");
+
+            let result = sqlx::query!(
+                r#"
+                DELETE FROM events 
+                WHERE id IN (
+                    SELECT event_id 
+                    FROM time_slots 
+                    GROUP BY event_id 
+                    HAVING MAX(end_at) < NOW() - INTERVAL '7 days'
+                )
+                "#
+            )
+            .execute(&pool_for_cleanup)
+            .await;
+
+            match result {
+                Ok(result) => {
+                    if result.rows_affected() > 0 {
+                        tracing::info!("Deleted {} expired events", result.rows_affected());
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Error in auto-deletion task: {:?}", e);
+                }
+            }
+        }
+    });
+
     // Setup CORS
     let cors = CorsLayer::new()
         .allow_origin(

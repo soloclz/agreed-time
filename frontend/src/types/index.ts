@@ -1,4 +1,4 @@
-export type EventState = "open" | "finalized" | "archived"; // 'draft' state removed for MVP
+export type EventState = "open" | "closed";
 
 export interface ApiTimeSlot {
   start_at: string; // ISO 8601 UTC string (e.g., "2025-12-08T09:00:00Z")
@@ -62,6 +62,7 @@ export interface EventData {
 
   timeZone?: string; // Metadata
 
+  state?: EventState; // "open" | "closed"
 }
 
 
@@ -108,3 +109,17 @@ export interface EventResultsResponse {
   participants: ParticipantInfo[]; // List of all participants with comments
   total_participants: number;
 }
+
+export interface OrganizerEventResponse {
+  id: string;
+  public_token: string;
+  organizer_token: string;
+  title: string;
+  description?: string;
+  time_zone?: string;
+  state: EventState;
+  time_slots: ApiTimeSlotWithParticipants[];
+  participants: ParticipantInfo[];
+  total_participants: number;
+}
+

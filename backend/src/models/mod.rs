@@ -97,4 +97,19 @@ pub struct EventResultsResponse {
     pub total_participants: i64, // Total unique participants
 }
 
+// Response structure for organizer view
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrganizerEventResponse {
+    pub id: Uuid,
+    pub public_token: String,    // Organizer needs this for sharing
+    pub organizer_token: String, // Organizer needs this for management actions
+    pub title: String,
+    pub description: Option<String>,
+    pub time_zone: Option<String>,
+    pub state: String,
+    pub time_slots: Vec<TimeSlotWithParticipants>, // Detailed slots with participants
+    pub participants: Vec<ParticipantInfo>,        // All participants with comments
+    pub total_participants: i64,
+}
+
 

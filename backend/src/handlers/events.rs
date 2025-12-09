@@ -11,6 +11,7 @@ use crate::{
     models::{
         CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
         ParticipantInfo, SubmitAvailabilityRequest, TimeSlot, TimeSlotWithParticipants,
+        OrganizerEventResponse, // <-- Add this import
     }, // TimeSlotRequest removed as it's not directly used here
 };
 
@@ -266,3 +267,150 @@ pub async fn get_event_results(
         total_participants,
     }))
 }
+
+pub async fn get_organizer_event(
+    State(pool): State<PgPool>,
+    Path(organizer_token): Path<String>,
+) -> AppResult<Json<OrganizerEventResponse>> {
+    // Fetch the event
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        FROM events
+        WHERE organizer_token = $1
+        "#,
+        organizer_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // Get total number of unique participants
+    let total_participants = sqlx::query_scalar!(
+        r#"
+        SELECT COUNT(DISTINCT participant_name) as "count!"
+        FROM availability
+        WHERE event_id = $1
+        "#,
+        event.id
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    // Fetch time slots with participant names
+    let time_slots_raw = sqlx::query!(
+        r#"
+        SELECT
+            ts.id,
+            ts.event_id,
+            ts.start_at,
+            ts.end_at,
+            COALESCE(array_agg(a.participant_name) FILTER (WHERE a.participant_name IS NOT NULL), ARRAY[]::text[]) as "participants!"
+        FROM time_slots ts
+        LEFT JOIN availability a ON ts.id = a.time_slot_id
+        WHERE ts.event_id = $1
+        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
+        ORDER BY ts.start_at
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let time_slots = time_slots_raw
+        .into_iter()
+        .map(|row| TimeSlotWithParticipants {
+            id: row.id,
+            event_id: row.event_id,
+            start_at: row.start_at,
+            end_at: row.end_at,
+            availability_count: row.participants.len() as i64,
+            participants: row.participants,
+        })
+        .collect();
+
+    // Fetch unique participants with their comments
+    let participants_raw = sqlx::query!(
+        r#"
+        SELECT DISTINCT ON (participant_name) participant_name, comment
+        FROM availability
+        WHERE event_id = $1
+        ORDER BY participant_name, created_at DESC
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let participants = participants_raw
+        .into_iter()
+        .map(|row| ParticipantInfo {
+            name: row.participant_name,
+            comment: row.comment,
+        })
+        .collect();
+
+    Ok(Json(OrganizerEventResponse {
+        id: event.id,
+        public_token: event.public_token,
+        organizer_token: event.organizer_token,
+        title: event.title,
+        description: event.description,
+        time_zone: event.time_zone,
+        state: event.state,
+        time_slots,
+        participants,
+        total_participants,
+    }))
+}
+
+pub async fn close_event(
+    State(pool): State<PgPool>,
+    Path(organizer_token): Path<String>,
+) -> AppResult<Json<EventResponse>> {
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+        UPDATE events
+        SET state = 'closed', updated_at = NOW()
+        WHERE organizer_token = $1
+        RETURNING id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        "#,
+        organizer_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // Fetch the slots to be consistent with EventResponse.
+    let time_slots = sqlx::query_as!(
+        TimeSlot,
+        r#"
+        SELECT
+            ts.id,
+            ts.event_id,
+            ts.start_at,
+            ts.end_at,
+            COALESCE(COUNT(a.id), 0) AS "availability_count!"
+        FROM time_slots ts
+        LEFT JOIN availability a ON ts.id = a.time_slot_id
+        WHERE ts.event_id = $1
+        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
+        ORDER BY ts.start_at
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    Ok(Json(EventResponse {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        time_zone: event.time_zone,
+        state: event.state,
+        time_slots,
+    }))
+}
+
