@@ -85,20 +85,18 @@ Frontend behavior by state:
 
 ### 3.2. Availability Status
 
-For each time slot, a participant can choose:
+For the MVP, a participant can simply choose:
 
-- `yes`
-- `if_needed`
-- `no`
+- `yes` (Selected)
+- `no` (Not selected)
 
 UI suggestion:
 
-- `yes` → green
-- `if_needed` → yellow
-- `no` → red or grey
+- Selected → green
+- Not selected → white/default
 
 Interaction pattern:
-Click on a cell cycles through states: `yes → if_needed → no → yes` (or similar; choose and be consistent).
+Click on a cell toggles selection.
 
 ### 3.3. Selected Slots Display (Bottom Fixed Bar - Implemented)
 
@@ -379,15 +377,13 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
 
   ```json
   {
-    "display_name": "Alice",
-    "responses": [
-      { "timeslot_id": 1, "status": "yes" },
-      { "timeslot_id": 2, "status": "if_needed" }
-    ]
+    "participant_name": "Alice",
+    "time_slot_ids": [1, 2]
   }
   ```
 
 - On success:
+  - Return 200 OK.
   - Optionally refetch `GET /events/{public_token}` to update aggregated view.
   - Show a small toast / message: "Saved! You can revisit this link to adjust later."
 
