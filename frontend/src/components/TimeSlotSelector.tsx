@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import TimeSlotCell from './TimeSlotCell';
@@ -8,6 +8,25 @@ import {
   addDays,
   formatHour,
 } from '../utils/dateUtils';
+import { useTimeSlotDragSelection } from '../hooks/useTimeSlotDragSelection';
+
+// Helper to generate time slot key
+const getCellKey = (date: string, startTime: string, endTime: string): string =>
+  `${date}_${startTime}-${endTime}`;
+
+// Helper to convert hour to time slot with duration
+const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
+  const startMinutes = Math.floor((hour % 1) * 60);
+  const startHour = Math.floor(hour);
+  const totalMinutes = startHour * 60 + startMinutes + duration;
+  const endHour = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+
+  return {
+    startTime: `${String(startHour).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`,
+    endTime: `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`,
+  };
+};
 
 interface TimeSlotSelectorProps {
   onSlotsChange?: (slots: TimeSlot[]) => void;
@@ -29,9 +48,9 @@ export default function TimeSlotSelector({
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // Helper to generate time slot key
-  const getCellKey = (date: string, startTime: string, endTime: string): string =>
-    `${date}_${startTime}-${endTime}`;
+  // Time range controls (hours)
+  const [startHour, setStartHour] = useState(9);
+  const [endHour, setEndHour] = useState(18);
 
   // Create a lookup map for available slots to preserve original IDs
   const availableSlotsMap = useMemo(() => {
@@ -67,9 +86,7 @@ export default function TimeSlotSelector({
       const maxSlotHour = Math.ceil(Math.max(...endTimes));
 
       // Business Hours (09:00 - 18:00) + Auto-expand logic
-      // If there are slots earlier than 9, start there. Otherwise start at 9.
       const displayStartHour = Math.min(minSlotHour, 9);
-      // If there are slots later than 18, end there. Otherwise end at 18.
       const displayEndHour = Math.max(maxSlotHour, 18);
 
       setStartDate(minDate);
@@ -88,111 +105,13 @@ export default function TimeSlotSelector({
     setIsMounted(true);
   }, [availableSlots]);
 
-  // Time range controls (hours)
-  const [startHour, setStartHour] = useState(9);
-  const [endHour, setEndHour] = useState(18);
-
-  // Grid state
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  const [showBottomPanel, setShowBottomPanel] = useState(false);
-
-  // Interaction state
-  const isDragging = useRef(false);
-  const dragMode = useRef<'select' | 'deselect'>('select');
-  const onSlotsChangeRef = useRef(onSlotsChange);
-  const selectedCellsRef = useRef<Set<string>>(new Set());
-  const longPressTimerRef = useRef<number | undefined>(undefined);
-  const touchStartPositionRef = useRef<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    onSlotsChangeRef.current = onSlotsChange;
-  }, [onSlotsChange]);
-
-  // Keep selectedCellsRef up to date
-  useEffect(() => {
-    selectedCellsRef.current = selectedCells;
-  }, [selectedCells]);
-
-  // Clean up selected cells that fall outside the new date range
-  useEffect(() => {
-    if (!startDate || !endDate) return;
-
-    setSelectedCells(prev => {
-      const newSet = new Set<string>();
-      let hasChanges = false;
-
-      prev.forEach(key => {
-        const [datePart] = key.split('_');
-        // Simple string comparison for YYYY-MM-DD works correctly for filtering
-        if (datePart >= startDate && datePart <= endDate) {
-          newSet.add(key);
-        } else {
-          hasChanges = true;
-        }
-      });
-
-      return hasChanges ? newSet : prev;
-    });
-  }, [startDate, endDate]);
-
-
-
-
-
-
-
-
-  // Initialize
-  useEffect(() => {
-    if (initialSlots.length > 0) {
-      const keys = new Set<string>();
-      initialSlots.forEach(slot => {
-        keys.add(getCellKey(slot.date, slot.startTime, slot.endTime));
-      });
-      setSelectedCells(keys);
-    }
-  }, []);
-
-  // Notify parent
-  useEffect(() => {
-    if (onSlotsChangeRef.current) {
-      const slots: TimeSlot[] = Array.from(selectedCells).map(key => {
-        const [datePart, timePart] = key.split('_');
-        const [startTime, endTime] = timePart.split('-');
-        const originalId = availableSlotsMap.get(key);
-        
-        return {
-          id: originalId || key, // Use original ID if available
-          date: datePart,
-          startTime,
-          endTime,
-        };
-      });
-      onSlotsChangeRef.current(slots);
-    }
-  }, [selectedCells, availableSlotsMap]);
-
-  // Helper to convert hour to time slot with duration
-  const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
-    const startMinutes = Math.floor((hour % 1) * 60);
-    const startHour = Math.floor(hour);
-    const totalMinutes = startHour * 60 + startMinutes + duration;
-    const endHour = Math.floor(totalMinutes / 60);
-    const endMinutes = totalMinutes % 60;
-
-    return {
-      startTime: `${String(startHour).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`,
-      endTime: `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`,
-    };
-  };
-
-  const isSlotSelectable = (date: string, hour: number): boolean => {
-    // 1. Range Check (New!) - Ensure date is within the selected range for Organizer Mode
+  const isSlotSelectable = useCallback((date: string, hour: number): boolean => {
+    // 1. Range Check
     if (date < startDate || date > endDate) {
       return false; 
     }
 
-    // 2. Guest Mode check: If availableSlots is provided, slot MUST be in it
+    // 2. Guest Mode check
     if (availableSlots && availableSlots.length > 0) {
       const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
       return availableSlots.some(slot =>
@@ -202,51 +121,54 @@ export default function TimeSlotSelector({
       );
     }
 
-    // 3. Organizer Mode: All range-valid slots are selectable (after the range check above)
+    // 3. Organizer Mode
     return true;
-  };
+  }, [startDate, endDate, availableSlots, slotDuration]);
+
+  const {
+    selectedCells,
+    handleMouseDown,
+    handleMouseEnter,
+    handleMouseUp,
+    toggleCell,
+    setCell,
+    removeSlot,
+    clearAllSlots,
+  } = useTimeSlotDragSelection({
+    initialSelectedCells: initialSlots.length > 0 ? new Set(initialSlots.map(slot => getCellKey(slot.date, slot.startTime, slot.endTime))) : new Set(),
+    slotDuration,
+    getCellKey,
+    getTimeSlotFromHour,
+    isSlotSelectable,
+    onSelectedCellsChange: (cells) => {
+      if (onSlotsChange) {
+        const slots: TimeSlot[] = Array.from(cells).map(key => {
+          const [datePart, timePart] = key.split('_');
+          const [startTime, endTime] = timePart.split('-');
+          const originalId = availableSlotsMap.get(key);
+          
+          return {
+            id: originalId || key,
+            date: datePart,
+            startTime,
+            endTime,
+          };
+        });
+        onSlotsChange(slots);
+      }
+    },
+    startDate,
+    endDate,
+  });
 
   const isCellSelected = (date: string, hour: number): boolean => {
     const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
     return selectedCells.has(getCellKey(date, startTime, endTime));
   };
-
-
-
-  const toggleCell = (date: string, hour: number) => {
-    if (!isSlotSelectable(date, hour)) return;
-    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-    const key = getCellKey(date, startTime, endTime);
-    setSelectedCells(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) newSet.delete(key);
-      else newSet.add(key);
-      return newSet;
-    });
-  };
-
-  const setCell = (date: string, hour: number, selected: boolean) => {
-    if (!isSlotSelectable(date, hour)) return;
-    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-    const key = getCellKey(date, startTime, endTime);
-    setSelectedCells(prev => {
-      const newSet = new Set(prev);
-      if (selected) newSet.add(key);
-      else newSet.delete(key);
-      return newSet;
-    });
-  };
-
-  const removeSlot = (key: string) => {
-    setSelectedCells(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(key);
-      return newSet;
-    });
-  };
-
+  
+  const [showBottomPanel, setShowBottomPanel] = useState(false);
+  
   const handleHeaderClick = (date: string) => {
-    // Recalculate timeSlots for this day, as TimeGrid now owns the main timeSlots array
     const timeSlotsForDay: Array<{ startHour: number; endHour: number; label: string }> = [];
     const durationInHours = slotDuration / 60;
     let currentHour = startHour;
@@ -255,7 +177,7 @@ export default function TimeSlotSelector({
       timeSlotsForDay.push({
         startHour: currentHour,
         endHour: nextHour,
-        label: '' // Label not needed for this logic
+        label: '' 
       });
       currentHour = nextHour;
     }
@@ -269,164 +191,18 @@ export default function TimeSlotSelector({
     });
     const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
 
-    setSelectedCells(prev => {
-      const newSet = new Set(prev);
-      if (allSelected) {
-        // Deselect all
-        allCellsInColumn.forEach(key => newSet.delete(key));
-      }
-      else {
-        // Select all
-        allCellsInColumn.forEach(key => newSet.add(key));
-      }
-      return newSet;
-    });
-  };
-
-  // Interaction Handlers
-  const handleMouseDown = (e: React.MouseEvent, date: string, hour: number) => {
-    if (e.button !== 0) return; // Only left click
-
-    e.preventDefault(); // Prevent text selection
-    isDragging.current = true;
-
-    const isSelected = isCellSelected(date, hour);
-    dragMode.current = isSelected ? 'deselect' : 'select';
-    toggleCell(date, hour);
-  };
-
-  const handleMouseEnter = (date: string, hour: number) => {
-    // `isDateInRange` check implicitly handled by `isSlotSelectable`
-    if (isDragging.current) {
-      setCell(date, hour, dragMode.current === 'select');
+    if (allSelected) {
+      allCellsInColumn.forEach(key => removeSlot(key));
+    } else {
+      allCellsInColumn.forEach(slotKey => {
+        const [dateStr, timePart] = slotKey.split('_');
+        const [startTimeStr] = timePart.split('-');
+        const hour = parseInt(startTimeStr.split(':')[0]);
+        setCell(dateStr, hour, true);
+      });
     }
   };
 
-  const handleMouseUp = () => {
-    isDragging.current = false;
-  };
-
-  useEffect(() => {
-    const grid = document.querySelector('.time-grid-scroll-area'); // Target the scrollable area of TimeGrid
-    if (!grid) return;
-
-    // Helper to check selection using the ref (fresh state)
-    const isCellSelectedFresh = (date: string, hour: number): boolean => {
-      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-      const key = getCellKey(date, startTime, endTime);
-      return selectedCellsRef.current.has(key);
-    };
-
-    const handleNativeTouchStart = (e: Event) => {
-      const touchEvent = e as TouchEvent;
-      const target = touchEvent.target as HTMLElement;
-      const td = target.closest('td');
-      if (!td) return;
-
-      const date = td.dataset.date;
-      const hourStr = td.dataset.hour;
-      if (!date || !hourStr) return;
-      
-      // Record start position for scroll detection
-      const touch = touchEvent.touches[0];
-      touchStartPositionRef.current = { x: touch.clientX, y: touch.clientY };
-
-      // Clear any existing timer
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-      }
-
-      // Start Long Press Timer (500ms)
-      longPressTimerRef.current = window.setTimeout(() => {
-        const hour = parseFloat(hourStr);
-
-        // Long press confirmed: Enter drag mode
-        isDragging.current = true;
-        
-        // Haptic feedback if available
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-
-        const isSelected = isCellSelectedFresh(date, hour);
-        dragMode.current = isSelected ? 'deselect' : 'select';
-        toggleCell(date, hour);
-      }, 500);
-    };
-
-    const handleNativeTouchMove = (e: Event) => {
-      const touchEvent = e as TouchEvent;
-      const touch = touchEvent.touches[0];
-      
-      // Check if user is scrolling (moved significantly before long press fired)
-      if (touchStartPositionRef.current && !isDragging.current) {
-        const moveX = Math.abs(touch.clientX - touchStartPositionRef.current.x);
-        const moveY = Math.abs(touch.clientY - touchStartPositionRef.current.y);
-        
-        // If moved more than 10px, it's a scroll, cancel long press
-        if (moveX > 10 || moveY > 10) {
-          if (longPressTimerRef.current) {
-            window.clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = undefined;
-          }
-        }
-        return; // Let native scroll happen
-      }
-
-      // If not in drag mode, do nothing (allow scroll)
-      if (!isDragging.current) return;
-
-      // In Drag Mode: Prevent scrolling and handle selection
-      if (e.cancelable) e.preventDefault();
-
-      const element = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (element instanceof HTMLElement) {
-        const td = element.closest('td');
-        if (td) {
-          const date = td.dataset.date;
-          const hourStr = td.dataset.hour;
-
-          if (date && hourStr) {
-            const hour = parseFloat(hourStr);
-            const currentSelected = isCellSelectedFresh(date, hour);
-            const shouldSelect = dragMode.current === 'select';
-
-            if (currentSelected !== shouldSelect) {
-              setCell(date, hour, shouldSelect);
-            }
-          }
-        }
-      }
-    };
-
-    const handleNativeTouchEnd = (_e: Event) => {
-      // Cancel timer if finger lifted early (tap)
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = undefined;
-      }
-      
-      isDragging.current = false;
-      touchStartPositionRef.current = null;
-    };
-
-    // Attach listeners with passive: false to allow preventDefault
-    grid.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
-    grid.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
-    grid.addEventListener('touchend', handleNativeTouchEnd, { passive: false });
-
-    return () => {
-      grid.removeEventListener('touchstart', handleNativeTouchStart);
-      grid.removeEventListener('touchmove', handleNativeTouchMove);
-      grid.removeEventListener('touchend', handleNativeTouchEnd);
-    };
-  }, [startDate, endDate]); // `mode` removed from dependencies // removed `mode` from dependencies
-
-
-
-
-
-  // Group selected slots
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
     selectedCells.forEach(key => {
@@ -436,7 +212,7 @@ export default function TimeSlotSelector({
         grouped[datePart] = [];
       }
       grouped[datePart].push({
-        id: availableSlotsMap.get(key) || key, // Use original ID if available
+        id: availableSlotsMap.get(key) || key,
         date: datePart,
         startTime,
         endTime,
@@ -448,7 +224,7 @@ export default function TimeSlotSelector({
     return grouped;
   }, [selectedCells, availableSlotsMap]);
 
-    if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
+  if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
