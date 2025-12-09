@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, addHours } from 'date-fns';
 import { eventService } from '../services/eventService';
-import type { EventData, ResponseData } from '../types';
+import type { EventResultsResponse } from '../types';
 import Heatmap from './Heatmap';
 
 // Helper function to get the current timezone offset string (e.g., "GMT+8")
@@ -18,50 +18,33 @@ function getTimezoneOffsetString(): string {
   return `GMT${sign}${formattedHours}:${formattedMinutes}`;
 }
 
-export default function EventResultView({ eventId }: { eventId: string }) {
+export default function EventResultView({ publicToken }: { publicToken: string }) {
   const [loading, setLoading] = useState(true);
-  const [eventData, setEventData] = useState<EventData | null>(null);
-  const [responses, setResponses] = useState<ResponseData[]>([]);
+  const [resultsData, setResultsData] = useState<EventResultsResponse | null>(null);
   const [allSortedSlots, setAllSortedSlots] = useState<{ slot: string; count: number; attendees: string[] }[]>([]);
   const [timezoneOffsetString, setTimezoneOffsetString] = useState<string>('');
-  const [isAdmin, setIsAdmin] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
   useEffect(() => {
     // Set timezone string on mount
     setTimezoneOffsetString(getTimezoneOffsetString());
 
-    // Check for admin token in localStorage
-    const adminToken = localStorage.getItem(`agreed_time_admin_${eventId}`);
-    if (adminToken) {
-      setIsAdmin(true);
-    }
-
     const fetchResults = async () => {
         setLoading(true);
         try {
-            const result = await eventService.getEventResults(eventId);
-            if (result) {
-                setEventData(result.event);
-                setResponses(result.responses);
-                
-                // 1. Flatten all slots and count occurrences (Aggregation Logic)
-                // Ideally this could move to eventService or a util, but keeping here for now to match previous logic
-                const slotCounts = new Map<string, { count: number; attendees: string[] }>();
-                
-                result.responses.forEach(response => {
-                    response.slots.forEach(slot => {
-                    const current = slotCounts.get(slot) || { count: 0, attendees: [] };
-                    current.count++;
-                    current.attendees.push(response.name);
-                    slotCounts.set(slot, current);
-                    });
-                });
+            const data = await eventService.getEventResults(publicToken);
+            if (data) {
+                setResultsData(data);
 
-                // 2. Sort by count (descending)
-                const sortedSlots = Array.from(slotCounts.entries())
-                    .map(([slot, data]) => ({ slot, ...data }))
-                    .sort((a, b) => b.count - a.count);
+                // Transform time_slots data to match original format
+                // Convert to ISO string format for compatibility with date-fns
+                const sortedSlots = data.time_slots
+                  .map(slot => ({
+                    slot: slot.start_at, // ISO string from backend
+                    count: slot.availability_count,
+                    attendees: slot.participants,
+                  }))
+                  .sort((a, b) => b.count - a.count);
 
                 setAllSortedSlots(sortedSlots);
             }
@@ -73,7 +56,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
     };
 
     fetchResults();
-  }, [eventId]);
+  }, [publicToken]);
 
   const maxCount = useMemo(() => {
     if (allSortedSlots.length === 0) return 0;
@@ -81,7 +64,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
   }, [allSortedSlots]);
 
   const topPicks = useMemo(() => {
-    return allSortedSlots.filter(slot => slot.count === maxCount);
+    return allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
   }, [allSortedSlots, maxCount]);
 
   const otherOptions = useMemo(() => {
@@ -94,47 +77,20 @@ export default function EventResultView({ eventId }: { eventId: string }) {
     setTimeout(() => setCopiedShare(false), 2000);
   };
 
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
-      alert('Event deleted! (Simulation)');
-      // In a real app, redirect to home after delete
-      window.location.href = '/';
-    }
-  };
-
-  const handleFinalize = () => {
-    alert('Finalize feature coming soon! (Simulation)');
-  };
-
-
   if (loading) {
     return <div className="text-center py-12 text-ink/60 font-serif">Calculating best times...</div>;
   }
 
-  if (!eventData) {
+  if (!resultsData) {
       return <div className="text-center py-12 text-ink/60 font-serif">Event not found.</div>;
   }
+
+  const totalParticipants = resultsData.total_participants;
 
   return (
     <div className="space-y-12 relative">
       {/* Action Bar (always visible) */}
       <div className="flex justify-end gap-2">
-        {isAdmin && (
-          <>
-            <button
-              onClick={handleFinalize}
-              className="px-4 py-2 bg-film-accent text-white text-sm rounded-md hover:bg-film-accent-hover transition-colors font-sans font-medium shadow-sm"
-            >
-              Finalize
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 text-sm rounded-md hover:bg-red-100 transition-colors font-sans font-medium"
-            >
-              Delete
-            </button>
-          </>
-        )}
         <button
           onClick={handleShare}
           className="px-4 py-2 bg-white border border-film-border text-ink text-sm rounded-md hover:bg-gray-50 transition-colors font-sans font-medium flex items-center gap-2 shadow-sm"
@@ -145,8 +101,8 @@ export default function EventResultView({ eventId }: { eventId: string }) {
 
       {/* Header (always visible) */}
       <div className="text-center space-y-4 -mt-6"> {/* Negative margin to pull up closer to actions */}
-        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{eventData.title}</h1>
-        <p className="text-ink/80 text-lg font-sans max-w-2xl mx-auto leading-relaxed">{eventData.description}</p>
+        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{resultsData.title}</h1>
+        <p className="text-ink/80 text-lg font-sans max-w-2xl mx-auto leading-relaxed">{resultsData.description}</p>
         {timezoneOffsetString && (
           <p className="text-sm text-ink/50 font-mono italic mt-2">
             All times are shown in your local timezone ({timezoneOffsetString}).
@@ -154,7 +110,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      {responses.length === 0 ? (
+      {totalParticipants === 0 ? (
         <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-film-accent/70 mx-auto">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -164,14 +120,12 @@ export default function EventResultView({ eventId }: { eventId: string }) {
             <p className="text-ink/70 font-sans max-w-md mx-auto">
               Share the guest link with your participants to start collecting responses.
             </p>
-            {isAdmin && (
-                <div className="pt-4">
-                    <a href={`${window.location.origin}/event/${eventId}`} 
-                       className="inline-flex items-center px-6 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg">
-                        Go to Guest Link
-                    </a>
-                </div>
-            )}
+            <div className="pt-4">
+                <a href={`/event/${publicToken}`}
+                   className="inline-flex items-center px-6 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg">
+                    Go to Guest Link
+                </a>
+            </div>
         </div>
       ) : (
         <>
@@ -195,7 +149,7 @@ export default function EventResultView({ eventId }: { eventId: string }) {
                       </div>
                       <div className="text-right w-full md:w-auto">
                         <span className="inline-block bg-film-accent text-white px-4 py-1.5 rounded-md text-sm font-bold mb-2 shadow-sm">
-                          {pick.count} / {responses.length} Available
+                          {pick.count} / {totalParticipants} Available
                         </span>
                         <p className="text-sm text-ink/60 font-medium">
                           Includes: {pick.attendees.join(', ')}
@@ -215,8 +169,8 @@ export default function EventResultView({ eventId }: { eventId: string }) {
             <h3 className="text-2xl font-serif font-bold text-ink mb-6">Other Options</h3>
             <div className="space-y-3">
                 {otherOptions.length > 0 ? (
-                  otherOptions.map((item) => (
-                      <div key={item.slot} className="group flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-lg border border-film-border hover:border-film-accent/30 transition-colors">
+                  otherOptions.map((item, idx) => (
+                      <div key={idx} className="group flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-lg border border-film-border hover:border-film-accent/30 transition-colors">
                           <div className="flex items-center gap-4 mb-2 sm:mb-0">
                               <span className="font-mono text-ink text-lg">
                                   {format(parseISO(item.slot), 'MMM d, HH:mm')} - {format(addHours(parseISO(item.slot), 1), 'HH:mm')}
@@ -241,25 +195,23 @@ export default function EventResultView({ eventId }: { eventId: string }) {
 
           {/* Participants List */}
           <section className="border-t border-film-border/50 pt-10">
-            <h3 className="text-2xl font-serif font-bold text-ink mb-6">Participants <span className="text-film-accent text-lg align-top">{responses.length}</span></h3>
+            <h3 className="text-2xl font-serif font-bold text-ink mb-6">Participants <span className="text-film-accent text-lg align-top">{totalParticipants}</span></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {responses.map((r, i) => (
+              {Array.from(new Set(allSortedSlots.flatMap(slot => slot.attendees))).map((name, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/60 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-serif text-sm">
-                    {r.name.charAt(0).toUpperCase()}
+                    {name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-bold text-ink">{r.name}</p>
-                    {r.comment && <p className="text-ink/60 text-sm italic mt-1">"{r.comment}"</p>}
+                    <p className="font-bold text-ink">{name}</p>
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Heatmap Calendar View */}
           <section>
-             <Heatmap slots={allSortedSlots} totalParticipants={responses.length} />
+             <Heatmap slots={allSortedSlots} totalParticipants={totalParticipants} />
           </section>
         </>
       )}
