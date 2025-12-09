@@ -14,6 +14,7 @@ frontend/dist/
 frontend/.astro/
 frontend/.env
 frontend/.env.production
+frontend/.vercel/
 
 # Logs
 npm-debug.log*
