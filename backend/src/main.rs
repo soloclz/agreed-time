@@ -37,19 +37,10 @@ async fn main() -> anyhow::Result<()> {
             interval.tick().await;
             tracing::info!("Running auto-deletion task...");
 
-            let result = sqlx::query!(
-                r#"
-                DELETE FROM events
-                WHERE created_at < NOW() - INTERVAL '7 days'
-                "#
-            )
-            .execute(&pool_for_cleanup)
-            .await;
-
-            match result {
-                Ok(result) => {
-                    if result.rows_affected() > 0 {
-                        tracing::info!("Deleted {} expired events", result.rows_affected());
+            match db::cleanup::delete_expired_events(&pool_for_cleanup).await {
+                Ok(count) => {
+                    if count > 0 {
+                        tracing::info!("Deleted {} expired events", count);
                     }
                 }
                 Err(e) => {
