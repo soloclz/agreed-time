@@ -72,7 +72,6 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       <div className="text-center py-12 text-green-600 space-y-4">
         <h2 className="text-3xl font-bold font-serif">Thank you!</h2>
         <p className="text-lg">Your availability has been submitted for "{eventData?.title}".</p>
-        <p className="text-sm text-gray-500">Event ID: {publicToken}</p> {/* Use publicToken for display */}
       </div>
     );
   }
