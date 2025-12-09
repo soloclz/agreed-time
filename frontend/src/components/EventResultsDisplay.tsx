@@ -46,15 +46,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
 
   return (
     <div className="space-y-12 relative">
-      {/* Action Bar */}
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={handleShare}
-          className="px-4 py-2 bg-white border border-film-border text-ink text-sm rounded-md hover:bg-gray-50 transition-colors font-sans font-medium flex items-center gap-2 shadow-sm"
-        >
-          {copiedShare ? 'Copied!' : 'Share Results'}
-        </button>
-      </div>
+
 
       {/* Header */}
       <div className="text-center space-y-4 -mt-6">
