@@ -232,6 +232,9 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
 
 - `title` (required, text input)
 - `description` (optional, textarea)
+- `organizer_name` (optional, text input, defaults to "Organizer")
+  - The organizer's name for display in results
+  - Automatically creates availability records for the organizer on all selected time slots
 - (Optional MVP) `time_zone` select or hidden default
 
 **API Integration**
@@ -458,16 +461,22 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
      - Date and Time (e.g., "Dec 24, 2025", "Friday, 14:00 - 15:00").
      - "Available" count (e.g., "5/5 Available").
      - List of attendees for this specific slot.
+   - **Filtering**: When multiple participants exist, slots with only the organizer are excluded from this list.
 
 3. **Other Options**
    - A list of remaining time slots sorted by popularity (vote count).
    - Shows date/time and vote count (e.g., "4 votes").
    - Hover/detail view shows who can attend.
+   - **Filtering**: When multiple participants exist, slots with only the organizer are excluded from this list.
 
 4. **Participants List**
    - Displays a grid/list of all participants.
    - Shows `display_name` and their avatar (initial).
+   - **Organizer Badge**: The event organizer is marked with an "Organizer" badge for clear identification.
    - **Comments**: Displays the optional comment provided by the participant (e.g., "I'll be late").
+   - **Empty State Handling**:
+     - If no participants have responded (total_participants = 0): Shows "No responses yet!" message.
+     - If only the organizer has responded (total_participants = 1 and is organizer): Shows "Waiting for participants" message encouraging link sharing.
 
 5. **Heatmap**
    - A visual grid (TimeGrid component reuse) showing availability intensity.
@@ -475,6 +484,7 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
      - Color intensity represents the number of available participants (e.g., Dark Red = All, Light Red = Few).
      - Non-interactive (read-only) version of the selection grid.
    - **Legend**: Clearly labels "Few", "Most", and "All" with corresponding color swatches.
+   - **Note**: Unlike Top Picks and Other Options, the heatmap displays ALL time slots including organizer-only slots for complete visibility.
 
 6. **Action Bar**
    - **Share Results**: Button to copy the result page URL to clipboard.
