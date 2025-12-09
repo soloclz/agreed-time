@@ -15,5 +15,9 @@ pub fn create_router(pool: PgPool) -> Router {
             "/api/events/{public_token}/availability",
             post(handlers::events::submit_availability),
         )
+        .route(
+            "/api/events/{public_token}/results",
+            get(handlers::events::get_event_results),
+        )
         .with_state(pool)
 }

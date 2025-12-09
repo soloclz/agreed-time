@@ -9,7 +9,8 @@ use uuid::Uuid;
 use crate::{
     error::{AppError, AppResult}, // Import AppError
     models::{
-        CreateEventRequest, CreateEventResponse, Event, EventResponse, SubmitAvailabilityRequest, TimeSlot,
+        CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
+        SubmitAvailabilityRequest, TimeSlot, TimeSlotWithParticipants,
     }, // TimeSlotRequest removed as it's not directly used here
 };
 
@@ -97,14 +98,21 @@ pub async fn get_event(
     .await?
     .ok_or_else(|| AppError::NotFound)?; // Corrected: No arguments for AppError::NotFound
 
-    // Fetch time slots for the event
+    // Fetch time slots for the event along with availability counts
     let time_slots = sqlx::query_as!(
         TimeSlot,
         r#"
-        SELECT id, event_id, start_at, end_at
-        FROM time_slots
-        WHERE event_id = $1
-        ORDER BY start_at
+        SELECT
+            ts.id,
+            ts.event_id,
+            ts.start_at,
+            ts.end_at,
+            COALESCE(COUNT(a.id), 0) AS "availability_count!"
+        FROM time_slots ts
+        LEFT JOIN availability a ON ts.id = a.time_slot_id
+        WHERE ts.event_id = $1
+        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
+        ORDER BY ts.start_at
         "#,
         event.id
     )
@@ -161,4 +169,77 @@ pub async fn submit_availability(
     transaction.commit().await?;
 
     Ok(())
+}
+
+pub async fn get_event_results(
+    State(pool): State<PgPool>,
+    Path(public_token): Path<String>,
+) -> AppResult<Json<EventResultsResponse>> {
+    // Fetch the event
+    let event = sqlx::query_as!(
+        Event,
+        r#"
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, created_at, updated_at
+        FROM events
+        WHERE public_token = $1
+        "#,
+        public_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // Get total number of unique participants
+    let total_participants = sqlx::query_scalar!(
+        r#"
+        SELECT COUNT(DISTINCT participant_name) as "count!"
+        FROM availability
+        WHERE event_id = $1
+        "#,
+        event.id
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    // Fetch time slots with participant names
+    let time_slots_raw = sqlx::query!(
+        r#"
+        SELECT
+            ts.id,
+            ts.event_id,
+            ts.start_at,
+            ts.end_at,
+            COALESCE(array_agg(a.participant_name) FILTER (WHERE a.participant_name IS NOT NULL), ARRAY[]::text[]) as "participants!"
+        FROM time_slots ts
+        LEFT JOIN availability a ON ts.id = a.time_slot_id
+        WHERE ts.event_id = $1
+        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
+        ORDER BY ts.start_at
+        "#,
+        event.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let time_slots = time_slots_raw
+        .into_iter()
+        .map(|row| TimeSlotWithParticipants {
+            id: row.id,
+            event_id: row.event_id,
+            start_at: row.start_at,
+            end_at: row.end_at,
+            availability_count: row.participants.len() as i64,
+            participants: row.participants,
+        })
+        .collect();
+
+    Ok(Json(EventResultsResponse {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        time_zone: event.time_zone,
+        state: event.state,
+        time_slots,
+        total_participants,
+    }))
 }
