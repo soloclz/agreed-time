@@ -81,8 +81,9 @@ Frontend behavior by state:
 To maintain system hygiene and privacy:
 
 - **Policy**: Events and all associated data (time slots, participants, availability) are **automatically deleted** from the database.
-- **Condition**: 7 days after the **latest date** in the event's defined Time Slots.
-  - *Example*: If an event has slots on Dec 10 and Dec 12, the event expires on Dec 19 (12 + 7).
+- **Condition**: 7 days after the **event creation date** (`created_at + 7 days`).
+  - *Example*: If an event is created on Dec 10, it will be deleted on Dec 17.
+  - *Rationale*: Prevents events from lingering in the system when users select far-future dates. AgreedTime is designed for quick time coordination, not long-term event management.
 
 ### 3.2. Availability Status
 
