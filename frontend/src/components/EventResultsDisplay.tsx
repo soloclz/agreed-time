@@ -69,12 +69,6 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
             <p className="text-ink/70 font-sans max-w-md mx-auto">
               Share the guest link with your participants to start collecting responses.
             </p>
-            <div className="pt-4">
-                <a href={`/event/${publicToken}`}
-                   className="inline-flex items-center px-6 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg">
-                    Go to Guest Link
-                </a>
-            </div>
         </div>
       ) : (
         <>
