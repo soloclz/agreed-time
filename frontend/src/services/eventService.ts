@@ -1,4 +1,4 @@
-import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEventSuccessResponse, EventResponse, TimeSlot, SubmitAvailabilityPayload } from '../types';
+import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEventSuccessResponse, EventResponse, TimeSlot, SubmitAvailabilityPayload, EventResultsResponse } from '../types';
 
 // API base URL - adjust as needed for production vs development
 // For local development, assume backend is on port 3000 (via proxy)
@@ -40,7 +40,8 @@ export const eventService = {
           id: String(slot.id), // Keep ID as string for UI consistency
           date: dateStr,
           startTime: `${startHour}:${startMinute}`,
-          endTime: `${endHour}:${endMinute}`
+          endTime: `${endHour}:${endMinute}`,
+          availabilityCount: slot.availability_count, // Map the new count
         };
       });
 
@@ -81,8 +82,14 @@ export const eventService = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create event');
+      const text = await response.text();
+      console.error('Create event failed:', response.status, text);
+      try {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || 'Failed to create event');
+      } catch (e) {
+          throw new Error(`Failed to create event: ${response.status} ${response.statusText}`);
+      }
     }
 
     return response.json() as Promise<CreateEventSuccessResponse>;
@@ -108,11 +115,25 @@ export const eventService = {
     }
   },
 
-  // This function is currently not implemented and still relies on mock data.
-  // We need to implement getEventResults with API call later.
-  getEventResults: async (publicToken: string): Promise<{ event: EventData, responses: ResponseData[] } | null> => {
-    console.warn('Using mock for getEventResults');
-    return null; 
+  // Fetch detailed event results with participant information
+  getEventResults: async (publicToken: string): Promise<EventResultsResponse | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${publicToken}/results`);
+
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch event results: ${response.statusText}`);
+      }
+
+      const data: EventResultsResponse = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching event results:", error);
+      return null;
+    }
   }
 };
 
