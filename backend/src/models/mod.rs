@@ -45,6 +45,7 @@ pub struct TimeSlot {
     pub event_id: Uuid, // Also include event_id for clarity
     pub start_at: DateTime<Utc>,
     pub end_at: DateTime<Utc>,
+    pub availability_count: i64, // New field for participant count
 }
 
 // 這是回傳給前端的完整活動資料 (Participant View)
@@ -62,6 +63,29 @@ pub struct EventResponse {
 pub struct SubmitAvailabilityRequest {
     pub participant_name: String,
     pub time_slot_ids: Vec<i64>,
+}
+
+// For results view: time slot with participant names
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TimeSlotWithParticipants {
+    pub id: i64,
+    pub event_id: Uuid,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub availability_count: i64,
+    pub participants: Vec<String>, // List of participant names
+}
+
+// For results view: complete event results
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventResultsResponse {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub time_zone: Option<String>,
+    pub state: String,
+    pub time_slots: Vec<TimeSlotWithParticipants>,
+    pub total_participants: i64, // Total unique participants
 }
 
 
