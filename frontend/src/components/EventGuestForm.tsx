@@ -76,7 +76,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
 
   if (submitted) {
     return (
-      <div className="text-center py-12 text-green-600 space-y-4">
+      <div className="text-center py-12 text-film-accent space-y-4">
         <h2 className="text-3xl font-bold font-serif">Thank you!</h2>
         <p className="text-lg">Your availability has been submitted for "{eventData?.title}".</p>
       </div>
