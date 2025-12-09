@@ -1,6 +1,6 @@
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
-
+pub mod cleanup;
 
 // For testing without actual database connection
 pub fn create_pool_lazy(database_url: &str) -> PgPool {
