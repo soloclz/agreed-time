@@ -19,6 +19,10 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       try {
         const data = await eventService.getEvent(publicToken); // Use publicToken here
         if (data) {
+          if (data.state === 'closed') {
+            window.location.href = `/event/${publicToken}/result`;
+            return;
+          }
           setEventData(data);
         } else {
           setError('Event not found.');

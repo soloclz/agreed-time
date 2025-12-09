@@ -52,6 +52,7 @@ export const eventService = {
         availableSlots: availableSlots,
         slotDuration: 60, // Default, as backend doesn't return this yet
         timeZone: eventResponse.time_zone,
+        state: eventResponse.state,
       };
 
     } catch (error) {
@@ -135,6 +136,48 @@ export const eventService = {
       console.error("Error fetching event results:", error);
       return null;
     }
+  },
+
+  getOrganizerEvent: async (organizerToken: string): Promise<OrganizerEventResponse | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/organizer/${organizerToken}`);
+      
+      if (response.status === 404) {
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch organizer event: ${response.statusText}`);
+      }
+
+      const eventResponse: OrganizerEventResponse = await response.json();
+      return eventResponse;
+
+    } catch (error) {
+      console.error("Error fetching organizer event:", error);
+      return null;
+    }
+  },
+
+  closeEvent: async (organizerToken: string): Promise<EventResponse> => {
+    const response = await fetch(`${API_BASE_URL}/events/${organizerToken}/close`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Close event failed:', response.status, text);
+      try {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || 'Failed to close event');
+      } catch (e) {
+          throw new Error(`Failed to close event: ${response.status} ${response.statusText}`);
+      }
+    }
+    return response.json() as Promise<EventResponse>;
   }
 };
 

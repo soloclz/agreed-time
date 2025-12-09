@@ -2,12 +2,12 @@
 import Layout from '../../layouts/Layout.astro';
 import EventGuestForm from '../../components/EventGuestForm';
 
-export const prerender = false; // Mark as non-prerenderable since data is dynamic
-
 const { public_token } = Astro.params;
 
 if (!public_token) {
-  return Astro.redirect('/404');
+  // Client-side redirect will handle this for static output
+  // For SSR, Astro.redirect('/404') would work
+  // but for static, it's best to handle this in JS or by server rewrite rules
 }
 ---
 

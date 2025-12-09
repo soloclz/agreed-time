@@ -1,0 +1,18 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import OrganizerDashboard from '../../components/OrganizerDashboard';
+
+const { organizer_token } = Astro.params;
+
+if (!organizer_token) {
+  // Client-side redirect will handle this for static output
+}
+---
+
+<Layout title={`Manage Event - ${organizer_token}`}>
+  <main class="min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-paper">
+    <div class="max-w-3xl mx-auto">
+      <OrganizerDashboard client:load organizerToken={organizer_token} />
+    </div>
+  </main>
+</Layout>
