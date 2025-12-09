@@ -126,3 +126,19 @@ export function formatHour(hour: number): string {
 export function formatHourTime(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`;
 }
+
+/**
+ * Get current timezone offset as a string (e.g. "GMT+08:00")
+ */
+export function getTimezoneOffsetString(): string {
+  const date = new Date();
+  const offsetMinutes = date.getTimezoneOffset();
+  const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
+  const offsetRemainingMinutes = Math.abs(offsetMinutes % 60);
+
+  const sign = offsetMinutes > 0 ? '-' : '+';
+  const formattedHours = String(offsetHours).padStart(2, '0');
+  const formattedMinutes = String(offsetRemainingMinutes).padStart(2, '0');
+
+  return `GMT${sign}${formattedHours}:${formattedMinutes}`;
+}
