@@ -37,7 +37,6 @@ export default function TimeSlotSelector({
   const availableSlotsMap = useMemo(() => {
     const map = new Map<string, string>();
     if (availableSlots) {
-      console.log('Building availableSlotsMap with slots:', availableSlots.length);
       availableSlots.forEach(slot => {
         const key = getCellKey(slot.date, slot.startTime, slot.endTime);
         map.set(key, slot.id);
@@ -63,13 +62,20 @@ export default function TimeSlotSelector({
 
       const minDate = dates.reduce((min, date) => date < min ? date : min, dates[0]);
       const maxDate = dates.reduce((max, date) => date > max ? date : max, dates[0]);
-      const minHour = Math.floor(Math.min(...startTimes));
-      const maxHour = Math.ceil(Math.max(...endTimes));
+      
+      const minSlotHour = Math.floor(Math.min(...startTimes));
+      const maxSlotHour = Math.ceil(Math.max(...endTimes));
+
+      // Business Hours (09:00 - 18:00) + Auto-expand logic
+      // If there are slots earlier than 9, start there. Otherwise start at 9.
+      const displayStartHour = Math.min(minSlotHour, 9);
+      // If there are slots later than 18, end there. Otherwise end at 18.
+      const displayEndHour = Math.max(maxSlotHour, 18);
 
       setStartDate(minDate);
       setEndDate(maxDate);
-      setStartHour(minHour);
-      setEndHour(maxHour);
+      setStartHour(displayStartHour);
+      setEndHour(displayEndHour);
     } else {
       // Organizer Mode: Default to 4 weeks from today
       const today = getTodayLocal();
@@ -155,10 +161,6 @@ export default function TimeSlotSelector({
         const [startTime, endTime] = timePart.split('-');
         const originalId = availableSlotsMap.get(key);
         
-        if (!originalId && availableSlots && availableSlots.length > 0) {
-             console.warn(`[TimeSlotSelector] ID lookup failed for key: ${key}. Map has ${availableSlotsMap.size} entries.`);
-        }
-
         return {
           id: originalId || key, // Use original ID if available
           date: datePart,
