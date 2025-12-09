@@ -38,3 +38,31 @@
 *   **Consequences**:
     *   (+) Prevents accidental sharing of admin rights.
     *   (+) Clear separation of concerns in frontend components.
+
+## ADR-004: Frontend Rendering Strategy (Static to SSR)
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-09
+*   **Context**: Initially aimed for a purely static Astro site. However, dynamic routes like `/event/[public_token]` and `/manage/[organizer_token]` require dynamic content generation at request time (SSR) because event tokens are unpredictable and cannot be pre-generated via `getStaticPaths`.
+*   **Decision**: Transitioned Astro's output mode from `static` to `server` (SSR).
+    *   Installed `@astrojs/vercel` adapter (or `@astrojs/node` for generic Node.js environment).
+    *   Configured `output: 'server'` in `astro.config.mjs`.
+*   **Consequences**:
+    *   (+) Enables dynamic routes to function correctly by rendering pages on demand.
+    *   (+) Supports server-side data fetching for initial page load, improving perceived performance and SEO for dynamic content.
+    *   (-) Requires a server environment (e.g., Vercel's Edge Functions, Node.js server) for deployment, moving away from purely static hosting.
+
+## ADR-005: Custom Notification and Dialog System
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-09
+*   **Context**: Native browser `alert()` and `confirm()` calls lead to poor user experience (inconsistent styling, blocking nature, showing domain name). A more polished and consistent UI feedback mechanism is needed.
+*   **Decision**: Implement a custom notification and dialog system using `react-hot-toast` and a custom Tailwind CSS modal.
+    *   `react-hot-toast` for all non-blocking messages (e.g., "Link copied!", "Event created successfully!").
+    *   A custom Tailwind CSS modal for blocking confirmations (e.g., "Confirm Close Event").
+*   **Consequences**:
+    *   (+) Significantly improved user experience with visually consistent and non-blocking (for toasts) feedback.
+    *   (+) Aligns UI with brand styling, avoiding "browser says" popups.
+    *   (+) Provides better control over user interaction flows.
+    *   (-) Adds a small dependency (`react-hot-toast`) and custom component implementation for modals.
+

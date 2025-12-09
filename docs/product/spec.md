@@ -239,7 +239,8 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
 - On form submit:
   - `POST /events`
   - On success:
-    - Redirect user to organizer page: `/manage/[organizer_token]`
+    - **Redirect immediately** to organizer dashboard: `/manage/[organizer_token]`
+    - (Skip "Event Created" success screen to reduce friction).
 
 ---
 
@@ -390,167 +391,50 @@ Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
 
 ---
 
-### 4.3. `/manage/[organizer_token]` – Organizer View
+### 4.3. `/manage/[organizer_token]` – Organizer Dashboard
 
 **Purpose**
 
-- Provide full control over a event:
-  - View event details
-  - Define time slots (in draft)
-  - Open event for responses
-  - See aggregated results with heat map
-  - Finalize selection
+- Provide a streamlined dashboard for the event organizer.
+- **Visual Consistency**: Reuses the same visual components as the Result View (`EventResultsDisplay`) to show the heatmap and top picks.
+- **Admin Controls**: Provides specific actions available only to the organizer (sharing, closing).
 
 **Data Source**
 
 - On initial load, call:
-
-  - `GET /organizer/events/{organizer_token}`
-
-**Expected Response (frontend-relevant)**
-
-Similar to public event GET, but includes internal IDs:
-
-```json
-{
-  "event": {
-    "id": 123,
-    "public_token": "pub_xxxxx",
-    "organizer_token": "org_yyyyy",
-    "title": "Team Sync",
-    "description": "Discuss next sprint",
-    "state": "draft",
-    "time_zone": "Asia/Taipei",
-    "created_at": "2025-12-01T12:00:00Z",
-    "updated_at": "2025-12-01T12:00:00Z"
-  },
-  "time_slots": [
-    { "id": 1, "date": "2025-12-10", "start_time": "09:00", "end_time": "10:00" }
-  ],
-  "participants": [...],
-  "aggregated": { ... },
-  "final_selection": [2]
-}
-```
+  - `GET /api/events/organizer/{organizer_token}`
 
 **UI Sections**
 
-1. **Header**
-   - Event title, editable input
-   - Description, editable textarea
-   - Display of event state (badge): Draft / Open / Finalized
+1. **Header & Status**
+   - Event title and description.
+   - **Status Badge**: Displays "OPEN" (Green) or "CLOSED" (Red).
 
-2. **Links**
-   - Show the public event URL for sharing, built from `public_token`:
-     - `https://<frontend-host>/event/{public_token}`
-   - Copy-to-clipboard button
+2. **Admin Controls (Top Section)**
+   - **Invite Participants (Primary Action)**:
+     - Prominent "Copy Invitation Link" button.
+     - Displays truncated URL preview (e.g., `agreed-time.com/event/...`) for clarity.
+     - *Instruction*: "Send this link to your participants to collect their availability."
+   - **Share Results (Secondary Action)**:
+     - Smaller "Copy Result Link" button.
+     - For read-only access to the results.
+   - **Close Event Action** (Only when `state = "open"`):
+     - "Close Event" button (Red).
+     - Triggers a **Confirmation Modal** (not native confirm) to prevent accidental closure.
+     - Once closed, the event becomes read-only for everyone.
 
-3. **Time Slot Editor (only when `state = "draft"`)**
+3. **Event Results Visualization**
+   - **Reused Component**: Renders the exact same view as `/event/[public_token]/result`.
+   - **Heatmap**: Shows availability intensity.
+   - **Top Picks**: Lists the best time slots.
+   - **Participants**: Lists who has responded.
+   - **Empty State**: If no responses yet, shows a simple message encouraging the organizer to share the link (no "Go to Guest Link" button, as the organizer typically doesn't need to vote).
 
-   **WhenIsGood-style Bulk Generator**:
+**API Actions**
 
-   The organizer should be able to quickly generate many time slots:
-
-   - **Date Range Picker**:
-     - Start date (e.g., Dec 10, 2025)
-     - End date (e.g., Dec 15, 2025)
-     - Day-of-week checkboxes: ☑ Mon ☑ Tue ☑ Wed ☑ Thu ☑ Fri ☐ Sat ☐ Sun
-
-   - **Time Range Inputs**:
-     - Start time (e.g., 09:00)
-     - End time (e.g., 18:00)
-     - Interval dropdown: [30 min | 1 hour | 2 hours]
-
-   - **Generate Button**:
-     - "Generate time slots"
-     - On click: Creates all combinations of selected dates × time intervals
-     - Shows preview of how many slots will be created
-
-   - **Time Slots List/Grid**:
-     - Shows all currently defined slots
-     - Grouped by date for easy scanning
-     - Each slot has a remove button (trash icon)
-     - Can manually add individual slots with a form below
-
-   - **Manual Add Form** (optional but useful):
-     - Single date picker
-     - Start time / end time inputs
-     - "Add slot" button
-
-   **API for updating slots (draft)**
-   For MVP UI, it is enough to support "replace full list":
-
-   - `PUT /organizer/events/{organizer_token}/timeslots`
-
-   Request body example:
-
-   ```json
-   {
-     "time_slots": [
-       { "id": 1, "date": "2025-12-10", "start_time": "09:00", "end_time": "10:00" },
-       { "id": null, "date": "2025-12-11", "start_time": "13:00", "end_time": "14:00" }
-     ]
-   }
-   ```
-
-4. **Open Event Controls (when `state = "draft"`)**
-   - Button: "Open event for responses"
-   - On click:
-     - `POST /organizer/events/{organizer_token}/open`
-     - On success, update state to `open`.
-
-5. **Aggregated Results (when `state = "open" or "finalized"`)**
-
-   **Heat Map Grid** (WhenIsGood style):
-
-   - Same grid layout as participant view (dates × times)
-   - Each cell shows:
-     - **Background color intensity**: Based on % of participants who said "yes"
-       - Darkest green = 100% yes
-       - Light green = 50-99% yes
-       - Yellow tint = high "if_needed"
-       - Grey = low availability
-     - **Hover tooltip**: Shows detailed breakdown
-       ```
-       9:00 AM - 10:00 AM on Mon 12/10
-       ✓ 5 yes
-       ~ 2 if needed
-       ✗ 1 no
-       Total: 8 responses
-       ```
-     - **Click to select** (when state = "open"): Marks slot for finalization
-
-   - **Legend**:
-     - Color scale showing availability percentage
-     - Symbol meanings (✓ yes, ~ if needed, ✗ no)
-
-   - **Participants List** (optional):
-     - Show list of participants who responded
-     - Each with "last updated" timestamp
-     - Click to expand and see their individual selections
-
-6. **Finalize Selection (when `state = "open"`)**
-   - Allow organizer to click on one or more slots in the heat map to mark as final.
-   - Selected slots visually highlighted with distinct border/badge.
-   - Button: "Finalize event"
-   - On click:
-
-     - `POST /organizer/events/{organizer_token}/finalize`
-
-     Request example:
-
-     ```json
-     {
-       "timeslot_ids": [2]
-     }
-     ```
-
-7. **Finalized View (when `state = "finalized"`)**
-   - Emphasize final selected slots:
-     - "Final time(s): [date + time]"
-     - Large visual emphasis on selected slots in grid
-   - Show aggregated data as read-only context.
-   - Show public link for reference.
+- **Close Event**:
+  - `POST /api/events/{organizer_token}/close`
+  - On success: Update local state to "CLOSED" and show success toast.
 
 ---
 
@@ -668,16 +552,8 @@ const [dragStatus, setDragStatus] = useState<AvailabilityStatus | null>(null);
 **Organizer View State**:
 ```typescript
 const [eventData, setEventData] = useState<OrganizerEventResponse | null>(null);
-const [editMode, setEditMode] = useState(false);
-const [selectedForFinalize, setSelectedForFinalize] = useState<number[]>([]);
-const [bulkGenerator, setBulkGenerator] = useState({
-  startDate: '',
-  endDate: '',
-  daysOfWeek: [1, 2, 3, 4, 5], // Mon-Fri
-  startTime: '09:00',
-  endTime: '18:00',
-  interval: 60 // minutes
-});
+const [isClosing, setIsClosing] = useState(false);
+// ... shared state with EventResultsDisplay
 ```
 
 ---
