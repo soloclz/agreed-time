@@ -24,6 +24,7 @@ export interface CreateEventSuccessResponse {
 export interface ApiTimeSlotWithId extends ApiTimeSlot {
   id: number;
   event_id: string;
+  availability_count: number; // New field from backend
 }
 
 export interface EventResponse {
@@ -42,6 +43,7 @@ export interface TimeSlot {
   date: string; // "YYYY-MM-DD" (Local)
   startTime: string; // "HH:MM" (Local)
   endTime: string; // "HH:MM" (Local)
+  availabilityCount?: number; // Optional: for displaying participant count
 }
 
 // ... existing types ...
@@ -82,4 +84,19 @@ export interface SubmitAvailabilityPayload {
 
   time_slot_ids: number[]; // Backend expects i64, so numbers
 
+}
+
+// Types for Event Results API
+export interface ApiTimeSlotWithParticipants extends ApiTimeSlotWithId {
+  participants: string[]; // List of participant names
+}
+
+export interface EventResultsResponse {
+  id: string;
+  title: string;
+  description?: string;
+  time_zone?: string;
+  state: EventState;
+  time_slots: ApiTimeSlotWithParticipants[];
+  total_participants: number;
 }
