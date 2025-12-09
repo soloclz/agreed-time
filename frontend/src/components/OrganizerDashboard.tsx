@@ -109,19 +109,56 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
               )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-             <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">Public Guest Link</span>
+          <div className="space-y-6 pt-4">
+             {/* Primary: Invitation Link */}
+             <div className="flex flex-col gap-2">
+                <label className="text-base font-bold text-ink flex items-center gap-2">
+                   Invite Participants
+                   <span className="text-xs font-normal bg-film-accent/10 text-film-accent px-2 py-0.5 rounded-full border border-film-accent/20">
+                     Share this link
+                   </span>
+                </label>
                 <div className="flex gap-2">
-                   <input readOnly value={publicEventUrl} className="flex-1 text-sm p-2 border border-film-border rounded bg-paper text-ink/70 font-mono" />
-                   <button onClick={() => navigator.clipboard.writeText(publicEventUrl)} className="text-sm bg-film-border/50 hover:bg-film-border px-3 py-1 rounded text-ink font-medium transition-colors">Copy</button>
+                   <input 
+                     readOnly 
+                     value={publicEventUrl} 
+                     className="flex-1 text-base p-3 border-2 border-film-accent/30 focus:border-film-accent rounded-lg bg-paper text-ink font-mono shadow-sm transition-colors"
+                     onClick={(e) => e.currentTarget.select()}
+                   />
+                   <button 
+                     onClick={() => {
+                       navigator.clipboard.writeText(publicEventUrl);
+                       alert('Link copied!');
+                     }} 
+                     className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-all active:scale-95"
+                   >
+                     Copy
+                   </button>
                 </div>
+                <p className="text-sm text-ink/60">
+                   Send this link to anyone you want to invite. They can view the event details and select their available times.
+                </p>
              </div>
-             <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold text-ink/50 uppercase tracking-wider">Public Results Link</span>
-                <div className="flex gap-2">
-                   <input readOnly value={publicResultsUrl} className="flex-1 text-sm p-2 border border-film-border rounded bg-paper text-ink/70 font-mono" />
-                   <button onClick={() => navigator.clipboard.writeText(publicResultsUrl)} className="text-sm bg-film-border/50 hover:bg-film-border px-3 py-1 rounded text-ink font-medium transition-colors">Copy</button>
+
+             {/* Secondary: Results Link */}
+             <div className="flex flex-col gap-1 pt-2">
+                <span className="text-xs font-bold text-ink/40 uppercase tracking-wider">Advanced: Read-only Results Link</span>
+                <div className="flex gap-2 items-center">
+                   <input 
+                     readOnly 
+                     value={publicResultsUrl} 
+                     className="flex-1 text-xs p-2 border border-film-border rounded bg-gray-50 text-ink/50 font-mono focus:outline-none focus:border-film-border" 
+                     onClick={(e) => e.currentTarget.select()}
+                   />
+                   <button 
+                     onClick={() => {
+                        navigator.clipboard.writeText(publicResultsUrl);
+                        alert('Results link copied!');
+                     }} 
+                     className="text-xs bg-white border border-film-border hover:bg-gray-50 px-3 py-2 rounded text-ink/60 font-medium transition-colors"
+                   >
+                     Copy Result Link
+                   </button>
                 </div>
              </div>
           </div>
