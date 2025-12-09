@@ -1,36 +1,13 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import TimeSlotSelector from './TimeSlotSelector';
-import type { TimeSlot, ApiTimeSlot, CreateEventSuccessResponse } from '../types'; // Updated imports
+import type { TimeSlot, ApiTimeSlot } from '../types';
 import { eventService } from '../services/eventService';
-
-// Reusable Copy Button Component
-function CopyButton({ textToCopy, label }: { textToCopy: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset "Copied!" message after 2 seconds
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="ml-2 px-3 py-1 bg-film-accent/10 text-film-accent text-sm rounded-md hover:bg-film-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
-      disabled={copied}
-    >
-      {copied ? 'Copied!' : label || 'Copy'}
-    </button>
-  );
-}
 
 export default function CreateEventForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]); // Still uses old TimeSlot for selector
+  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [eventCreationResult, setEventCreationResult] = useState<CreateEventSuccessResponse | null>(null); // Updated type
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSlotsChange = useCallback((slots: TimeSlot[]) => {
@@ -94,73 +71,28 @@ export default function CreateEventForm() {
         apiTimeSlots
       );
       
-      setEventCreationResult(result);
-      
       // Save admin token to localStorage for auto-login
       try {
-        localStorage.setItem(`agreed_time_admin_${result.id}`, result.organizer_token); // Updated keys
+        localStorage.setItem(`agreed_time_admin_${result.id}`, result.organizer_token);
       } catch (error) {
         console.error('Failed to save admin token to localStorage:', error);
       }
+
+      // Direct redirect to manage page
+      window.location.href = `/manage/${result.organizer_token}`;
+
     } catch (error) {
-      console.error("Event creation failed:", error); // Log actual error
+      console.error("Event creation failed:", error);
       alert('Failed to create event. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (eventCreationResult) {
-    const guestLink = `${window.location.origin}/event/${eventCreationResult.public_token}`; // Updated to use public_token
-    const adminLink = `${window.location.origin}/manage/${eventCreationResult.organizer_token}`; // Updated ID and token fields
-    const resultLink = `${window.location.origin}/event/${eventCreationResult.public_token}/result`; // Updated to use public_token
-
-    return (
-      <div className="space-y-8 p-6 bg-paper rounded-lg shadow-md text-ink">
-        <h2 className="text-3xl font-serif font-bold text-film-accent text-center mb-4">Event Created Successfully!</h2>
-        <p className="text-lg text-center font-sans">
-          Your event "<span className="font-bold">{title}</span>" is ready. {/* Use title from state */}
-        </p>
-
-        <div className="space-y-6">
-          {/* Guest Link */}
-          <div className="bg-film-light border border-film-border rounded-lg p-4">
-            <p className="font-bold text-ink mb-2 font-serif">Share this link with participants:</p>
-            <div className="flex items-center break-all">
-              <input type="text" readOnly value={guestLink} className="flex-grow bg-transparent border-none outline-none font-mono text-sm pr-2"/>
-              <CopyButton textToCopy={guestLink} />
-            </div>
-          </div>
-
-          {/* Admin Link (Masked) */}
-          <div className="bg-film-light border border-film-border rounded-lg p-4">
-            <p className="font-bold text-ink mb-2 font-serif">Your Admin Access:</p>
-            <div className="flex items-center">
-              <span className="flex-grow text-ink/70 font-mono text-sm pr-2">
-                Click "Copy" to get your private management link.
-              </span>
-              <CopyButton textToCopy={adminLink} label="Copy Admin Link" />
-            </div>
-            <p className="text-xs text-ink/70 mt-2 font-sans italic">
-              This link gives you full control. <span className="font-bold text-red-500">Do not share it.</span>
-            </p>
-          </div>
-
-          {/* Go to Results Button */}
-          <div className="text-center pt-4">
-            <a href={resultLink} className="inline-flex items-center px-6 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover transition-colors duration-300 rounded-lg shadow-md hover:shadow-lg">
-              Go to Event Results
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
       {/* Event Details Section */}
       <div className="space-y-4 sm:space-y-6">
+
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-ink mb-2 font-serif">
             Event Title <span className="text-red-500">*</span>
