@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import type { TimeSlot } from '../types';
+import type { ApiTimeRange, TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import TimeSlotCell from './TimeSlotCell';
 import TimeGrid from './TimeGrid';
@@ -8,13 +8,14 @@ import {
   addDays,
   formatHour,
 } from '../utils/dateUtils';
+import {
+  getCellKey,
+  rangesToCells,
+  cellsToRanges
+} from '../utils/eventUtils';
 import { useTimeSlotDragSelection } from '../hooks/useTimeSlotDragSelection';
 
-// Helper to generate time slot key
-const getCellKey = (date: string, startTime: string, endTime: string): string =>
-  `${date}_${startTime}-${endTime}`;
-
-// Helper to convert hour to time slot with duration
+// Helper to convert hour to time slot with duration for display logic
 const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
   const startMinutes = Math.floor((hour % 1) * 60);
   const startHour = Math.floor(hour);
@@ -29,22 +30,24 @@ const getTimeSlotFromHour = (hour: number, duration: number): { startTime: strin
 };
 
 interface TimeSlotSelectorProps {
-  onSlotsChange?: (slots: TimeSlot[]) => void;
-  initialSlots?: TimeSlot[];
-  availableSlots?: TimeSlot[]; // If provided, only these slots can be selected (Guest Mode)
+  onRangesChange?: (ranges: ApiTimeRange[]) => void; // Changed from onSlotsChange
+  initialRanges?: ApiTimeRange[]; // Changed from initialSlots
+  availableRanges?: ApiTimeRange[]; // Changed from availableSlots (Guest Mode)
   slotDuration?: number; // Duration in minutes (default: 60)
 }
 
+const DEFAULT_RANGES: ApiTimeRange[] = [];
+
 export default function TimeSlotSelector({ 
-  onSlotsChange, 
-  initialSlots = [], 
-  availableSlots, 
+  onRangesChange, 
+  initialRanges = DEFAULT_RANGES, 
+  availableRanges, 
   slotDuration = 60,
 }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
 
-  // Date range controls - Initialize empty, set on mount
+  // Date range controls
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
@@ -52,35 +55,44 @@ export default function TimeSlotSelector({
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(18);
 
-  // Create a lookup map for available slots to preserve original IDs
-  const availableSlotsMap = useMemo(() => {
-    const map = new Map<string, string>();
-    if (availableSlots) {
-      availableSlots.forEach(slot => {
-        const key = getCellKey(slot.date, slot.startTime, slot.endTime);
-        map.set(key, slot.id);
-      });
-    }
-    return map;
-  }, [availableSlots]);
+  // Convert initial ranges to selected cells set
+  const initialSelectedCells = useMemo(() => {
+    return rangesToCells(initialRanges, slotDuration);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialRanges), slotDuration]); // Stabilize dependency by content
+  
+  // Available cells set for fast lookup in Guest Mode
+  const availableCells = useMemo(() => {
+    if (!availableRanges) return null;
+    return rangesToCells(availableRanges, slotDuration);
+  }, [availableRanges, slotDuration]);
 
   useEffect(() => {
-    // Guest Mode: Calculate date/time range from availableSlots
-    if (availableSlots && availableSlots.length > 0) {
+    // Guest Mode: Calculate date/time range from availableRanges
+    if (availableRanges && availableRanges.length > 0) {
       const dates: string[] = [];
       const startTimes: number[] = [];
       const endTimes: number[] = [];
 
-      availableSlots.forEach(slot => {
-        dates.push(slot.date);
-        const startHourMinute = slot.startTime.split(':');
-        const endHourMinute = slot.endTime.split(':');
-        startTimes.push(parseInt(startHourMinute[0]) + parseInt(startHourMinute[1]) / 60);
-        endTimes.push(parseInt(endHourMinute[0]) + parseInt(endHourMinute[1]) / 60);
+      availableRanges.forEach(range => {
+        const start = new Date(range.start_at);
+        const end = new Date(range.end_at);
+        
+        // Local Date
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const day = String(start.getDate()).padStart(2, '0');
+        dates.push(`${year}-${month}-${day}`);
+        
+        // Local Hours
+        startTimes.push(start.getHours() + start.getMinutes() / 60);
+        endTimes.push(end.getHours() + end.getMinutes() / 60);
       });
 
-      const minDate = dates.reduce((min, date) => date < min ? date : min, dates[0]);
-      const maxDate = dates.reduce((max, date) => date > max ? date : max, dates[0]);
+      // Find min/max date string (lexicographically works for ISO dates)
+      dates.sort();
+      const minDate = dates[0];
+      const maxDate = dates[dates.length - 1];
       
       const minSlotHour = Math.floor(Math.min(...startTimes));
       const maxSlotHour = Math.ceil(Math.max(...endTimes));
@@ -96,14 +108,14 @@ export default function TimeSlotSelector({
     } else {
       // Organizer Mode: Default to 4 weeks from today
       const today = getTodayLocal();
-      const future = addDays(today, 27); // 4 weeks by default
+      const future = addDays(today, 27); // 4 weeks
 
       setStartDate(today);
       setEndDate(future);
     }
 
     setIsMounted(true);
-  }, [availableSlots]);
+  }, [availableRanges]);
 
   const isSlotSelectable = useCallback((date: string, hour: number): boolean => {
     // 1. Range Check
@@ -112,21 +124,18 @@ export default function TimeSlotSelector({
     }
 
     // 2. Guest Mode check
-    if (availableSlots && availableSlots.length > 0) {
-      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-      return availableSlots.some(slot =>
-        slot.date === date &&
-        slot.startTime === startTime &&
-        slot.endTime === endTime
-      );
+    if (availableCells) {
+      const key = getCellKey(date, hour);
+      return availableCells.has(key);
     }
 
     // 3. Organizer Mode
     return true;
-  }, [startDate, endDate, availableSlots, slotDuration]);
+  }, [startDate, endDate, availableCells]);
 
   const {
     selectedCells,
+    setSelectedCells,
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,
@@ -135,26 +144,15 @@ export default function TimeSlotSelector({
     removeSlot,
     clearAllSlots,
   } = useTimeSlotDragSelection({
-    initialSelectedCells: initialSlots.length > 0 ? new Set(initialSlots.map(slot => getCellKey(slot.date, slot.startTime, slot.endTime))) : new Set(),
+    initialSelectedCells,
     slotDuration,
     getCellKey,
     getTimeSlotFromHour,
     isSlotSelectable,
     onSelectedCellsChange: (cells) => {
-      if (onSlotsChange) {
-        const slots: TimeSlot[] = Array.from(cells).map(key => {
-          const [datePart, timePart] = key.split('_');
-          const [startTime, endTime] = timePart.split('-');
-          const originalId = availableSlotsMap.get(key);
-          
-          return {
-            id: originalId || key,
-            date: datePart,
-            startTime,
-            endTime,
-          };
-        });
-        onSlotsChange(slots);
+      if (onRangesChange) {
+        const ranges = cellsToRanges(cells, slotDuration);
+        onRangesChange(ranges);
       }
     },
     startDate,
@@ -162,32 +160,28 @@ export default function TimeSlotSelector({
   });
 
   const isCellSelected = (date: string, hour: number): boolean => {
-    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-    return selectedCells.has(getCellKey(date, startTime, endTime));
+    return selectedCells.has(getCellKey(date, hour));
   };
   
   const [showBottomPanel, setShowBottomPanel] = useState(false);
   
   const handleHeaderClick = (date: string) => {
-    const timeSlotsForDay: Array<{ startHour: number; endHour: number; label: string }> = [];
+    const timeSlotsForDay: Array<{ startHour: number; label: string }> = [];
     const durationInHours = slotDuration / 60;
     let currentHour = startHour;
     while (currentHour < endHour) {
-      const nextHour = Math.min(currentHour + durationInHours, endHour);
       timeSlotsForDay.push({
         startHour: currentHour,
-        endHour: nextHour,
         label: '' 
       });
-      currentHour = nextHour;
+      currentHour += durationInHours;
     }
 
     const selectableSlots = timeSlotsForDay.filter(slot => isSlotSelectable(date, slot.startHour));
     if (selectableSlots.length === 0) return;
 
     const allCellsInColumn = selectableSlots.map(slot => {
-      const { startTime, endTime } = getTimeSlotFromHour(slot.startHour, slotDuration);
-      return getCellKey(date, startTime, endTime);
+      return getCellKey(date, slot.startHour);
     });
     const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
 
@@ -195,24 +189,25 @@ export default function TimeSlotSelector({
       allCellsInColumn.forEach(key => removeSlot(key));
     } else {
       allCellsInColumn.forEach(slotKey => {
-        const [dateStr, timePart] = slotKey.split('_');
-        const [startTimeStr] = timePart.split('-');
-        const hour = parseInt(startTimeStr.split(':')[0]);
-        setCell(dateStr, hour, true);
+        const [dateStr, hourStr] = slotKey.split('_');
+        setCell(dateStr, parseFloat(hourStr), true);
       });
     }
   };
 
+  // Convert selected cells to UI TimeSlots for BottomPanel
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
     selectedCells.forEach(key => {
-      const [datePart, timePart] = key.split('_');
-      const [startTime, endTime] = timePart.split('-');
+      const [datePart, hourStr] = key.split('_');
+      const hour = parseFloat(hourStr);
+      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
+      
       if (!grouped[datePart]) {
         grouped[datePart] = [];
       }
       grouped[datePart].push({
-        id: availableSlotsMap.get(key) || key,
+        id: key, // Use key as ID for UI
         date: datePart,
         startTime,
         endTime,
@@ -222,12 +217,13 @@ export default function TimeSlotSelector({
       grouped[date].sort((a, b) => a.startTime.localeCompare(b.startTime));
     });
     return grouped;
-  }, [selectedCells, availableSlotsMap]);
+  }, [selectedCells, slotDuration]);
 
   if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
+      {/* Header and Controls (Same as before) */}
       <div>
         <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
             Select Your Available Time Slots
@@ -244,7 +240,7 @@ export default function TimeSlotSelector({
         </p>
       </div>
 
-      {!availableSlots && (
+      {!availableRanges && (
         <div className="bg-paper border border-film-border p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-sm">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <div>

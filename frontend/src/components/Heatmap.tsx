@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { parseISO, format, addMinutes, addDays } from 'date-fns';
-import TimeSlotCell from './TimeSlotCell'; // Using TimeSlotCell for individual cells
-import TimeGrid from './TimeGrid'; // Using TimeGrid for grid structure
+import TimeSlotCell from './TimeSlotCell'; 
+import TimeGrid from './TimeGrid'; 
 import type { HeatmapCellData, TimeSlot } from '../types';
 
 interface SlotData {
@@ -13,9 +13,11 @@ interface SlotData {
 interface HeatmapProps {
   slots: SlotData[];
   totalParticipants: number;
+  slotDuration?: number; // Optional, default 60
 }
 
-export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
+export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }: HeatmapProps) {
+  
   // Transform data for TimeGrid (and TimeSlotCell)
   const { heatmapData, minDate, maxDate, minHour, maxHour } = useMemo(() => {
     const data: Record<string, HeatmapCellData> = {};
@@ -30,10 +32,9 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
       const dateObj = parseISO(s.slot);
       const dateStr = format(dateObj, 'yyyy-MM-dd');
       
-      // Assume 60 min slots for now, as per TimeGrid default slotDuration
       const startTime = format(dateObj, 'HH:mm');
-      const endTime = format(addMinutes(dateObj, 60), 'HH:mm');
-      const hour = dateObj.getHours();
+      const endTime = format(addMinutes(dateObj, slotDuration), 'HH:mm');
+      const hour = dateObj.getHours() + dateObj.getMinutes() / 60;
 
       if (dateStr < currentMinDate) currentMinDate = dateStr;
       if (dateStr > currentMaxDate) currentMaxDate = dateStr;
@@ -57,25 +58,24 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
       }
     });
 
-    // Add padding to hours for better display if min/max hours were actually found
-    const finalMinHour = availSlots.length > 0 ? Math.max(0, currentMinHour - 1) : 9;
-    const finalMaxHour = availSlots.length > 0 ? Math.min(23, currentMaxHour + 1) : 18;
+    // Add padding to hours
+    const finalMinHour = availSlots.length > 0 ? Math.max(0, Math.floor(currentMinHour) - 1) : 9;
+    const finalMaxHour = availSlots.length > 0 ? Math.min(23, Math.ceil(currentMaxHour) + 1) : 18;
 
 
     return { 
         heatmapData: data, 
         minDate: availSlots.length > 0 ? currentMinDate : format(new Date(), 'yyyy-MM-dd'),
-        maxDate: availSlots.length > 0 ? currentMaxDate : format(addDays(new Date(), 6), 'yyyy-MM-dd'), // Default to a week
+        maxDate: availSlots.length > 0 ? currentMaxDate : format(addDays(new Date(), 6), 'yyyy-MM-dd'),
         minHour: finalMinHour,
         maxHour: finalMaxHour,
     };
-  }, [slots]);
+  }, [slots, slotDuration]);
 
   if (slots.length === 0) {
     return null;
   }
 
-  // Heatmap mode doesn't need interactive onMouseDown/onMouseEnter/onMouseUp
   const noop = () => {};
 
   return (
@@ -86,8 +86,8 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
             endDate={maxDate}
             startHour={minHour}
             endHour={maxHour}
-            slotDuration={60}
-            onMouseDown={noop} // No interaction in heatmap
+            slotDuration={slotDuration}
+            onMouseDown={noop}
             onMouseEnter={noop}
             onMouseUp={noop}
             renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
@@ -97,31 +97,31 @@ export default function Heatmap({ slots, totalParticipants }: HeatmapProps) {
                     hour={hour}
                     slotLabel={slotLabel}
                     mode="heatmap"
-                    isSelected={false} // Not applicable for heatmap
-                    isSelectable={false} // Not applicable for heatmap
+                    isSelected={false}
+                    isSelectable={false}
                     heatmapData={heatmapData ? heatmapData[key] : undefined}
                     totalParticipants={totalParticipants}
-                    onMouseDown={onMouseDownGrid} // Pass grid's default noop handlers
+                    onMouseDown={onMouseDownGrid}
                     onMouseEnter={onMouseEnterGrid}
                     onMouseUp={onMouseUpGrid}
                 />
             )}
             renderDateHeader={(_date, defaultHeader) => (
-                defaultHeader // Default header is fine for heatmap, no interaction
+                defaultHeader
             )}
         />
         
         <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60">
             <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div> {/* Approx opacity for 25% participation */}
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div>
                 <span>Few</span>
             </div>
             <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.83)]"></div> {/* Approx opacity for 75% participation */}
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.83)]"></div>
                 <span>Most</span>
             </div>
             <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,1.0)]"></div> {/* Full opacity for 100% participation */}
+                <div className="w-4 h-4 rounded bg-[rgba(225,29,72,1.0)]"></div>
                 <span>All ({totalParticipants})</span>
             </div>
         </div>

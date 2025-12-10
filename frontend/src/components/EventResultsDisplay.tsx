@@ -1,8 +1,13 @@
 import { useState, useMemo } from 'react';
-import { format, parseISO, addHours } from 'date-fns';
+import { format, parseISO, addMinutes } from 'date-fns';
 import type { EventResultsResponse, OrganizerEventResponse } from '../types';
 import Heatmap from './Heatmap';
-import { findOrganizerName, filterOrganizerOnlySlots, isOrganizerOnly as checkIsOrganizerOnly } from '../utils/eventUtils';
+import { 
+  findOrganizerName, 
+  filterOrganizerOnlySlots, 
+  isOrganizerOnly as checkIsOrganizerOnly,
+  rangesToCells 
+} from '../utils/eventUtils';
 
 interface EventResultsDisplayProps {
   data: EventResultsResponse | OrganizerEventResponse;
@@ -10,20 +15,64 @@ interface EventResultsDisplayProps {
   timezoneOffsetString: string;
 }
 
+interface ComputedSlot {
+  slot: string; // ISO string
+  count: number;
+  attendees: string[];
+}
+
 export default function EventResultsDisplay({ data, publicToken, timezoneOffsetString }: EventResultsDisplayProps) {
   const [copiedShare, setCopiedShare] = useState(false);
 
   const totalParticipants = data.total_participants;
+  const slotDuration = data.slot_duration || 60; // Use event's slot duration
 
+  // Transform Participant Ranges into Computed Slots (Intersection Logic)
   const allSortedSlots = useMemo(() => {
-     return data.time_slots
-      .map(slot => ({
-        slot: slot.start_at,
-        count: slot.availability_count,
-        attendees: slot.participants,
-      }))
-      .sort((a, b) => b.count - a.count);
-  }, [data]);
+    // 2. Map: "YYYY-MM-DD_H.5" -> { count, attendees }
+    const slotMap = new Map<string, { count: number, attendees: string[] }>();
+
+    data.participants.forEach(p => {
+      // Convert this participant's ranges to cells
+      const cells = rangesToCells(p.availabilities, slotDuration);
+      
+      cells.forEach(cellKey => {
+        if (!slotMap.has(cellKey)) {
+          slotMap.set(cellKey, { count: 0, attendees: [] });
+        }
+        const entry = slotMap.get(cellKey)!;
+        entry.count += 1;
+        entry.attendees.push(p.name);
+      });
+    });
+
+    // 3. Convert Map to Array and Sort
+    const result: ComputedSlot[] = [];
+    slotMap.forEach((value, key) => {
+      const [dateStr, hourStr] = key.split('_');
+      const hour = parseFloat(hourStr);
+      const [year, month, day] = dateStr.split('-').map(Number);
+      
+      const date = new Date(year, month - 1, day);
+      const hours = Math.floor(hour);
+      const minutes = Math.round((hour % 1) * 60);
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      
+      result.push({
+        slot: date.toISOString(), 
+        count: value.count,
+        attendees: value.attendees
+      });
+    });
+
+    // Sort by count (desc), then by time (asc)
+    return result.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.slot.localeCompare(b.slot);
+    });
+
+  }, [data.participants, slotDuration]);
 
   const maxCount = useMemo(() => {
     if (allSortedSlots.length === 0) return 0;
@@ -36,14 +85,15 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
   }, [data.participants]);
 
   const topPicks = useMemo(() => {
-    const slots = allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
-    return filterOrganizerOnlySlots(slots, totalParticipants, organizerName);
-  }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
+    // We want to filter out slots where ONLY the organizer is available IF there are other people
+    // But topPicks logic: usually maxCount > 1 if multiple people responded.
+    // If only organizer responded, maxCount is 1.
+    return allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
+  }, [allSortedSlots, maxCount]);
 
   const otherOptions = useMemo(() => {
-    const slots = allSortedSlots.filter(slot => slot.count < maxCount);
-    return filterOrganizerOnlySlots(slots, totalParticipants, organizerName);
-  }, [allSortedSlots, maxCount, totalParticipants, organizerName]);
+    return allSortedSlots.filter(slot => slot.count < maxCount);
+  }, [allSortedSlots, maxCount]);
 
   const handleShare = () => {
     const url = `${window.location.origin}/event/${publicToken}/result`;
@@ -57,8 +107,6 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
 
   return (
     <div className="space-y-12 relative">
-
-
       {/* Header */}
       <div className="text-center space-y-4 -mt-6">
         <h1 className="text-4xl sm:text-5xl font-serif font-bold text-ink tracking-tight">{data.title}</h1>
@@ -78,7 +126,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
 
             <h3 className="text-2xl font-serif font-bold text-ink">No responses yet!</h3>
             <p className="text-ink/70 font-sans max-w-md mx-auto">
-              Share the guest link with your participants to start collecting responses.
+              Share the guest link with your participants.
             </p>
         </div>
       ) : isOrganizerOnly ? (
@@ -89,7 +137,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
 
             <h3 className="text-2xl font-serif font-bold text-ink">Waiting for participants</h3>
             <p className="text-ink/70 font-sans max-w-md mx-auto">
-              Only the organizer has filled in their availability. Share the guest link to collect responses from other participants.
+              Only the organizer has filled in their availability. Share the guest link to collect responses.
             </p>
         </div>
       ) : (
@@ -109,7 +157,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
                            {format(parseISO(pick.slot), 'MMM d, yyyy')}
                         </p>
                         <p className="text-xl font-mono text-ink/70">
-                           {format(parseISO(pick.slot), 'EEEE, HH:mm')} - {format(addHours(parseISO(pick.slot), 1), 'HH:mm')}
+                           {format(parseISO(pick.slot), 'EEEE, HH:mm')} - {format(addMinutes(parseISO(pick.slot), slotDuration), 'HH:mm')}
                         </p>
                       </div>
                       <div className="text-right w-full md:w-auto">
@@ -134,26 +182,23 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
             <h3 className="text-2xl font-serif font-bold text-ink mb-6">Other Options</h3>
             <div className="space-y-3">
                 {otherOptions.length > 0 ? (
-                  otherOptions.map((item, idx) => (
+                  otherOptions.slice(0, 10).map((item, idx) => (
                       <div key={idx} className="group flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-lg border border-film-border hover:border-film-accent/30 transition-colors">
                           <div className="flex items-center gap-4 mb-2 sm:mb-0">
                               <span className="font-mono text-ink text-lg">
-                                  {format(parseISO(item.slot), 'MMM d, HH:mm')} - {format(addHours(parseISO(item.slot), 1), 'HH:mm')}
-                              </span>
-                              <span className="text-sm text-ink/40 font-serif hidden sm:inline-block">
-                                 — {format(parseISO(item.slot), 'EEEE')}
+                                  {format(parseISO(item.slot), 'MMM d, HH:mm')}
                               </span>
                           </div>
                           <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
                               <span className="text-sm text-ink/60 truncate max-w-[150px]">{item.attendees.join(', ')}</span>
-                              <span className="bg-paper border border-film-border text-ink/70 px-3 py-1 rounded-md text-xs font-bold whitespace-nowrap group-hover:bg-film-accent/5 group-hover:text-film-accent group-hover:border-film-accent/20 transition-colors">
+                              <span className="bg-paper border border-film-border text-ink/70 px-3 py-1 rounded-md text-xs font-bold whitespace-nowrap">
                                   {item.count} votes
                               </span>
                           </div>
                       </div>
                   ))
                 ) : (
-                  <p className="text-ink/50 italic font-serif">No other options with fewer votes.</p>
+                  <p className="text-ink/50 italic font-serif">No other options.</p>
                 )}
             </div>
           </section>
@@ -164,19 +209,18 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {data.participants.map((participant, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/60 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-serif text-sm">
+                  <div className="w-8 h-8 rounded-full bg-film-accent/20 flex items-center justify-center text-film-accent font-bold font-seri text-sm">
                     {participant.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-bold text-ink">{participant.name}</p>
-                      {participant.is_organizer && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-film-accent/10 text-film-accent border border-film-accent/20">
-                          Organizer
-                        </span>
-                      )}
+                        <p className="font-bold text-ink">{participant.name}</p>
+                        {participant.is_organizer && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-film-accent/10 text-film-accent border border-film-accent/20">
+                                Organizer
+                            </span>
+                        )}
                     </div>
-                    {participant.comment && <p className="text-ink/60 text-sm italic mt-1">"{participant.comment}"</p>}
                   </div>
                 </div>
               ))}
@@ -184,7 +228,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
           </section>
 
           <section>
-             <Heatmap slots={allSortedSlots} totalParticipants={totalParticipants} />
+             <Heatmap slots={allSortedSlots} totalParticipants={totalParticipants} slotDuration={slotDuration} />
           </section>
         </>
       )}
