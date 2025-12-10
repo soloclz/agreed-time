@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS availabilities;
+DROP TABLE IF EXISTS participants;
+DROP TABLE IF EXISTS event_slots;
+DROP TABLE IF EXISTS events;
