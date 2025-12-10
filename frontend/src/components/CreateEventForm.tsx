@@ -1,19 +1,21 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import toast from 'react-hot-toast';
 import TimeSlotSelector from './TimeSlotSelector';
-import type { TimeSlot, ApiTimeSlot } from '../types';
+import type { ApiTimeRange } from '../types';
 import { eventService } from '../services/eventService';
 
 export default function CreateEventForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organizerName, setOrganizerName] = useState('Organizer');
-  const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
+  const [selectedRanges, setSelectedRanges] = useState<ApiTimeRange[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSlotsChange = useCallback((slots: TimeSlot[]) => {
-    setSelectedSlots(slots);
+  const SLOT_DURATION = 60; // Default for now, could be selectable in future
+
+  const handleRangesChange = useCallback((ranges: ApiTimeRange[]) => {
+    setSelectedRanges(ranges);
   }, []);
 
   // Auto-resize textarea function
@@ -38,7 +40,7 @@ export default function CreateEventForm() {
       return;
     }
 
-    if (selectedSlots.length === 0) {
+    if (selectedRanges.length === 0) {
       toast.error('Please select at least one time slot');
       return;
     }
@@ -49,29 +51,13 @@ export default function CreateEventForm() {
       // Get user's current timezone
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      // Convert old TimeSlot[] format to new ApiTimeSlot[] format (ISO 8601 UTC string)
-      const apiTimeSlots: ApiTimeSlot[] = selectedSlots.map(slot => {
-        // Construct a local date-time string
-        const startLocal = `${slot.date}T${slot.startTime}:00`;
-        const endLocal = `${slot.date}T${slot.endTime}:00`;
-
-        // Create Date objects (parsed as local time)
-        const startDate = new Date(startLocal);
-        const endDate = new Date(endLocal);
-
-        // Convert to ISO 8601 UTC string
-        return {
-          start_at: startDate.toISOString(),
-          end_at: endDate.toISOString()
-        };
-      });
-
       const result = await eventService.createEvent(
         title,
         description,
         organizerName,
         userTimeZone, // Pass user's timezone as metadata
-        apiTimeSlots
+        SLOT_DURATION, // Pass slot duration
+        selectedRanges
       );
       
       // Save admin token to localStorage for auto-login
@@ -152,15 +138,18 @@ export default function CreateEventForm() {
 
       {/* Time Slot Selector */}
       <div>
-        <TimeSlotSelector onSlotsChange={handleSlotsChange} />
+        <TimeSlotSelector 
+          slotDuration={SLOT_DURATION}
+          onRangesChange={handleRangesChange} 
+        />
       </div>
 
       {/* Submit Button */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 py-4 sm:py-6 border-t border-film-border pb-20 sm:pb-6">
         <div className="text-sm sm:text-base font-sans hidden sm:block">
-          {selectedSlots.length > 0 ? (
+          {selectedRanges.length > 0 ? (
             <span className="text-ink">
-              <span className="font-bold">✓</span> <span className="font-semibold">{selectedSlots.length}</span> time slots selected
+              <span className="font-bold">✓</span> Ranges selected
             </span>
           ) : (
             <span className="text-ink/70">No time slots selected yet</span>
@@ -168,7 +157,7 @@ export default function CreateEventForm() {
         </div>
         <button
           type="submit"
-          disabled={isSubmitting || !title.trim() || selectedSlots.length === 0}
+          disabled={isSubmitting || !title.trim() || selectedRanges.length === 0}
           className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-film-accent text-white font-sans font-medium tracking-wide hover:bg-film-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 rounded-lg shadow-md hover:shadow-lg active:transform active:scale-[0.98]"
         >
           {isSubmitting ? 'Creating...' : 'Create Event'}

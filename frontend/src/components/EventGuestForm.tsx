@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import type { TimeSlot, EventData } from '../types';
+import type { ApiTimeRange, EventData } from '../types';
 import TimeSlotSelector from './TimeSlotSelector';
 import { eventService } from '../services/eventService';
 
-export default function EventGuestForm({ publicToken }: { publicToken: string }) { // Changed eventId to publicToken
+export default function EventGuestForm({ publicToken }: { publicToken: string }) {
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guestName, setGuestName] = useState('');
-  const [guestComment, setGuestComment] = useState('');
-  const [selectedGuestSlots, setSelectedGuestSlots] = useState<TimeSlot[]>([]);
+  const [guestComment, setGuestComment] = useState(''); // Note: Comment currently not supported by backend schema but kept in UI
+  const [selectedGuestRanges, setSelectedGuestRanges] = useState<ApiTimeRange[]>([]);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       setLoading(true);
       setError(null);
       try {
-        const data = await eventService.getEvent(publicToken); // Use publicToken here
+        const data = await eventService.getEvent(publicToken);
         if (data) {
           if (data.state === 'closed') {
             window.location.href = `/event/${publicToken}/result`;
@@ -28,7 +28,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         } else {
           setError('Event not found.');
         }
-      } catch (err: any) { // Catch any for clearer error message
+      } catch (err: any) {
         setError(`Failed to load event data: ${err.message}`);
         toast.error(`Failed to load event: ${err.message}`);
       } finally {
@@ -37,7 +37,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
     };
 
     fetchEvent();
-  }, [publicToken]); // Changed dependency to publicToken
+  }, [publicToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,23 +45,20 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       toast.error('Please enter your name.');
       return;
     }
-    if (selectedGuestSlots.length === 0) {
+    if (selectedGuestRanges.length === 0) {
       toast.error('Please select at least one time slot.');
       return;
     }
 
-    // Map selectedGuestSlots to their IDs (which are strings)
-    const selectedSlotIds = selectedGuestSlots.map(slot => slot.id);
-
     try {
-      await eventService.submitResponse(publicToken, { // Use publicToken here
-        name: guestName,
-        comment: guestComment,
-        slots: selectedSlotIds, 
-      });
+      await eventService.submitResponse(
+        publicToken, 
+        guestName,
+        selectedGuestRanges // Pass ranges directly
+      );
       setSubmitted(true);
       toast.success('Your availability has been submitted!');
-    } catch (err: any) { // Catch any for clearer error message
+    } catch (err: any) {
       toast.error(`Failed to submit response: ${err.message}`);
     }
   };
@@ -88,6 +85,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       <div>
         <h1 className="text-3xl sm:text-4xl font-serif font-bold text-ink mb-2">{eventData?.title}</h1>
         <p className="text-ink/80 text-lg">{eventData?.description}</p>
+        <p className="text-sm text-gray-500 mt-2">Organizer: {eventData?.organizerName}</p>
       </div>
 
       <div className="space-y-4">
@@ -103,6 +101,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         />
       </div>
 
+      {/* Comment section disabled until backend supports it
       <div className="space-y-4">
         <label htmlFor="guestComment" className="block text-lg font-bold text-ink">Comments (Optional)</label>
         <textarea
@@ -114,14 +113,14 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
           className="w-full px-4 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-sans transition-colors text-ink"
         ></textarea>
       </div>
+      */}
 
       <div>
-        {eventData && eventData.availableSlots && (
+        {eventData && eventData.eventSlots && (
           <TimeSlotSelector
-            availableSlots={eventData.availableSlots}
+            availableRanges={eventData.eventSlots} // Pass ranges
             slotDuration={eventData.slotDuration}
-            onSlotsChange={setSelectedGuestSlots}
-            // Add initialSlots if we want to pre-fill based on a previous submission
+            onRangesChange={setSelectedGuestRanges}
           />
         )}
       </div>
@@ -130,7 +129,7 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         <button
           type="submit"
           className="px-8 py-4 font-sans font-medium tracking-wide transition-colors duration-300 rounded-lg shadow-md text-lg disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none bg-film-accent text-white hover:bg-film-accent-hover hover:shadow-lg"
-          disabled={selectedGuestSlots.length === 0 || !guestName.trim()}
+          disabled={selectedGuestRanges.length === 0 || !guestName.trim()}
         >
           Submit Availability
         </button>
