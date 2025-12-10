@@ -2,28 +2,67 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use chrono::Utc; // For current timestamp
-use sqlx::PgPool; // Transaction is not used directly here, PgPool's begin() returns it
+use chrono::{DateTime, Utc};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    error::{AppError, AppResult}, // Import AppError
+    error::{AppError, AppResult},
     models::{
         CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
-        ParticipantInfo, SubmitAvailabilityRequest, TimeSlot, TimeSlotWithParticipants,
-        OrganizerEventResponse, // <-- Add this import
-    }, // TimeSlotRequest removed as it's not directly used here
+        EventSlot, OrganizerEventResponse, ParticipantAvailability, SubmitAvailabilityRequest,
+        TimeRangeRequest,
+    },
 };
 
-// Helper to generate unique string tokens for public and organizer access.
 fn generate_token() -> String {
     Uuid::new_v4().to_string()
+}
+
+fn merge_time_ranges(mut ranges: Vec<TimeRangeRequest>) -> Vec<TimeRangeRequest> {
+    if ranges.is_empty() {
+        return vec![];
+    }
+    
+    ranges.sort_by(|a, b| a.start_at.cmp(&b.start_at));
+
+    let mut merged = Vec::new();
+    let mut current = ranges[0].clone();
+
+    for next in ranges.into_iter().skip(1) {
+        if next.start_at <= current.end_at {
+            if next.end_at > current.end_at {
+                current.end_at = next.end_at;
+            }
+        } else {
+            merged.push(current);
+            current = next;
+        }
+    }
+    merged.push(current);
+    merged
 }
 
 pub async fn create_event(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateEventRequest>,
 ) -> AppResult<Json<CreateEventResponse>> {
+    // Validate input
+    if payload.time_slots.is_empty() {
+        return Err(AppError::BadRequest("At least one time slot is required".to_string()));
+    }
+
+    for slot in &payload.time_slots {
+        if slot.start_at >= slot.end_at {
+            return Err(AppError::BadRequest("Invalid time range: start must be before end".to_string()));
+        }
+    }
+
+    let slot_duration = payload.slot_duration.unwrap_or(60);
+    if slot_duration <= 0 {
+        return Err(AppError::BadRequest("Slot duration must be positive".to_string()));
+    }
+
     let mut transaction = pool.begin().await?;
 
     let event_id = Uuid::new_v4();
@@ -31,66 +70,78 @@ pub async fn create_event(
     let organizer_token = generate_token();
     let current_time = Utc::now();
 
-    // Determine organizer name (default to "Organizer" if not provided)
-    let organizer_name = payload.organizer_name.clone().unwrap_or_else(|| "Organizer".to_string());
+    let organizer_name = payload
+        .organizer_name
+        .clone()
+        .unwrap_or_else(|| "Organizer".to_string());
 
-    // Insert the new event
+    // 1. Insert Event (without organizer_name)
     sqlx::query_as!(
         Event,
         r#"
         INSERT INTO events (
-            id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+            id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         )
         VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         )
-        RETURNING id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        RETURNING id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         "#,
         event_id,
         public_token,
         organizer_token,
         payload.title,
         payload.description,
-        organizer_name,
-        // For MVP, directly set state to 'open' as discussed
         "open",
         payload.time_zone,
+        slot_duration,
         current_time,
         current_time
     )
     .fetch_one(&mut *transaction)
     .await?;
 
-    // Insert time slots and collect their IDs for creating organizer availability
-    let mut time_slot_ids = Vec::new();
-    for time_slot in payload.time_slots {
-        let time_slot_id = sqlx::query_scalar!(
-            r#"
-            INSERT INTO time_slots (event_id, start_at, end_at)
-            VALUES ($1, $2, $3)
-            RETURNING id
-            "#,
-            event_id,
-            time_slot.start_at,
-            time_slot.end_at
-        )
-        .fetch_one(&mut *transaction)
-        .await?;
+    // 2. Event Slots
+    let merged_slots = merge_time_ranges(payload.time_slots);
 
-        time_slot_ids.push(time_slot_id);
-    }
-
-    // Create organizer availability records for all time slots
-    for time_slot_id in time_slot_ids {
+    for slot in &merged_slots {
         sqlx::query!(
             r#"
-            INSERT INTO availability (event_id, time_slot_id, participant_name, comment)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO event_slots (event_id, start_at, end_at)
+            VALUES ($1, $2, $3)
             "#,
             event_id,
-            time_slot_id,
-            organizer_name,
-            None::<String> // Organizer doesn't have a comment
+            slot.start_at,
+            slot.end_at
+        )
+        .execute(&mut *transaction)
+        .await?;
+    }
+
+    // 3. Create Organizer Participant (is_organizer = true)
+    let participant_id = sqlx::query_scalar!(
+        r#"
+        INSERT INTO participants (event_id, name, is_organizer)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        "#,
+        event_id,
+        organizer_name,
+        true // is_organizer
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
+
+    // 4. Organizer Availability
+    for slot in &merged_slots {
+        sqlx::query!(
+            r#"
+            INSERT INTO availabilities (participant_id, start_at, end_at)
+            VALUES ($1, $2, $3)
+            "#,
+            participant_id,
+            slot.start_at,
+            slot.end_at
         )
         .execute(&mut *transaction)
         .await?;
@@ -109,11 +160,11 @@ pub async fn get_event(
     State(pool): State<PgPool>,
     Path(public_token): Path<String>,
 ) -> AppResult<Json<EventResponse>> {
-    // Fetch the event
+    // 1. Fetch Event
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         FROM events
         WHERE public_token = $1
         "#,
@@ -121,23 +172,29 @@ pub async fn get_event(
     )
     .fetch_optional(&pool)
     .await?
-    .ok_or_else(|| AppError::NotFound)?; // Corrected: No arguments for AppError::NotFound
+    .ok_or_else(|| AppError::NotFound)?;
 
-    // Fetch time slots for the event along with availability counts
-    let time_slots = sqlx::query_as!(
-        TimeSlot,
+    // 2. Fetch Organizer Name
+    let organizer_name = sqlx::query_scalar!(
         r#"
-        SELECT
-            ts.id,
-            ts.event_id,
-            ts.start_at,
-            ts.end_at,
-            COALESCE(COUNT(a.id), 0) AS "availability_count!"
-        FROM time_slots ts
-        LEFT JOIN availability a ON ts.id = a.time_slot_id
-        WHERE ts.event_id = $1
-        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
-        ORDER BY ts.start_at
+        SELECT name
+        FROM participants
+        WHERE event_id = $1 AND is_organizer = true
+        LIMIT 1
+        "#,
+        event.id
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    // 3. Fetch Event Slots
+    let event_slots = sqlx::query_as!(
+        EventSlot,
+        r#"
+        SELECT id, event_id, start_at, end_at
+        FROM event_slots
+        WHERE event_id = $1
+        ORDER BY start_at
         "#,
         event.id
     )
@@ -149,8 +206,10 @@ pub async fn get_event(
         title: event.title,
         description: event.description,
         time_zone: event.time_zone,
+        slot_duration: event.slot_duration,
         state: event.state,
-        time_slots,
+        event_slots,
+        organizer_name,
     }))
 }
 
@@ -159,9 +218,20 @@ pub async fn submit_availability(
     Path(public_token): Path<String>,
     Json(payload): Json<SubmitAvailabilityRequest>,
 ) -> AppResult<()> {
+    // Validate participant name
+    if payload.participant_name.trim().is_empty() {
+        return Err(AppError::BadRequest("Participant name is required".to_string()));
+    }
+
+    // Validate time ranges
+    for range in &payload.availabilities {
+        if range.start_at >= range.end_at {
+            return Err(AppError::BadRequest("Invalid time range: start must be before end".to_string()));
+        }
+    }
+
     let mut transaction = pool.begin().await?;
 
-    // Find the event by public_token
     let event_id = sqlx::query_scalar!(
         "SELECT id FROM events WHERE public_token = $1",
         public_token
@@ -170,23 +240,49 @@ pub async fn submit_availability(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    // Delete existing availability for this participant and event
-    sqlx::query!(
-        "DELETE FROM availability WHERE event_id = $1 AND participant_name = $2",
+    // Try to find participant by name
+    // Important: We should NOT overwrite the Organizer if someone just enters the organizer's name.
+    // For MVP anonymous, we might allow it, but let's be safe: 
+    // If the name matches an existing participant, we update it.
+    // Ideally we should block overwriting organizer if payload is from guest form?
+    // But since organizer uses same submit flow? No, organizer is created at event creation.
+    // Let's keep simple logic: find by name. If it's organizer, so be it (organizer updating their time).
+    
+    let participant_id = if let Some(id) = sqlx::query_scalar!(
+        "SELECT id FROM participants WHERE event_id = $1 AND name = $2",
         event_id,
         payload.participant_name
+    )
+    .fetch_optional(&mut *transaction)
+    .await?
+    {
+        id
+    } else {
+        sqlx::query_scalar!(
+            "INSERT INTO participants (event_id, name, is_organizer) VALUES ($1, $2, $3) RETURNING id",
+            event_id,
+            payload.participant_name,
+            false // Default is not organizer
+        )
+        .fetch_one(&mut *transaction)
+        .await?
+    };
+
+    sqlx::query!(
+        "DELETE FROM availabilities WHERE participant_id = $1",
+        participant_id
     )
     .execute(&mut *transaction)
     .await?;
 
-    // Insert new availability entries
-    for time_slot_id in payload.time_slot_ids {
+    let merged_availabilities = merge_time_ranges(payload.availabilities);
+
+    for range in merged_availabilities {
         sqlx::query!(
-            "INSERT INTO availability (event_id, time_slot_id, participant_name, comment) VALUES ($1, $2, $3, $4)",
-            event_id,
-            time_slot_id,
-            payload.participant_name,
-            payload.comment
+            "INSERT INTO availabilities (participant_id, start_at, end_at) VALUES ($1, $2, $3)",
+            participant_id,
+            range.start_at,
+            range.end_at
         )
         .execute(&mut *transaction)
         .await?;
@@ -197,89 +293,98 @@ pub async fn submit_availability(
     Ok(())
 }
 
-async fn fetch_event_details(
+async fn fetch_event_results_data(
     pool: &PgPool,
     event_id: Uuid,
-    organizer_name: &str,
-) -> AppResult<(Vec<TimeSlotWithParticipants>, Vec<ParticipantInfo>, i64)> {
-    // Get total number of unique participants
-    let total_participants = sqlx::query_scalar!(
+) -> AppResult<(Vec<EventSlot>, Vec<ParticipantAvailability>, i64)> {
+    let event_slots = sqlx::query_as!(
+        EventSlot,
         r#"
-        SELECT COUNT(DISTINCT participant_name) as "count!"
-        FROM availability
+        SELECT id, event_id, start_at, end_at
+        FROM event_slots
         WHERE event_id = $1
-        "#,
-        event_id
-    )
-    .fetch_one(pool)
-    .await?;
-
-    // Fetch time slots with participant names
-    let time_slots_raw = sqlx::query!(
-        r#"
-        SELECT
-            ts.id,
-            ts.event_id,
-            ts.start_at,
-            ts.end_at,
-            COALESCE(array_agg(a.participant_name) FILTER (WHERE a.participant_name IS NOT NULL), ARRAY[]::text[]) as "participants!"
-        FROM time_slots ts
-        LEFT JOIN availability a ON ts.id = a.time_slot_id
-        WHERE ts.event_id = $1
-        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
-        ORDER BY ts.start_at
+        ORDER BY start_at
         "#,
         event_id
     )
     .fetch_all(pool)
     .await?;
 
-    let time_slots = time_slots_raw
-        .into_iter()
-        .map(|row| TimeSlotWithParticipants {
-            id: row.id,
-            event_id: row.event_id,
-            start_at: row.start_at,
-            end_at: row.end_at,
-            availability_count: row.participants.len() as i64,
-            participants: row.participants,
-        })
-        .collect();
+    struct Row {
+        name: String,
+        is_organizer: bool,
+        start_at: Option<DateTime<Utc>>,
+        end_at: Option<DateTime<Utc>>,
+    }
 
-    // Fetch unique participants with their comments
-    let participants_raw = sqlx::query!(
+    let rows = sqlx::query_as!(
+        Row,
         r#"
-        SELECT DISTINCT ON (participant_name) participant_name, comment
-        FROM availability
-        WHERE event_id = $1
-        ORDER BY participant_name, created_at DESC
+        SELECT p.name, p.is_organizer, a.start_at, a.end_at
+        FROM participants p
+        LEFT JOIN availabilities a ON p.id = a.participant_id
+        WHERE p.event_id = $1
+        ORDER BY p.is_organizer DESC, p.created_at ASC, a.start_at
         "#,
         event_id
     )
     .fetch_all(pool)
     .await?;
 
-    let participants = participants_raw
+    // We need to keep track of is_organizer per participant
+    struct ParticipantData {
+        is_organizer: bool,
+        ranges: Vec<TimeRangeRequest>,
+    }
+
+    let mut participants_map: std::collections::HashMap<String, ParticipantData> = std::collections::HashMap::new();
+    
+    // Order needs to be preserved as fetched (Organizer first)
+    // HashMap doesn't preserve order. We should use a Vec and look up by index? 
+    // Or just collect unique names in order first.
+    let mut participant_names: Vec<String> = Vec::new();
+
+    for row in rows {
+        if !participants_map.contains_key(&row.name) {
+            participants_map.insert(row.name.clone(), ParticipantData { 
+                is_organizer: row.is_organizer, 
+                ranges: Vec::new() 
+            });
+            participant_names.push(row.name.clone());
+        }
+
+        if let (Some(start), Some(end)) = (row.start_at, row.end_at) {
+            if let Some(data) = participants_map.get_mut(&row.name) {
+                data.ranges.push(TimeRangeRequest { start_at: start, end_at: end });
+            }
+        }
+    }
+
+    let total_participants = participants_map.len() as i64;
+
+    let participants: Vec<ParticipantAvailability> = participant_names
         .into_iter()
-        .map(|row| ParticipantInfo {
-            name: row.participant_name.clone(),
-            comment: row.comment,
-            is_organizer: row.participant_name == organizer_name,
+        .map(|name| {
+            let data = participants_map.remove(&name).unwrap();
+            ParticipantAvailability {
+                name,
+                is_organizer: data.is_organizer,
+                availabilities: data.ranges,
+            }
         })
         .collect();
 
-    Ok((time_slots, participants, total_participants))
+    Ok((event_slots, participants, total_participants))
 }
 
 pub async fn get_event_results(
     State(pool): State<PgPool>,
     Path(public_token): Path<String>,
 ) -> AppResult<Json<EventResultsResponse>> {
-    // Fetch the event
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         FROM events
         WHERE public_token = $1
         "#,
@@ -289,16 +394,17 @@ pub async fn get_event_results(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    let (time_slots, participants, total_participants) =
-        fetch_event_details(&pool, event.id, &event.organizer_name).await?;
+    let (event_slots, participants, total_participants) = 
+        fetch_event_results_data(&pool, event.id).await?;
 
     Ok(Json(EventResultsResponse {
         id: event.id,
         title: event.title,
         description: event.description,
         time_zone: event.time_zone,
+        slot_duration: event.slot_duration,
         state: event.state,
-        time_slots,
+        event_slots,
         participants,
         total_participants,
     }))
@@ -308,11 +414,10 @@ pub async fn get_organizer_event(
     State(pool): State<PgPool>,
     Path(organizer_token): Path<String>,
 ) -> AppResult<Json<OrganizerEventResponse>> {
-    // Fetch the event
     let event = sqlx::query_as!(
         Event,
         r#"
-        SELECT id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        SELECT id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         FROM events
         WHERE organizer_token = $1
         "#,
@@ -322,8 +427,8 @@ pub async fn get_organizer_event(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    let (time_slots, participants, total_participants) =
-        fetch_event_details(&pool, event.id, &event.organizer_name).await?;
+    let (event_slots, participants, total_participants) = 
+        fetch_event_results_data(&pool, event.id).await?;
 
     Ok(Json(OrganizerEventResponse {
         id: event.id,
@@ -332,8 +437,9 @@ pub async fn get_organizer_event(
         title: event.title,
         description: event.description,
         time_zone: event.time_zone,
+        slot_duration: event.slot_duration,
         state: event.state,
-        time_slots,
+        event_slots,
         participants,
         total_participants,
         created_at: event.created_at,
@@ -350,7 +456,7 @@ pub async fn close_event(
         UPDATE events
         SET state = 'closed', updated_at = NOW()
         WHERE organizer_token = $1
-        RETURNING id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at
+        RETURNING id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at
         "#,
         organizer_token
     )
@@ -358,21 +464,26 @@ pub async fn close_event(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    // Fetch the slots to be consistent with EventResponse.
-    let time_slots = sqlx::query_as!(
-        TimeSlot,
+    // Need to fetch organizer name separately now
+    let organizer_name = sqlx::query_scalar!(
         r#"
-        SELECT
-            ts.id,
-            ts.event_id,
-            ts.start_at,
-            ts.end_at,
-            COALESCE(COUNT(a.id), 0) AS "availability_count!"
-        FROM time_slots ts
-        LEFT JOIN availability a ON ts.id = a.time_slot_id
-        WHERE ts.event_id = $1
-        GROUP BY ts.id, ts.event_id, ts.start_at, ts.end_at
-        ORDER BY ts.start_at
+        SELECT name
+        FROM participants
+        WHERE event_id = $1 AND is_organizer = true
+        LIMIT 1
+        "#,
+        event.id
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let event_slots = sqlx::query_as!(
+        EventSlot,
+        r#"
+        SELECT id, event_id, start_at, end_at
+        FROM event_slots
+        WHERE event_id = $1
+        ORDER BY start_at
         "#,
         event.id
     )
@@ -384,8 +495,49 @@ pub async fn close_event(
         title: event.title,
         description: event.description,
         time_zone: event.time_zone,
+        slot_duration: event.slot_duration,
         state: event.state,
-        time_slots,
+        event_slots,
+        organizer_name,
     }))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    #[test]
+    fn test_merge_time_ranges_no_overlap() {
+        let t1_start = Utc.timestamp_opt(1000, 0).unwrap();
+        let t1_end = Utc.timestamp_opt(2000, 0).unwrap();
+        let t2_start = Utc.timestamp_opt(3000, 0).unwrap();
+        let t2_end = Utc.timestamp_opt(4000, 0).unwrap();
+
+        let ranges = vec![
+            TimeRangeRequest { start_at: t1_start, end_at: t1_end },
+            TimeRangeRequest { start_at: t2_start, end_at: t2_end },
+        ];
+
+        let merged = merge_time_ranges(ranges);
+        assert_eq!(merged.len(), 2);
+    }
+
+    #[test]
+    fn test_merge_time_ranges_overlap() {
+        let t1_start = Utc.timestamp_opt(1000, 0).unwrap();
+        let t1_end = Utc.timestamp_opt(3000, 0).unwrap();
+        let t2_start = Utc.timestamp_opt(2000, 0).unwrap(); // Overlaps
+        let t2_end = Utc.timestamp_opt(4000, 0).unwrap();
+
+        let ranges = vec![
+            TimeRangeRequest { start_at: t1_start, end_at: t1_end },
+            TimeRangeRequest { start_at: t2_start, end_at: t2_end },
+        ];
+
+        let merged = merge_time_ranges(ranges);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].start_at, t1_start);
+        assert_eq!(merged[0].end_at, t2_end);
+    }
+}

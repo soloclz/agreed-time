@@ -24,10 +24,11 @@ async fn test_delete_expired_events() {
     let expired_event_id = Uuid::new_v4();
     let old_time = Utc::now() - Duration::days(8);
     
+    // Updated Schema: No organizer_name, Added slot_duration
     sqlx::query!(
         r#"
-        INSERT INTO events (id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at)
-        VALUES ($1, $2, $3, 'Expired Event', NULL, 'Tester', 'open', 'UTC', $4, $4)
+        INSERT INTO events (id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at)
+        VALUES ($1, $2, $3, 'Expired Event', NULL, 'open', 'UTC', 60, $4, $4)
         "#,
         expired_event_id,
         Uuid::new_v4().to_string(),
@@ -44,8 +45,8 @@ async fn test_delete_expired_events() {
 
     sqlx::query!(
         r#"
-        INSERT INTO events (id, public_token, organizer_token, title, description, organizer_name, state, time_zone, created_at, updated_at)
-        VALUES ($1, $2, $3, 'Active Event', NULL, 'Tester', 'open', 'UTC', $4, $4)
+        INSERT INTO events (id, public_token, organizer_token, title, description, state, time_zone, slot_duration, created_at, updated_at)
+        VALUES ($1, $2, $3, 'Active Event', NULL, 'open', 'UTC', 60, $4, $4)
         "#,
         active_event_id,
         Uuid::new_v4().to_string(),
