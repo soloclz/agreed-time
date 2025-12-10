@@ -9,7 +9,7 @@ CREATE TABLE events (
     description TEXT,
     state VARCHAR(50) NOT NULL DEFAULT 'open',
     time_zone VARCHAR(100),
-    organizer_name VARCHAR(255),
+    slot_duration INT NOT NULL DEFAULT 60, -- Duration in minutes
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -34,11 +34,9 @@ CREATE TABLE participants (
     id BIGSERIAL PRIMARY KEY,
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    is_organizer BOOLEAN NOT NULL DEFAULT FALSE, -- Flag to identify the organizer
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- Ensure a name is unique within an event (optional, but good for UX)
-    -- or allow duplicates? Let's allow duplicates for now as anonymous users might pick same name
-    -- But usually for a simpler app, unique name per event avoids confusion.
     UNIQUE(event_id, name) 
 );
 
