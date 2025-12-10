@@ -2,7 +2,7 @@ import type { EventData, ResponseData, ApiTimeSlot, CreateEventPayload, CreateEv
 
 // API base URL - adjust as needed for production vs development
 // For local development, assume backend is on port 3000 (via proxy)
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || '/api';
 
 export const eventService = {
   // Fetch event by public token (Real API)
