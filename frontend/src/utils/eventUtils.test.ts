@@ -5,23 +5,23 @@ import {
   isOrganizerOnly,
   filterOrganizerOnlySlots,
 } from './eventUtils';
-import type { ParticipantInfo } from '../types';
+import type { ParticipantAvailability } from '../types';
 
 describe('eventUtils', () => {
   describe('findOrganizerName', () => {
     it('should find organizer from participants list', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Alice', comment: null, is_organizer: false },
-        { name: 'Bob', comment: null, is_organizer: true },
-        { name: 'Charlie', comment: null, is_organizer: false },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Alice', is_organizer: false, availabilities: [] },
+        { name: 'Bob', is_organizer: true, availabilities: [] },
+        { name: 'Charlie', is_organizer: false, availabilities: [] },
       ];
 
       expect(findOrganizerName(participants)).toBe('Bob');
     });
 
     it('should return undefined if no organizer', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Alice', comment: null, is_organizer: false },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Alice', is_organizer: false, availabilities: [] },
       ];
 
       expect(findOrganizerName(participants)).toBeUndefined();
@@ -61,25 +61,25 @@ describe('eventUtils', () => {
 
   describe('isOrganizerOnly', () => {
     it('should return true when only organizer responded', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Organizer', comment: null, is_organizer: true },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Organizer', is_organizer: true, availabilities: [] },
       ];
 
       expect(isOrganizerOnly(1, participants)).toBe(true);
     });
 
     it('should return false when multiple participants', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Organizer', comment: null, is_organizer: true },
-        { name: 'Alice', comment: null, is_organizer: false },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Organizer', is_organizer: true, availabilities: [] },
+        { name: 'Alice', is_organizer: false, availabilities: [] },
       ];
 
       expect(isOrganizerOnly(2, participants)).toBe(false);
     });
 
     it('should return false when only participant is not organizer', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Alice', comment: null, is_organizer: false },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Alice', is_organizer: false, availabilities: [] },
       ];
 
       expect(isOrganizerOnly(1, participants)).toBe(false);
@@ -141,10 +141,10 @@ describe('eventUtils', () => {
 
   describe('integration: realistic scenario', () => {
     it('should handle complete event results filtering', () => {
-      const participants: ParticipantInfo[] = [
-        { name: 'Alice', comment: 'Flexible', is_organizer: true },
-        { name: 'Bob', comment: null, is_organizer: false },
-        { name: 'Charlie', comment: 'Morning preferred', is_organizer: false },
+      const participants: ParticipantAvailability[] = [
+        { name: 'Alice', is_organizer: true, availabilities: [] },
+        { name: 'Bob', is_organizer: false, availabilities: [] },
+        { name: 'Charlie', is_organizer: false, availabilities: [] },
       ];
 
       const allSlots = [
