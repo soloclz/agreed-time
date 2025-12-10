@@ -14,8 +14,17 @@ Modern scheduling made simple. Create polls, collect availability, and find the 
 *   Node.js & npm
 *   Rust (Cargo)
 
+### One-Time Bootstrap
+After cloning the repo, run `./scripts/bootstrap.sh`. The script:
+*   Verifies the tools above are installed.
+*   Installs Rust via rustup automatically if `cargo` is missing (requires `curl`).
+*   Installs `sqlx-cli` once Rust/Cargo are available.
+*   Initializes the `knowledge/` git submodule (requires SSH access to `git@soloclz:soloclz/knowledge.git`).
+*   Creates `backend/.env` with local defaults if it doesn’t exist.
+*   Starts the Postgres container, applies database migrations, runs `cargo check`, installs frontend dependencies, and completes an `npm run build` so both apps are ready.
+
 ### Environment Setup
-Before running the backend, ensure you have a `.env` file in the `backend/` directory with your database connection string and other settings. A template for required variables is typically available or can be inferred from `backend/src/config.rs`.
+If you skip the bootstrap script, ensure you have a `.env` file in the `backend/` directory with your database connection string and other settings. A template for required variables is typically available or can be inferred from `backend/src/config.rs`.
 
 ### Running Locally
 
