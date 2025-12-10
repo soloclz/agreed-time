@@ -54,9 +54,9 @@ export default function CreateEventForm() {
       const result = await eventService.createEvent(
         title,
         description,
-        organizerName,
-        userTimeZone, // Pass user's timezone as metadata
-        SLOT_DURATION, // Pass slot duration
+        organizerName.trim() === '' ? "Organizer" : organizerName, // Frontend ensures non-empty value
+        userTimeZone,
+        SLOT_DURATION,
         selectedRanges
       );
       
