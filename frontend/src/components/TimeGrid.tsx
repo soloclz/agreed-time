@@ -43,7 +43,7 @@ interface TimeGridProps {
   onMouseUp: () => void;
 }
 
-const MAX_WEEKS_DEFAULT = 8;
+const MAX_WEEKS_DEFAULT = 4;
 
 export default function TimeGrid({
   startDate,
