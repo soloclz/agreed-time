@@ -1,28 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { TimeSlot } from '../types';
 
 interface UseTimeSlotDragSelectionProps {
   initialSelectedCells?: Set<string>;
   slotDuration: number;
-  getCellKey: (date: string, startTime: string, endTime: string) => string;
-  getTimeSlotFromHour: (hour: number, duration: number) => { startTime: string; endTime: string };
+  getCellKey: (date: string, hour: number) => string; // Simplified: date + hour only
   isSlotSelectable: (date: string, hour: number) => boolean;
   onSelectedCellsChange?: (cells: Set<string>) => void;
   startDate: string; 
   endDate: string;
+  setSelectedCells?: (cells: Set<string>) => void; // Optional controlled state setter
 }
 
 export function useTimeSlotDragSelection({
   initialSelectedCells = new Set(),
   slotDuration,
   getCellKey,
-  getTimeSlotFromHour,
   isSlotSelectable,
   onSelectedCellsChange,
   startDate,
   endDate,
 }: UseTimeSlotDragSelectionProps) {
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(initialSelectedCells);
+  const [internalSelectedCells, setInternalSelectedCells] = useState<Set<string>>(initialSelectedCells);
+  
+  // Use internal state or derived from somewhere? 
+  // Actually, TimeSlotSelector seems to want to control this state via onRangesChange but 
+  // currently it relies on this hook to manage the Set.
+  // Ideally this hook manages the Set and notifies parent.
+  
+  const selectedCells = internalSelectedCells;
+  
+  // We expose setSelectedCells to let parent clear it if needed
+  const setSelectedCells = useCallback((newState: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    setInternalSelectedCells(newState);
+  }, []);
 
   // Interaction state
   const isDragging = useRef(false);
@@ -44,6 +54,11 @@ export function useTimeSlotDragSelection({
       onSelectedCellsChangeRef.current(selectedCells);
     }
   }, [selectedCells]);
+
+  // Update internal state if initialSelectedCells changes (e.g. loading from API)
+  useEffect(() => {
+    setInternalSelectedCells(initialSelectedCells);
+  }, [initialSelectedCells]);
 
   // Clean up selected cells that fall outside the new date range
   useEffect(() => {
@@ -68,27 +83,27 @@ export function useTimeSlotDragSelection({
 
   const toggleCell = useCallback((date: string, hour: number) => {
     if (!isSlotSelectable(date, hour)) return;
-    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-    const key = getCellKey(date, startTime, endTime);
+    const key = getCellKey(date, hour);
+    
     setSelectedCells(prev => {
       const newSet = new Set(prev);
       if (newSet.has(key)) newSet.delete(key);
       else newSet.add(key);
       return newSet;
     });
-  }, [isSlotSelectable, getTimeSlotFromHour, getCellKey, slotDuration]);
+  }, [isSlotSelectable, getCellKey]);
 
   const setCell = useCallback((date: string, hour: number, selected: boolean) => {
     if (!isSlotSelectable(date, hour)) return;
-    const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-    const key = getCellKey(date, startTime, endTime);
+    const key = getCellKey(date, hour);
+    
     setSelectedCells(prev => {
       const newSet = new Set(prev);
       if (selected) newSet.add(key);
       else newSet.delete(key);
       return newSet;
     });
-  }, [isSlotSelectable, getTimeSlotFromHour, getCellKey, slotDuration]);
+  }, [isSlotSelectable, getCellKey]);
 
   const removeSlot = useCallback((key: string) => {
     setSelectedCells(prev => {
@@ -108,10 +123,11 @@ export function useTimeSlotDragSelection({
     e.preventDefault(); // Prevent text selection
     isDragging.current = true;
 
-    const isSelected = selectedCellsRef.current.has(getCellKey(date, getTimeSlotFromHour(hour, slotDuration).startTime, getTimeSlotFromHour(hour, slotDuration).endTime));
+    const key = getCellKey(date, hour);
+    const isSelected = selectedCellsRef.current.has(key);
     dragMode.current = isSelected ? 'deselect' : 'select';
     toggleCell(date, hour);
-  }, [toggleCell, getCellKey, getTimeSlotFromHour, slotDuration]);
+  }, [toggleCell, getCellKey]);
 
   const handleMouseEnter = useCallback((date: string, hour: number) => {
     if (isDragging.current) {
@@ -129,8 +145,7 @@ export function useTimeSlotDragSelection({
     if (!grid) return;
 
     const isCellSelectedFresh = (date: string, hour: number): boolean => {
-      const { startTime, endTime } = getTimeSlotFromHour(hour, slotDuration);
-      const key = getCellKey(date, startTime, endTime);
+      const key = getCellKey(date, hour);
       return selectedCellsRef.current.has(key);
     };
 
@@ -218,10 +233,11 @@ export function useTimeSlotDragSelection({
       grid.removeEventListener('touchmove', handleNativeTouchMove);
       grid.removeEventListener('touchend', handleNativeTouchEnd);
     };
-  }, [getCellKey, getTimeSlotFromHour, isSlotSelectable, slotDuration, toggleCell, setCell, startDate, endDate]);
+  }, [getCellKey, isSlotSelectable, slotDuration, toggleCell, setCell, startDate, endDate]);
 
   return {
     selectedCells,
+    setSelectedCells,
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,

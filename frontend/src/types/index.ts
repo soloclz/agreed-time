@@ -1,19 +1,19 @@
 export type EventState = "open" | "closed";
 
-export interface ApiTimeSlot {
-  start_at: string; // ISO 8601 UTC string (e.g., "2025-12-08T09:00:00Z")
-  end_at: string;   // ISO 8601 UTC string
+// 基礎的時間範圍介面
+export interface ApiTimeRange {
+  start_at: string;
+  end_at: string;
 }
 
 export interface CreateEventPayload {
   title: string;
   description?: string;
-  organizer_name?: string; // Organizer's name (defaults to "Organizer")
-  time_zone?: string; // Optional metadata for UI display
-  time_slots: ApiTimeSlot[];
+  organizer_name?: string;
+  time_zone?: string;
+  slot_duration?: number;
+  time_slots: ApiTimeRange[];
 }
-
-// ... existing types ...
 
 export interface CreateEventSuccessResponse {
   id: string; // UUID
@@ -21,84 +21,56 @@ export interface CreateEventSuccessResponse {
   organizer_token: string;
 }
 
-// Types for Fetching Event (GET /api/events/:token)
-export interface ApiTimeSlotWithId extends ApiTimeSlot {
+// Backend DB: event_slots
+export interface ApiEventSlot extends ApiTimeRange {
   id: number;
   event_id: string;
-  availability_count: number; // New field from backend
 }
 
+// GET /api/events/:token
 export interface EventResponse {
   id: string;
   title: string;
   description?: string;
   time_zone?: string;
+  slot_duration: number;
   state: EventState;
-  time_slots: ApiTimeSlotWithId[];
+  event_slots: ApiEventSlot[];
+  organizer_name: string;
 }
 
 // --- UI Types ---
 
-export interface TimeSlot {
-  id: string;
-  date: string; // "YYYY-MM-DD" (Local)
-  startTime: string; // "HH:MM" (Local)
-  endTime: string; // "HH:MM" (Local)
-  availabilityCount?: number; // Optional: for displaying participant count
+export interface GridCell {
+  date: string;
+  hour: number;
+  startTime: string;
+  endTime: string;
 }
-
-// ... existing types ...
 
 export interface EventData {
-
   id: string;
-
   title: string;
-
   description: string;
-
-  availableSlots: TimeSlot[]; // Transformed for UI
-
-  slotDuration?: number; // Duration in minutes
-
-  timeZone?: string; // Metadata
-
-  state?: EventState; // "open" | "closed"
+  eventSlots: ApiTimeRange[]; 
+  slotDuration: number;
+  timeZone?: string; 
+  state?: EventState;
+  organizerName?: string;
 }
 
-
-
-export interface ResponseData {
-
-  name: string;
-
-  slots: string[]; // This will store the TimeSlot.id (which are strings)
-
-  comment?: string;
-
-}
-
-
-
+// Form Data for Submit Availability
 export interface SubmitAvailabilityPayload {
-
   participant_name: string;
-
-  time_slot_ids: number[]; // Backend expects i64, so numbers
-
-  comment?: string;
-
+  availabilities: ApiTimeRange[];
 }
 
-// Types for Event Results API
-export interface ApiTimeSlotWithParticipants extends ApiTimeSlotWithId {
-  participants: string[]; // List of participant names
-}
+// --- Results View Types ---
 
-export interface ParticipantInfo {
+export interface ParticipantAvailability {
   name: string;
-  comment?: string;
-  is_organizer: boolean;
+  is_organizer: boolean; // Added
+  availabilities: ApiTimeRange[];
 }
 
 export interface EventResultsResponse {
@@ -106,23 +78,15 @@ export interface EventResultsResponse {
   title: string;
   description?: string;
   time_zone?: string;
+  slot_duration: number;
   state: EventState;
-  time_slots: ApiTimeSlotWithParticipants[];
-  participants: ParticipantInfo[]; // List of all participants with comments
+  event_slots: ApiEventSlot[];
+  participants: ParticipantAvailability[];
   total_participants: number;
 }
 
-export interface OrganizerEventResponse {
-  id: string;
+export interface OrganizerEventResponse extends EventResultsResponse {
   public_token: string;
   organizer_token: string;
-  title: string;
-  description?: string;
-  time_zone?: string;
-  state: EventState;
-  time_slots: ApiTimeSlotWithParticipants[];
-  participants: ParticipantInfo[];
-  total_participants: number;
-  created_at: string; // ISO 8601 timestamp
+  created_at: string;
 }
-
