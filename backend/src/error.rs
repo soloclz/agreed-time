@@ -6,7 +6,6 @@ use axum::{
 use serde_json::json;
 
 #[derive(Debug, thiserror::Error)]
-#[allow(dead_code)]
 pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
@@ -16,9 +15,6 @@ pub enum AppError {
 
     #[error("Bad request: {0}")]
     BadRequest(String),
-
-    #[error("Internal server error")]
-    InternalServer,
 }
 
 impl IntoResponse for AppError {
@@ -29,10 +25,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
             }
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found"),
-            AppError::BadRequest(ref msg) => (StatusCode::BAD_REQUEST, msg.as_str()),
-            AppError::InternalServer => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-            }
+            AppError::BadRequest(ref msg) => (StatusCode::BAD_REQUEST, msg.as_str())
         };
 
         let body = Json(json!({

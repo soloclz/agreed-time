@@ -8,7 +8,7 @@ fn test_create_event_request_serialization() {
     let request = CreateEventRequest {
         title: "Test Event".to_string(),
         description: Some("Test Description".to_string()),
-        organizer_name: Some("Test Organizer".to_string()),
+        organizer_name: "Test Organizer".to_string(),
         time_zone: Some("Asia/Taipei".to_string()),
         slot_duration: Some(30), // Added field
         time_slots: vec![
@@ -28,7 +28,7 @@ fn test_create_event_request_serialization() {
     let deserialized: CreateEventRequest = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.title, "Test Event");
     assert_eq!(deserialized.description, Some("Test Description".to_string()));
-    assert_eq!(deserialized.organizer_name, Some("Test Organizer".to_string()));
+    assert_eq!(deserialized.organizer_name, "Test Organizer".to_string());
     assert_eq!(deserialized.slot_duration, Some(30));
 }
 
@@ -37,7 +37,7 @@ fn test_create_event_request_optional_fields() {
     let request = CreateEventRequest {
         title: "Minimal Event".to_string(),
         description: None,
-        organizer_name: None,
+        organizer_name: "Organizer".to_string(),
         time_zone: None,
         slot_duration: None, // Added field
         time_slots: vec![],
@@ -48,7 +48,7 @@ fn test_create_event_request_optional_fields() {
 
     assert_eq!(deserialized.title, "Minimal Event");
     assert_eq!(deserialized.description, None);
-    assert_eq!(deserialized.organizer_name, None);
+    assert_eq!(deserialized.organizer_name, "Organizer".to_string());
     assert_eq!(deserialized.time_zone, None);
     assert_eq!(deserialized.slot_duration, None);
 }
