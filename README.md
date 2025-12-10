@@ -47,6 +47,11 @@ If you skip the bootstrap script, ensure you have a `.env` file in the `backend/
     ```
     *Frontend runs at `http://localhost:4321`*
 
+### Testing
+- Backend: `cd backend && cargo test`
+- Frontend (Vitest): `cd frontend && npm test`  
+  - Run a single spec: `npm test -- CreateEventForm.test.tsx`
+
 ## Roadmap
 
 - [x] **Event Creation (Organizer View)**

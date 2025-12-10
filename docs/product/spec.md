@@ -55,6 +55,8 @@ Optional future route (not required for first UI pass, can be a simple section o
 - Drag-to-select interaction for time slots
 - Bottom fixed bar with expandable panel for selected slots
 - Responsive design with mobile considerations
+- Public result view and organizer dashboard share a heatmap/participant list backed by the results API.
+- Organizer name is required by the backend; the UI defaults an empty name to `"Organizer"` when creating an event.
 
 ---
 
