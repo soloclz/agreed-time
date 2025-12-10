@@ -89,8 +89,9 @@ This section outlines the planned approach for managing access to event pages, b
 *   **Guest Submission Page (`/event/:public_token`)**:
     *   Accessible via the public invitation link.
     *   Lets attendees submit available time slots and optional comments.
-*   **Event Result Page**:
-    *   Planned to show aggregated availability/heatmap. Currently the frontend placeholder depends on a real results API (not wired yet).
+*   **Event Result Page / Organizer Dashboard**:
+    *   Uses the results API to render a heatmap and participant list.
+    *   Organizer dashboard (`/manage/:organizer_token`) reuses the same data with owner controls (close event, copy links).
 
 ### 5.2 Access Control (current tokens)
 
@@ -176,6 +177,8 @@ To prepare for future backend integration and maintain a clean separation of con
 *   **Purpose**: Central entry for data operations used by components (`EventGuestForm`, `EventResultView`, etc.).
 *   **Current behavior**:
     *   `getEvent`, `createEvent`, `submitResponse`, `getEventResults`, `getOrganizerEvent`, `closeEvent` all call real backend APIs. Mocking has been largely removed.
+    *   API base URL is configured via `PUBLIC_API_BASE_URL` (falls back to `/api`).
+    *   `createEvent` requires a non-empty `organizer_name`; the UI defaults blank input to `"Organizer"` before sending.
 
 ### 8.2 Mock Data Strategy (Deprecated)
 *   Mocking has been largely removed as core flows are now backed by the API.
@@ -236,7 +239,6 @@ Unified error type `AppError` with automatic JSON error responses:
 *   `Database(sqlx::Error)`: Database errors
 *   `NotFound`: Resource not found (404)
 *   `BadRequest(String)`: Invalid request (400)
-*   `InternalServer`: Internal server error (500)
 
 #### Database (`db/mod.rs`)
 *   Uses SQLx with lazy connection pooling
@@ -291,6 +293,17 @@ npm run dev
 cd backend
 cargo run
 # Axum API server: http://localhost:3000
+```
+
+#### Tests
+```bash
+# Backend
+cd backend && cargo test
+
+# Frontend (Vitest)
+cd frontend && npm test
+# Single file example
+cd frontend && npm test -- CreateEventForm.test.tsx
 ```
 
 #### CORS Configuration
