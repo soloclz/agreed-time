@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import {
   addDays,
   parseLocalDate,
@@ -132,6 +132,35 @@ export default function TimeGrid({
     return dateStr >= startDate && dateStr <= endDate;
   };
 
+  // Auto-scroll to startDate on mount or change
+  useEffect(() => {
+    if (!gridRef.current || !startDate) return;
+
+    // Wait for render cycle to complete ensuring DOM is ready
+    requestAnimationFrame(() => {
+      if (!gridRef.current) return;
+      
+      const startEl = gridRef.current.querySelector(`[data-date="${startDate}"]`) as HTMLElement;
+      
+      if (startEl) {
+        const containerRect = gridRef.current.getBoundingClientRect();
+        const elementRect = startEl.getBoundingClientRect();
+        
+        // Calculate the relative position to scroll to
+        // elementRect.left is relative to viewport, containerRect.left is relative to viewport
+        // currentScrollLeft + (elementRelativeOffset)
+        const relativeOffset = elementRect.left - containerRect.left;
+        const currentScroll = gridRef.current.scrollLeft;
+        
+        // Scroll to the element, adding a small buffer
+        gridRef.current.scrollTo({
+          left: currentScroll + relativeOffset,
+          behavior: 'smooth'
+        });
+      }
+    });
+  }, [startDate, weeks]);
+
   // Helper to generate time slot key
   const getCellKey = (date: string, startTime: string, endTime: string): string =>
     `${date}_${startTime}-${endTime}`;
@@ -233,6 +262,7 @@ export default function TimeGrid({
                           return (
                             <th
                               key={date}
+                              data-date={date}
                               className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
                             >
                               {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
