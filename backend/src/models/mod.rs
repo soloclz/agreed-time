@@ -28,7 +28,7 @@ pub struct TimeRangeRequest {
 pub struct CreateEventRequest {
     pub title: String,
     pub description: Option<String>,
-    pub organizer_name: Option<String>,
+    pub organizer_name: String,
     pub time_zone: Option<String>,
     pub slot_duration: Option<i32>,
     pub time_slots: Vec<TimeRangeRequest>, 

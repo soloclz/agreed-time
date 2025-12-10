@@ -70,10 +70,7 @@ pub async fn create_event(
     let organizer_token = generate_token();
     let current_time = Utc::now();
 
-    let organizer_name = payload
-        .organizer_name
-        .clone()
-        .unwrap_or_else(|| "Organizer".to_string());
+    let organizer_name = payload.organizer_name.clone();
 
     // 1. Insert Event (without organizer_name)
     sqlx::query_as!(
