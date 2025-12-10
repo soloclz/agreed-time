@@ -9,7 +9,7 @@ export interface ApiTimeRange {
 export interface CreateEventPayload {
   title: string;
   description?: string;
-  organizer_name?: string;
+  organizer_name: string;
   time_zone?: string;
   slot_duration?: number;
   time_slots: ApiTimeRange[];
