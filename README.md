@@ -2,6 +2,8 @@
 
 Modern scheduling made simple. Create polls, collect availability, and find the best time for your group in seconds.
 
+> Branding notice: The name “AgreedTime” and associated logos are not licensed for reuse. See `TRADEMARKS.md`.
+
 ## Documentation
 
 *   **[Developer Guide](./docs/developer/guide.md)**: Architecture, code standards, and contribution workflow.
