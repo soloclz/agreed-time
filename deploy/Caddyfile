@@ -1,5 +1,5 @@
 # Frontend
-agreedtime.com {
+agreedtime.com, www.agreedtime.com {
     reverse_proxy frontend:4321
 }
 
