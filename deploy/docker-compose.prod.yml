@@ -57,11 +57,12 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agreed_time}
     volumes:
       - ..:/app
+      - ./prepare.sh:/app/deploy/prepare.sh
     depends_on:
       db:
         condition: service_healthy
     entrypoint: ["/bin/bash", "-c"]
-    command: "apt-get update && apt-get install -y build-essential pkg-config libssl-dev ca-certificates curl && cargo install sqlx-cli --no-default-features --features postgres --locked && cargo sqlx prepare -- --bin agreed-time-backend"
+    command: "/app/deploy/prepare.sh"
 
 volumes:
   postgres_data:
