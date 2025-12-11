@@ -37,7 +37,6 @@ CREATE TABLE participants (
     is_organizer BOOLEAN NOT NULL DEFAULT FALSE, -- Flag to identify the organizer
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    comment TEXT,
     UNIQUE(event_id, name) 
 );
 
