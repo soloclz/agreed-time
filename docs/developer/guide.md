@@ -306,6 +306,16 @@ cd frontend && npm test
 cd frontend && npm test -- CreateEventForm.test.tsx
 ```
 
+#### SQLx 離線快取 (.sqlx)
+Dockerfile 使用 `SQLX_OFFLINE=true`，建置前需有 `.sqlx`。不想提交快取檔時，可用 compose 的 helper 服務生成：
+```bash
+# 啟動 db（如需）
+docker compose -f deploy/docker-compose.prod.yml up -d db
+# 生成 .sqlx
+docker compose -f deploy/docker-compose.prod.yml --profile prepare run --rm sqlx-prepare
+```
+每次 schema 變更後重跑一次，然後再進行 `docker compose -f deploy/docker-compose.prod.yml up -d --build`。
+
 #### CORS Configuration
 The backend is configured to allow requests from the frontend origin:
 *   Development: `http://localhost:4321`
