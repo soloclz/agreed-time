@@ -28,6 +28,15 @@ async fn main() -> anyhow::Result<()> {
     let pool = db::create_pool_lazy(&config.database_url);
     tracing::info!("Database connection pool created (lazy)");
 
+    // Run database migrations
+    tracing::info!("Running database migrations...");
+    let migrator = sqlx::migrate!("./migrations");
+    migrator
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
+    tracing::info!("Database migrations applied successfully!");
+
     // Start background task for auto-deletion
     let pool_for_cleanup = pool.clone();
     tokio::spawn(async move {
