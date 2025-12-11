@@ -80,16 +80,19 @@ fn test_submit_availability_request() {
         availabilities: vec![
             TimeRangeRequest { start_at: start, end_at: end }
         ],
+        comment: Some("I'm late".to_string()), // Added field
     };
 
     let json = serde_json::to_string(&request).unwrap();
     assert!(json.contains("Charlie"));
+    assert!(json.contains("I'm late"));
 
     let deserialized: SubmitAvailabilityRequest = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.participant_name, "Charlie");
     assert_eq!(deserialized.availabilities.len(), 1);
     assert_eq!(deserialized.availabilities[0].start_at, start);
     assert_eq!(deserialized.availabilities[0].end_at, end);
+    assert_eq!(deserialized.comment, Some("I'm late".to_string()));
 }
 
 #[test]
@@ -106,11 +109,13 @@ fn test_event_results_response_structure() {
             ParticipantAvailability {
                 name: "Alice".to_string(),
                 is_organizer: true, // Added field
+                comment: Some("Host".to_string()), // Added field
                 availabilities: vec![],
             },
             ParticipantAvailability {
                 name: "Bob".to_string(),
                 is_organizer: false, // Added field
+                comment: None, // Added field
                 availabilities: vec![],
             },
         ],
@@ -123,12 +128,14 @@ fn test_event_results_response_structure() {
     assert!(json.contains("Alice"));
     assert!(json.contains("Bob"));
     assert!(json.contains("\"is_organizer\":true"));
+    assert!(json.contains("Host"));
 
     let deserialized: EventResultsResponse = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.title, "Team Meeting");
     assert_eq!(deserialized.total_participants, 2);
     assert_eq!(deserialized.participants.len(), 2);
     assert_eq!(deserialized.participants[0].is_organizer, true);
+    assert_eq!(deserialized.participants[0].comment, Some("Host".to_string()));
 }
 
 #[test]

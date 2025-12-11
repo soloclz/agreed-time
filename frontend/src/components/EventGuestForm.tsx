@@ -54,7 +54,8 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
       await eventService.submitResponse(
         publicToken, 
         guestName,
-        selectedGuestRanges // Pass ranges directly
+        selectedGuestRanges,
+        guestComment // Pass the guestComment
       );
       setSubmitted(true);
       toast.success('Your availability has been submitted!');
@@ -101,7 +102,6 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
         />
       </div>
 
-      {/* Comment section disabled until backend supports it
       <div className="space-y-4">
         <label htmlFor="guestComment" className="block text-lg font-bold text-ink">Comments (Optional)</label>
         <textarea
@@ -113,7 +113,6 @@ export default function EventGuestForm({ publicToken }: { publicToken: string })
           className="w-full px-4 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-sans transition-colors text-ink"
         ></textarea>
       </div>
-      */}
 
       <div>
         {eventData && eventData.eventSlots && (
