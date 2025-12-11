@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT p.name, p.is_organizer, p.comment, a.start_at, a.end_at\n        FROM participants p\n        LEFT JOIN availabilities a ON p.id = a.participant_id\n        WHERE p.event_id = $1\n        ORDER BY p.is_organizer DESC, p.created_at ASC, a.start_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "is_organizer",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "comment",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3baabf69959d6333ebaeca587fde16a1bb0005a653f6b3a4c60ca824d9db643a"
+}
