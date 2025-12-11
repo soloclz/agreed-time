@@ -169,7 +169,15 @@ export function useTimeSlotDragSelection({
       longPressTimerRef.current = window.setTimeout(() => {
         const hour = parseFloat(hourStr);
         isDragging.current = true;
-        if (navigator.vibrate) navigator.vibrate(50);
+
+        // Safe vibration: wrapped in try-catch to avoid console warnings
+        try {
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+        } catch (e) {
+          // Vibration not allowed or not supported, silently ignore
+        }
 
         const isSelected = isCellSelectedFresh(date, hour);
         dragMode.current = isSelected ? 'deselect' : 'select';

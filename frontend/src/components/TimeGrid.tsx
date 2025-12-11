@@ -237,7 +237,7 @@ export default function TimeGrid({
           {/* Right: Scrollable Grid */}
           <div
             ref={gridRef}
-            className="overflow-x-auto flex-1"
+            className="time-grid-scroll-area overflow-x-auto flex-1"
           >
             <div className="flex">
               {weeks.map((week, weekIndex) => (
