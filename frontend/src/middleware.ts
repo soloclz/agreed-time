@@ -1,32 +1,34 @@
 import { defineMiddleware } from 'astro:middleware';
 
 export const onRequest = defineMiddleware(async (_context, next) => {
-  // Get the response
   const response = await next();
-
-  // Clone the response so we can modify headers
   const newResponse = new Response(response.body, response);
 
-    // Security Headers
+  const connectSources = ["'self'", 'ws:', 'wss:'];
+  const apiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL || '/api';
+  try {
+    const apiUrl = new URL(apiBaseUrl);
+    connectSources.push(apiUrl.origin);
+  } catch {
+    // Relative /api stays under 'self'
+  }
 
-    // 1. Cache-Control instead of Expires
-    // Use Cache-Control for better control over caching
-    newResponse.headers.set('Cache-Control', 'public, max-age=3600, must-revalidate');
-    newResponse.headers.delete('Expires'); // Remove deprecated Expires header
+  newResponse.headers.set('Cache-Control', 'public, max-age=3600, must-revalidate');
+  newResponse.headers.delete('Expires');
 
-    // 2. Content-Security-Policy instead of X-Frame-Options
-    // Allow Google Fonts and necessary resources
-    newResponse.headers.set(
-      'Content-Security-Policy',
-      "frame-ancestors 'self'; " +
-      "default-src 'self'; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-      "font-src 'self' data: https://fonts.gstatic.com; " +
-      "img-src 'self' data: https:; " +
-      "connect-src 'self' ws: wss:;"
-    );
-    newResponse.headers.delete('X-Frame-Options'); // Remove deprecated header
+  newResponse.headers.set(
+    'Content-Security-Policy',
+    [
+      "frame-ancestors 'self'",
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: https:",
+      `connect-src ${connectSources.join(' ')}`,
+    ].join('; ') + ';'
+  );
+  newResponse.headers.delete('X-Frame-Options');
 
     // 3. Remove unneeded x-xss-protection header
     // X-XSS-Protection is deprecated and can create security issues
