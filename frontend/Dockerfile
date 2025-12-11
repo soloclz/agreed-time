@@ -36,8 +36,9 @@ RUN npm ci --omit=dev
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
 
-# Default port Astro listens on
+# Default binding config for Astro Node adapter
 ENV PORT=4321
+ENV HOST=0.0.0.0
 EXPOSE 4321
 
 CMD ["node", "./dist/server/entry.mjs"]
