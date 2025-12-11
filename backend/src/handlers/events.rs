@@ -253,13 +253,23 @@ pub async fn submit_availability(
     .fetch_optional(&mut *transaction)
     .await?
     {
+        // Participant exists, update their comment
+        sqlx::query!(
+            "UPDATE participants SET comment = $1, updated_at = NOW() WHERE id = $2",
+            payload.comment,
+            id
+        )
+        .execute(&mut *transaction)
+        .await?;
         id
     } else {
+        // New participant, insert with comment
         sqlx::query_scalar!(
-            "INSERT INTO participants (event_id, name, is_organizer) VALUES ($1, $2, $3) RETURNING id",
+            "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id",
             event_id,
             payload.participant_name,
-            false // Default is not organizer
+            false, // Default is not organizer
+            payload.comment
         )
         .fetch_one(&mut *transaction)
         .await?
@@ -310,6 +320,7 @@ async fn fetch_event_results_data(
     struct Row {
         name: String,
         is_organizer: bool,
+        comment: Option<String>, // Add comment field
         start_at: Option<DateTime<Utc>>,
         end_at: Option<DateTime<Utc>>,
     }
@@ -317,7 +328,7 @@ async fn fetch_event_results_data(
     let rows = sqlx::query_as!(
         Row,
         r#"
-        SELECT p.name, p.is_organizer, a.start_at, a.end_at
+        SELECT p.name, p.is_organizer, p.comment, a.start_at, a.end_at
         FROM participants p
         LEFT JOIN availabilities a ON p.id = a.participant_id
         WHERE p.event_id = $1
@@ -328,9 +339,10 @@ async fn fetch_event_results_data(
     .fetch_all(pool)
     .await?;
 
-    // We need to keep track of is_organizer per participant
+    // We need to keep track of is_organizer and comment per participant
     struct ParticipantData {
         is_organizer: bool,
+        comment: Option<String>, // Add comment field
         ranges: Vec<TimeRangeRequest>,
     }
 
@@ -345,6 +357,7 @@ async fn fetch_event_results_data(
         if !participants_map.contains_key(&row.name) {
             participants_map.insert(row.name.clone(), ParticipantData { 
                 is_organizer: row.is_organizer, 
+                comment: row.comment.clone(), // Set comment
                 ranges: Vec::new() 
             });
             participant_names.push(row.name.clone());
@@ -366,6 +379,7 @@ async fn fetch_event_results_data(
             ParticipantAvailability {
                 name,
                 is_organizer: data.is_organizer,
+                comment: data.comment, // Pass comment
                 availabilities: data.ranges,
             }
         })

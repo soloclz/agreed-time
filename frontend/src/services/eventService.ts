@@ -84,10 +84,11 @@ import type {
       return response.json() as Promise<CreateEventSuccessResponse>;
     },
   
-    submitResponse: async (publicToken: string, participantName: string, ranges: ApiTimeRange[]): Promise<void> => {
+    submitResponse: async (publicToken: string, participantName: string, ranges: ApiTimeRange[], comment: string | undefined): Promise<void> => {
       const payload: SubmitAvailabilityPayload = {
         participant_name: participantName,
         availabilities: ranges,
+        comment: comment || undefined,
       };
   
       const apiResponse = await fetch(`${API_BASE_URL}/events/${publicToken}/availability`, {

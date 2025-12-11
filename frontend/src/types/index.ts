@@ -63,6 +63,7 @@ export interface EventData {
 export interface SubmitAvailabilityPayload {
   participant_name: string;
   availabilities: ApiTimeRange[];
+  comment?: string;
 }
 
 // --- Results View Types ---
