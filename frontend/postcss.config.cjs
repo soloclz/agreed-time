@@ -1,14 +1,19 @@
 module.exports = {
   plugins: {
+    tailwindcss: {},
     autoprefixer: {
       overrideBrowserslist: [
-        'last 2 versions',
-        'Safari >= 12',
-        'iOS >= 12',
-        'Chrome >= 90',
+        'last 3 versions',
+        'Safari >= 9',
+        'iOS >= 9',
+        'Chrome >= 53',
+        'ChromeAndroid >= 53',
         'Firefox >= 88',
-        'Edge >= 90'
-      ]
+        'Edge >= 79',
+        'Android >= 4.4'
+      ],
+      grid: false,
+      flexbox: 'no-2009'
     }
   }
 };

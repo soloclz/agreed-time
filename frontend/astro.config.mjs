@@ -22,17 +22,5 @@ export default defineConfig({
               }
           }
       },
-      build: {
-          // Enable cache busting with content hashing
-          assetsInlineLimit: 0,
-          rollupOptions: {
-              output: {
-                  // Add hashes to filenames for cache busting
-                  entryFileNames: 'entry.[hash].js',
-                  chunkFileNames: 'chunks/chunk.[hash].js',
-                  assetFileNames: 'assets/asset.[hash][extname]'
-              }
-          }
-      }
 	},
 });

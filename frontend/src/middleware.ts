@@ -16,14 +16,24 @@ export const onRequest = defineMiddleware(async (_context, next) => {
   newResponse.headers.set('Cache-Control', 'public, max-age=3600, must-revalidate');
   newResponse.headers.delete('Expires');
 
+  // Set Content-Type with UTF-8 charset for HTML responses
+  const contentType = newResponse.headers.get('Content-Type');
+  if (contentType && contentType.includes('text/html')) {
+    newResponse.headers.set('Content-Type', 'text/html; charset=utf-8');
+  }
+  // Ensure SVGs specify UTF-8 charset for linters/tooling
+  if (contentType && contentType.startsWith('image/svg+xml') && !contentType.toLowerCase().includes('charset=')) {
+    newResponse.headers.set('Content-Type', 'image/svg+xml; charset=utf-8');
+  }
+
   newResponse.headers.set(
     'Content-Security-Policy',
     [
       "frame-ancestors 'self'",
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' data: https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self' data:",
       "img-src 'self' data: https:",
       `connect-src ${connectSources.join(' ')}`,
     ].join('; ') + ';'
