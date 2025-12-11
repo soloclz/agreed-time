@@ -11,17 +11,17 @@ RUN cargo new --bin backend
 WORKDIR /app/backend
 
 # Copy manifests
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./Cargo.toml ./Cargo.toml
+COPY ./backend/Cargo.lock ./Cargo.lock
+COPY ./backend/Cargo.toml ./Cargo.toml
 
 # Build dependencies (this layer will be cached if manifests don't change)
 RUN cargo build --release
 RUN rm src/*.rs
 
 # Copy source code
-COPY ./src ./src
-COPY ./.sqlx ./.sqlx
-COPY ./migrations ./migrations
+COPY ./backend/src ./src
+COPY ./backend/.sqlx ./.sqlx
+COPY ./backend/migrations ./migrations
 
 # Build the actual application
 # Use SQLX_OFFLINE=true to use the cached .sqlx directory instead of connecting to a live DB
