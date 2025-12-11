@@ -221,6 +221,11 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
                             </span>
                         )}
                     </div>
+                    {participant.comment && (
+                      <p className="text-sm text-ink/70 mt-1 italic border-l-2 border-film-accent/30 pl-2">
+                        "{participant.comment}"
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
