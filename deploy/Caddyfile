@@ -1,6 +1,6 @@
 # Frontend
 agreedtime.com {
-    reverse_proxy frontend:80
+    reverse_proxy frontend:4321
 }
 
 # Backend
