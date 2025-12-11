@@ -6,30 +6,38 @@ WORKDIR /app
 # Copy package files (context is project root, so use frontend/ prefix)
 COPY frontend/package.json frontend/package-lock.json ./
 
-# Install dependencies
+# Install dependencies (include dev deps for build)
 RUN npm ci
 
 # Copy source code
 COPY frontend/ .
 
-# Accept build argument for API URL
+# Accept build argument for API URL (used at build time for PUBLIC_ vars)
 ARG PUBLIC_API_BASE_URL=https://api.agreedtime.com
 
-# Create .env.production file with the build arg
+# Create .env.production file with the build arg so Astro embeds the API URL
 RUN echo "PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}" > .env.production
 
-# Build static files
+# Build SSR output (dist/server + dist/client)
 RUN npm run build
 
-# Production stage - use nginx to serve static files
-FROM nginx:alpine
+# Production stage - run Astro SSR with Node adapter
+FROM node:20-alpine
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Copy nginx configuration for SPA routing
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy package metadata for npm ci --omit=dev
+COPY frontend/package.json frontend/package-lock.json ./
 
-EXPOSE 80
+# Install only production dependencies for runtime
+RUN npm ci --omit=dev
 
-CMD ["nginx", "-g", "daemon off;"]
+# Copy built assets from builder
+COPY --from=builder /app/dist ./dist
+
+# Default port Astro listens on
+ENV PORT=4321
+EXPOSE 4321
+
+CMD ["node", "./dist/server/entry.mjs"]

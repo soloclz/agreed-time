@@ -39,6 +39,9 @@ services:
       args:
         PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.agreedtime.com}
     restart: always
+    environment:
+      PORT: ${FRONTEND_PORT:-4321}
+      HOST: 0.0.0.0
 
   # Caddy Reverse Proxy (Handles HTTPS automatically)
   caddy:
