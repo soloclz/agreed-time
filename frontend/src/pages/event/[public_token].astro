@@ -2,12 +2,16 @@
 import Layout from '../../layouts/Layout.astro';
 import EventGuestForm from '../../components/EventGuestForm';
 
+// For static build, provide an empty getStaticPaths
+// The actual routing will be handled by the web server's fallback configuration
+export async function getStaticPaths() {
+  return [];
+}
+
 const { public_token } = Astro.params;
 
 if (!public_token) {
   // Client-side redirect will handle this for static output
-  // For SSR, Astro.redirect('/404') would work
-  // but for static, it's best to handle this in JS or by server rewrite rules
 }
 ---
 
