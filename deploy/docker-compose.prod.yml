@@ -30,6 +30,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+  # Migrator Service (Runs DB migrations before backend starts)
+  migrator:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agreed_time}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/app/server", "migrate"]
 
   # Frontend Service
   frontend:

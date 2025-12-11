@@ -29,6 +29,7 @@ dotenvy = "0.15"
 # Error handling
 anyhow = "1"
 thiserror = "2"
+clap = { version = "4.5.53", features = ["derive"] }
 
 [dev-dependencies]
 # Testing utilities
