@@ -31,6 +31,15 @@ services:
       db:
         condition: service_healthy
 
+  # Frontend Service
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-https://api.agreedtime.com}
+    restart: always
+
   # Caddy Reverse Proxy (Handles HTTPS automatically)
   caddy:
     image: caddy:2-alpine
@@ -40,11 +49,11 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ../frontend/dist:/srv
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - backend
+      - frontend
 
   # Helper to generate SQLx offline data (.sqlx) before building backend images
   # Usage:
