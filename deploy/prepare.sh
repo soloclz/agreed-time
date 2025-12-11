@@ -12,6 +12,10 @@ apt-get install -y build-essential pkg-config libssl-dev ca-certificates curl
 echo "Installing sqlx-cli..."
 cargo install sqlx-cli --no-default-features --features postgres --locked
 
+# Run migrations first!
+echo "Running database migrations..."
+cargo sqlx migrate run
+
 # Run prepare
 echo "Running cargo sqlx prepare..."
 cargo sqlx prepare -- --bin agreed-time-backend
