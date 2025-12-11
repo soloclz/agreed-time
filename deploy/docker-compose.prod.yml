@@ -51,7 +51,7 @@ services:
   #   docker compose -f deploy/docker-compose.prod.yml --profile prepare run --rm sqlx-prepare
   sqlx-prepare:
     profiles: ["prepare"]
-    image: rust:1.91-slim-bookworm
+    image: rust:1.91-bookworm
     working_dir: /app/backend
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agreed_time}
@@ -62,7 +62,7 @@ services:
         condition: service_healthy
     entrypoint: ["/bin/bash", "-lc"]
     command: |
-      apt-get update && apt-get install -y pkg-config libssl-dev ca-certificates curl \
+      apt-get update && apt-get install -y build-essential pkg-config libssl-dev ca-certificates curl \
         && cargo install sqlx-cli --no-default-features --features postgres --locked \
         && cargo sqlx prepare -- --bin agreed-time-backend
 
