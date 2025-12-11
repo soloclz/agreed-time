@@ -27,7 +27,7 @@ export default function TimeSlotBottomPanel({
       {/* Bottom Panel Overlay */}
       {showBottomPanel && (
         <div
-          className="fixed inset-0 bg-black/5 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-black/20 z-40"
           onClick={onTogglePanel}
           role="button"
           tabIndex={0}
@@ -108,7 +108,7 @@ export default function TimeSlotBottomPanel({
             e.stopPropagation();
             onTogglePanel();
           }}
-          className="w-full bg-white/95 backdrop-blur-md hover:bg-white text-ink px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
+          className="w-full bg-white/95 hover:bg-white text-ink px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
         >
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="flex items-center justify-center min-w-[2rem] h-8 px-2 bg-film-accent text-white font-mono font-bold text-sm rounded-full shadow-sm">

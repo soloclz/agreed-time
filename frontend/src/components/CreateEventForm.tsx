@@ -94,7 +94,7 @@ export default function CreateEventForm() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Team Sync Meeting"
-            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono rounded-t-sm placeholder-gray-400 text-ink"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono rounded-t-sm placeholder-gray-400 text-ink"
             required
             autoComplete="off"
           />
@@ -115,7 +115,7 @@ export default function CreateEventForm() {
             }}
             placeholder="Add any details about the event..."
             rows={1}
-            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
           />
         </div>
 
@@ -130,7 +130,7 @@ export default function CreateEventForm() {
             value={organizerName}
             onChange={(e) => setOrganizerName(e.target.value)}
             placeholder="Organizer"
-            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-all font-mono rounded-t-sm placeholder-gray-400 text-ink"
+            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono rounded-t-sm placeholder-gray-400 text-ink"
             autoComplete="name"
           />
         </div>

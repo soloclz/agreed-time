@@ -119,7 +119,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
       </div>
 
       {totalParticipants === 0 ? (
-        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
+        <div className="bg-white/90 rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-film-accent/70 mx-auto">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -130,7 +130,7 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
             </p>
         </div>
       ) : isOrganizerOnly ? (
-        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
+        <div className="bg-white/90 rounded-xl p-8 border border-film-border shadow-sm text-center space-y-4 mt-8">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-film-accent/70 mx-auto">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
@@ -143,14 +143,14 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
       ) : (
         <>
           {/* Top Picks Section */}
-          <section className="bg-white/50 backdrop-blur-sm rounded-xl p-8 border border-film-border shadow-sm">
+          <section className="bg-white/90 rounded-xl p-8 border border-film-border shadow-sm">
             <h2 className="text-2xl font-serif font-bold text-ink mb-6 flex items-center gap-3">
               <span className="text-film-accent">✦</span> Best Time{topPicks.length > 1 ? 's' : ''}
             </h2>
             {topPicks.length > 0 ? (
               <div className="space-y-4">
                 {topPicks.map((pick, index) => (
-                  <div key={index} className="bg-film-accent/5 border border-film-accent/20 rounded-lg p-6 transition-all hover:bg-film-accent/10">
+                  <div key={index} className="bg-film-accent/5 border border-film-accent/20 rounded-lg p-6 transition-colors hover:bg-film-accent/10">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                       <div className="space-y-1">
                         <p className="text-3xl font-serif font-bold text-ink">
