@@ -80,7 +80,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
 
   return (
     <div className="w-full overflow-x-auto pb-4">
-      <div className="min-w-[600px] p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-film-border shadow-sm">
+      <div className="min-w-[600px] p-4 bg-white/90 rounded-xl border border-film-border shadow-sm">
         <TimeGrid
             startDate={minDate}
             endDate={maxDate}

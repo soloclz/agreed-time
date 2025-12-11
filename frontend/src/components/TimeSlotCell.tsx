@@ -64,7 +64,7 @@ export default function TimeSlotCell({
 
   // Mode-specific styles/classes
   let modeClasses = "";
-  let inlineStyle = {};
+  let cssVars = {};
 
   if (mode === 'select') {
     if (isSelected) {
@@ -75,11 +75,12 @@ export default function TimeSlotCell({
       modeClasses = "cursor-pointer bg-film-light hover:bg-white active:bg-white";
     }
   } else {
-    // Heatmap mode
+    // Heatmap mode - Use CSS custom properties
     if (hasVotes) {
-      inlineStyle = { backgroundColor: `rgba(225, 29, 72, ${finalOpacity})` };
+      modeClasses = "heatmap-cell";
+      cssVars = { '--cell-opacity': finalOpacity };
     } else {
-      inlineStyle = { backgroundColor: 'transparent' };
+      modeClasses = "bg-transparent";
     }
   }
 
@@ -91,7 +92,7 @@ export default function TimeSlotCell({
       data-date={date}
       data-hour={hour}
       className={`${baseClasses} ${modeClasses}`}
-      style={inlineStyle}
+      style={cssVars as React.CSSProperties}
       onMouseDown={(e) => { if (mode === 'select' && isSelectable) onMouseDown(e, date, hour); }}
       onMouseEnter={() => { if (mode === 'select' && isSelectable) onMouseEnter(date, hour); }}
       onMouseUp={onMouseUp}
