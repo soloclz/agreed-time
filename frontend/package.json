@@ -23,6 +23,9 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
+    "@fontsource/shippori-mincho": "^5.1.1",
+    "@fontsource/space-mono": "^5.1.1",
+    "@fontsource/zen-kaku-gothic-new": "^5.1.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
