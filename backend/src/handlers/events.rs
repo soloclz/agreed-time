@@ -378,12 +378,12 @@ async fn fetch_event_results_data(
         }
 
         if let (Some(start), Some(end)) = (row.start_at, row.end_at)
-            && let Some(data) = participants_map.get_mut(&row.name) {
-                data.ranges.push(TimeRangeRequest {
-                    start_at: start,
-                    end_at: end,
-                });
-            }
+            && let Some(data) = participants_map.get_mut(&row.name)
+        {
+            data.ranges.push(TimeRangeRequest {
+                start_at: start,
+                end_at: end,
+            });
         }
     }
 
