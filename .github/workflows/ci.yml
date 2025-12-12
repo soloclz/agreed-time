@@ -26,6 +26,9 @@ jobs:
         with:
           workspaces: backend
 
+      - name: Install rustfmt component
+        run: rustup component add rustfmt
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
