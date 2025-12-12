@@ -44,7 +44,11 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
       const key = `${dateStr}_${startTime}-${endTime}`;
       
       data[key] = {
+        date: dateStr,
+        hour,
         count: s.count,
+        ratio: totalParticipants > 0 ? s.count / totalParticipants : 0,
+        participants: s.attendees,
         attendees: s.attendees,
       };
 
@@ -52,6 +56,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
         availSlots.push({
             id: key,
             date: dateStr,
+            hour,
             startTime,
             endTime
         });

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { ApiTimeRange, TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import TimeSlotCell from './TimeSlotCell';
@@ -139,15 +139,14 @@ export default function TimeSlotSelector({
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,
-    toggleCell,
+    toggleCell: _toggleCell,
     setCell,
     removeSlot,
-    clearAllSlots,
+    clearAllSlots: _clearAllSlots,
   } = useTimeSlotDragSelection({
     initialSelectedCells,
     slotDuration,
     getCellKey,
-    getTimeSlotFromHour,
     isSlotSelectable,
     onSelectedCellsChange: (cells) => {
       if (onRangesChange) {
@@ -209,6 +208,7 @@ export default function TimeSlotSelector({
       grouped[datePart].push({
         id: key, // Use key as ID for UI
         date: datePart,
+        hour,
         startTime,
         endTime,
       });

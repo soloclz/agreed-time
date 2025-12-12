@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import '@testing-library/jest-dom';
@@ -56,7 +56,7 @@ describe('CreateEventForm', () => {
 
   afterEach(() => {
     mockCreateEvent.mockClear();
-    mockLocalStorage.setItem.mockClear();
+    (mockLocalStorage.setItem as unknown as Mock).mockClear();
   });
 
   afterAll(() => {

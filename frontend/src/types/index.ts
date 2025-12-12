@@ -42,10 +42,22 @@ export interface EventResponse {
 // --- UI Types ---
 
 export interface GridCell {
+  id: string; // Key "YYYY-MM-DD_HH.5"
   date: string;
   hour: number;
   startTime: string;
   endTime: string;
+}
+
+export type TimeSlot = GridCell;
+
+export interface HeatmapCellData {
+  date: string;
+  hour: number;
+  count: number;
+  ratio: number;
+  participants: string[];
+  attendees: string[]; // Alias for participants or just extra field
 }
 
 export interface EventData {
@@ -71,6 +83,7 @@ export interface SubmitAvailabilityPayload {
 export interface ParticipantAvailability {
   name: string;
   is_organizer: boolean; // Added
+  comment?: string; // Added
   availabilities: ApiTimeRange[];
 }
 
