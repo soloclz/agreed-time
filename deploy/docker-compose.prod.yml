@@ -17,6 +17,7 @@ services:
 
   # Backend Service
   backend:
+    image: ${IMAGE_REPO:-ghcr.io/soloclz/agreed-time}-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -35,6 +36,7 @@ services:
 
   # Migrator Service (Runs DB migrations before backend starts)
   migrator:
+    image: ${IMAGE_REPO:-ghcr.io/soloclz/agreed-time}-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -47,6 +49,7 @@ services:
 
   # Frontend Service
   frontend:
+    image: ${IMAGE_REPO:-ghcr.io/soloclz/agreed-time}-frontend:latest
     build:
       context: ..
       dockerfile: frontend/Dockerfile
