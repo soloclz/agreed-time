@@ -30,7 +30,12 @@ jobs:
         run: rustup component add rustfmt
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: |
+          if ! cargo fmt --all -- --check; then
+            echo "::error::Code formatting check failed!"
+            echo "::notice::To fix this, please run 'cargo fmt --all' in your local 'backend' directory and commit the changes."
+            exit 1
+          fi
 
       - name: Lint with Clippy
         run: cargo clippy -- -D warnings
