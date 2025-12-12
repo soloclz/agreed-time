@@ -1,5 +1,5 @@
 use agreed_time_backend::models::*;
-use chrono::{Utc, TimeZone};
+use chrono::{TimeZone, Utc};
 use serde_json;
 use uuid::Uuid;
 
@@ -11,12 +11,10 @@ fn test_create_event_request_serialization() {
         organizer_name: "Test Organizer".to_string(),
         time_zone: Some("Asia/Taipei".to_string()),
         slot_duration: Some(30), // Added field
-        time_slots: vec![
-            TimeRangeRequest {
-                start_at: Utc::now(),
-                end_at: Utc::now(),
-            }
-        ],
+        time_slots: vec![TimeRangeRequest {
+            start_at: Utc::now(),
+            end_at: Utc::now(),
+        }],
     };
 
     let json = serde_json::to_string(&request).unwrap();
@@ -27,7 +25,10 @@ fn test_create_event_request_serialization() {
 
     let deserialized: CreateEventRequest = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.title, "Test Event");
-    assert_eq!(deserialized.description, Some("Test Description".to_string()));
+    assert_eq!(
+        deserialized.description,
+        Some("Test Description".to_string())
+    );
     assert_eq!(deserialized.organizer_name, "Test Organizer".to_string());
     assert_eq!(deserialized.slot_duration, Some(30));
 }
@@ -73,13 +74,14 @@ fn test_create_event_response_serialization() {
 #[test]
 fn test_submit_availability_request() {
     let start = Utc.timestamp_opt(1678886400, 0).unwrap(); // 2023-03-15T16:00:00Z
-    let end = Utc.timestamp_opt(1678890000, 0).unwrap();   // 2023-03-15T17:00:00Z
+    let end = Utc.timestamp_opt(1678890000, 0).unwrap(); // 2023-03-15T17:00:00Z
 
     let request = SubmitAvailabilityRequest {
         participant_name: "Charlie".to_string(),
-        availabilities: vec![
-            TimeRangeRequest { start_at: start, end_at: end }
-        ],
+        availabilities: vec![TimeRangeRequest {
+            start_at: start,
+            end_at: end,
+        }],
         comment: Some("I'm late".to_string()), // Added field
     };
 
@@ -108,14 +110,14 @@ fn test_event_results_response_structure() {
         participants: vec![
             ParticipantAvailability {
                 name: "Alice".to_string(),
-                is_organizer: true, // Added field
+                is_organizer: true,                // Added field
                 comment: Some("Host".to_string()), // Added field
                 availabilities: vec![],
             },
             ParticipantAvailability {
                 name: "Bob".to_string(),
                 is_organizer: false, // Added field
-                comment: None, // Added field
+                comment: None,       // Added field
                 availabilities: vec![],
             },
         ],
@@ -135,7 +137,10 @@ fn test_event_results_response_structure() {
     assert_eq!(deserialized.total_participants, 2);
     assert_eq!(deserialized.participants.len(), 2);
     assert_eq!(deserialized.participants[0].is_organizer, true);
-    assert_eq!(deserialized.participants[0].comment, Some("Host".to_string()));
+    assert_eq!(
+        deserialized.participants[0].comment,
+        Some("Host".to_string())
+    );
 }
 
 #[test]
