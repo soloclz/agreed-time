@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 
@@ -31,7 +31,7 @@ pub struct CreateEventRequest {
     pub organizer_name: String,
     pub time_zone: Option<String>,
     pub slot_duration: Option<i32>,
-    pub time_slots: Vec<TimeRangeRequest>, 
+    pub time_slots: Vec<TimeRangeRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,7 +57,7 @@ pub struct EventResponse {
     pub time_zone: Option<String>,
     pub slot_duration: i32,
     pub state: String,
-    pub event_slots: Vec<EventSlot>, 
+    pub event_slots: Vec<EventSlot>,
     pub organizer_name: String, // Computed field
 }
 
@@ -84,8 +84,8 @@ pub struct EventResultsResponse {
     pub time_zone: Option<String>,
     pub slot_duration: i32,
     pub state: String,
-    pub event_slots: Vec<EventSlot>, 
-    pub participants: Vec<ParticipantAvailability>, 
+    pub event_slots: Vec<EventSlot>,
+    pub participants: Vec<ParticipantAvailability>,
     pub total_participants: i64,
 }
 

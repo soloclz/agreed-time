@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 
@@ -25,7 +25,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error")
             }
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found"),
-            AppError::BadRequest(ref msg) => (StatusCode::BAD_REQUEST, msg.as_str())
+            AppError::BadRequest(ref msg) => (StatusCode::BAD_REQUEST, msg.as_str()),
         };
 
         let body = Json(json!({

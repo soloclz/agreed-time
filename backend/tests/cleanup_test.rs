@@ -1,5 +1,5 @@
 use agreed_time_backend::db::cleanup::delete_expired_events;
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use uuid::Uuid;
@@ -23,7 +23,7 @@ async fn test_delete_expired_events() {
     // 1. Create Expired Event (8 days ago)
     let expired_event_id = Uuid::new_v4();
     let old_time = Utc::now() - Duration::days(8);
-    
+
     // Updated Schema: No organizer_name, Added slot_duration
     sqlx::query!(
         r#"
@@ -59,7 +59,7 @@ async fn test_delete_expired_events() {
 
     // 3. Run Cleanup
     let deleted_count = delete_expired_events(&pool).await.expect("Cleanup failed");
-    
+
     // 4. Verify
     // Note: deleted_count might be > 1 if other junk exists in DB.
     assert!(deleted_count >= 1);
@@ -69,7 +69,7 @@ async fn test_delete_expired_events() {
         .await
         .unwrap()
         .is_some();
-    
+
     assert!(!expired_exists, "Expired event should be deleted");
 
     let active_exists = sqlx::query!("SELECT id FROM events WHERE id = $1", active_event_id)
@@ -77,9 +77,12 @@ async fn test_delete_expired_events() {
         .await
         .unwrap()
         .is_some();
-        
+
     assert!(active_exists, "Active event should remain");
 
     // Cleanup active event
-    sqlx::query!("DELETE FROM events WHERE id = $1", active_event_id).execute(&pool).await.unwrap();
+    sqlx::query!("DELETE FROM events WHERE id = $1", active_event_id)
+        .execute(&pool)
+        .await
+        .unwrap();
 }

@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -23,7 +23,7 @@ fn merge_time_ranges(mut ranges: Vec<TimeRangeRequest>) -> Vec<TimeRangeRequest>
     if ranges.is_empty() {
         return vec![];
     }
-    
+
     ranges.sort_by(|a, b| a.start_at.cmp(&b.start_at));
 
     let mut merged = Vec::new();
@@ -49,18 +49,24 @@ pub async fn create_event(
 ) -> AppResult<Json<CreateEventResponse>> {
     // Validate input
     if payload.time_slots.is_empty() {
-        return Err(AppError::BadRequest("At least one time slot is required".to_string()));
+        return Err(AppError::BadRequest(
+            "At least one time slot is required".to_string(),
+        ));
     }
 
     for slot in &payload.time_slots {
         if slot.start_at >= slot.end_at {
-            return Err(AppError::BadRequest("Invalid time range: start must be before end".to_string()));
+            return Err(AppError::BadRequest(
+                "Invalid time range: start must be before end".to_string(),
+            ));
         }
     }
 
     let slot_duration = payload.slot_duration.unwrap_or(60);
     if slot_duration <= 0 {
-        return Err(AppError::BadRequest("Slot duration must be positive".to_string()));
+        return Err(AppError::BadRequest(
+            "Slot duration must be positive".to_string(),
+        ));
     }
 
     let mut transaction = pool.begin().await?;
@@ -217,13 +223,17 @@ pub async fn submit_availability(
 ) -> AppResult<()> {
     // Validate participant name
     if payload.participant_name.trim().is_empty() {
-        return Err(AppError::BadRequest("Participant name is required".to_string()));
+        return Err(AppError::BadRequest(
+            "Participant name is required".to_string(),
+        ));
     }
 
     // Validate time ranges
     for range in &payload.availabilities {
         if range.start_at >= range.end_at {
-            return Err(AppError::BadRequest("Invalid time range: start must be before end".to_string()));
+            return Err(AppError::BadRequest(
+                "Invalid time range: start must be before end".to_string(),
+            ));
         }
     }
 
@@ -239,12 +249,12 @@ pub async fn submit_availability(
 
     // Try to find participant by name
     // Important: We should NOT overwrite the Organizer if someone just enters the organizer's name.
-    // For MVP anonymous, we might allow it, but let's be safe: 
+    // For MVP anonymous, we might allow it, but let's be safe:
     // If the name matches an existing participant, we update it.
     // Ideally we should block overwriting organizer if payload is from guest form?
     // But since organizer uses same submit flow? No, organizer is created at event creation.
     // Let's keep simple logic: find by name. If it's organizer, so be it (organizer updating their time).
-    
+
     let participant_id = if let Some(id) = sqlx::query_scalar!(
         "SELECT id FROM participants WHERE event_id = $1 AND name = $2",
         event_id,
@@ -346,26 +356,33 @@ async fn fetch_event_results_data(
         ranges: Vec<TimeRangeRequest>,
     }
 
-    let mut participants_map: std::collections::HashMap<String, ParticipantData> = std::collections::HashMap::new();
-    
+    let mut participants_map: std::collections::HashMap<String, ParticipantData> =
+        std::collections::HashMap::new();
+
     // Order needs to be preserved as fetched (Organizer first)
-    // HashMap doesn't preserve order. We should use a Vec and look up by index? 
+    // HashMap doesn't preserve order. We should use a Vec and look up by index?
     // Or just collect unique names in order first.
     let mut participant_names: Vec<String> = Vec::new();
 
     for row in rows {
         if !participants_map.contains_key(&row.name) {
-            participants_map.insert(row.name.clone(), ParticipantData { 
-                is_organizer: row.is_organizer, 
-                comment: row.comment.clone(), // Set comment
-                ranges: Vec::new() 
-            });
+            participants_map.insert(
+                row.name.clone(),
+                ParticipantData {
+                    is_organizer: row.is_organizer,
+                    comment: row.comment.clone(), // Set comment
+                    ranges: Vec::new(),
+                },
+            );
             participant_names.push(row.name.clone());
         }
 
         if let (Some(start), Some(end)) = (row.start_at, row.end_at) {
             if let Some(data) = participants_map.get_mut(&row.name) {
-                data.ranges.push(TimeRangeRequest { start_at: start, end_at: end });
+                data.ranges.push(TimeRangeRequest {
+                    start_at: start,
+                    end_at: end,
+                });
             }
         }
     }
@@ -405,7 +422,7 @@ pub async fn get_event_results(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    let (event_slots, participants, total_participants) = 
+    let (event_slots, participants, total_participants) =
         fetch_event_results_data(&pool, event.id).await?;
 
     Ok(Json(EventResultsResponse {
@@ -438,7 +455,7 @@ pub async fn get_organizer_event(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    let (event_slots, participants, total_participants) = 
+    let (event_slots, participants, total_participants) =
         fetch_event_results_data(&pool, event.id).await?;
 
     Ok(Json(OrganizerEventResponse {
@@ -526,8 +543,14 @@ mod tests {
         let t2_end = Utc.timestamp_opt(4000, 0).unwrap();
 
         let ranges = vec![
-            TimeRangeRequest { start_at: t1_start, end_at: t1_end },
-            TimeRangeRequest { start_at: t2_start, end_at: t2_end },
+            TimeRangeRequest {
+                start_at: t1_start,
+                end_at: t1_end,
+            },
+            TimeRangeRequest {
+                start_at: t2_start,
+                end_at: t2_end,
+            },
         ];
 
         let merged = merge_time_ranges(ranges);
@@ -542,8 +565,14 @@ mod tests {
         let t2_end = Utc.timestamp_opt(4000, 0).unwrap();
 
         let ranges = vec![
-            TimeRangeRequest { start_at: t1_start, end_at: t1_end },
-            TimeRangeRequest { start_at: t2_start, end_at: t2_end },
+            TimeRangeRequest {
+                start_at: t1_start,
+                end_at: t1_end,
+            },
+            TimeRangeRequest {
+                start_at: t2_start,
+                end_at: t2_end,
+            },
         ];
 
         let merged = merge_time_ranges(ranges);
