@@ -1,10 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format, parseISO, addMinutes } from 'date-fns';
 import type { EventResultsResponse, OrganizerEventResponse } from '../types';
 import Heatmap from './Heatmap';
 import { 
-  findOrganizerName, 
-  filterOrganizerOnlySlots, 
   isOrganizerOnly as checkIsOrganizerOnly,
   rangesToCells 
 } from '../utils/eventUtils';
@@ -21,8 +19,7 @@ interface ComputedSlot {
   attendees: string[];
 }
 
-export default function EventResultsDisplay({ data, publicToken, timezoneOffsetString }: EventResultsDisplayProps) {
-  const [copiedShare, setCopiedShare] = useState(false);
+export default function EventResultsDisplay({ data, publicToken: _publicToken, timezoneOffsetString }: EventResultsDisplayProps) {
 
   const totalParticipants = data.total_participants;
   const slotDuration = data.slot_duration || 60; // Use event's slot duration
@@ -79,11 +76,6 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
     return allSortedSlots[0].count;
   }, [allSortedSlots]);
 
-  // Find organizer's name
-  const organizerName = useMemo(() => {
-    return findOrganizerName(data.participants);
-  }, [data.participants]);
-
   const topPicks = useMemo(() => {
     // We want to filter out slots where ONLY the organizer is available IF there are other people
     // But topPicks logic: usually maxCount > 1 if multiple people responded.
@@ -94,13 +86,6 @@ export default function EventResultsDisplay({ data, publicToken, timezoneOffsetS
   const otherOptions = useMemo(() => {
     return allSortedSlots.filter(slot => slot.count < maxCount);
   }, [allSortedSlots, maxCount]);
-
-  const handleShare = () => {
-    const url = `${window.location.origin}/event/${publicToken}/result`;
-    navigator.clipboard.writeText(url);
-    setCopiedShare(true);
-    setTimeout(() => setCopiedShare(false), 2000);
-  };
 
   // Check if only the organizer has responded
   const isOrganizerOnly = checkIsOrganizerOnly(totalParticipants, data.participants);

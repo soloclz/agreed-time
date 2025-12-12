@@ -56,7 +56,7 @@ import type {
       const payload: CreateEventPayload = {
         title,
         description: description || undefined,
-        organizer_name: organizerName || undefined,
+        organizer_name: organizerName || '',
         time_zone: timeZone || undefined,
         slot_duration: slotDuration || 60,
         time_slots: timeSlots,
