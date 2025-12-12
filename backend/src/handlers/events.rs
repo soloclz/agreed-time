@@ -377,8 +377,8 @@ async fn fetch_event_results_data(
             participant_names.push(row.name.clone());
         }
 
-        if let (Some(start), Some(end)) = (row.start_at, row.end_at) {
-            if let Some(data) = participants_map.get_mut(&row.name) {
+        if let (Some(start), Some(end)) = (row.start_at, row.end_at)
+            && let Some(data) = participants_map.get_mut(&row.name) {
                 data.ranges.push(TimeRangeRequest {
                     start_at: start,
                     end_at: end,
