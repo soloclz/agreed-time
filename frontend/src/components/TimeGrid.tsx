@@ -279,10 +279,12 @@ export default function TimeGrid({
           {/* Right: Scrollable Grid */}
           <div
             ref={gridRef}
-            className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0"
+            className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0 select-none"
+            style={{ WebkitTouchCallout: 'none' }}
             onMouseDown={handleGridMouseDown}
             onMouseEnter={handleGridMouseEnter}
             onMouseUp={handleGridMouseUp}
+            onContextMenu={(e) => e.preventDefault()}
           >
             <div className="flex">
               {weeks.map((week, weekIndex) => (
