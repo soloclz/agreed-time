@@ -163,6 +163,9 @@ export default function TimeSlotSelector({
   };
   
   const [showBottomPanel, setShowBottomPanel] = useState(false);
+
+  // State to hold the scrollable grid element (instead of Ref, to trigger updates)
+  const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
   
   const handleHeaderClick = (date: string) => {
     const timeSlotsForDay: Array<{ startHour: number; label: string }> = [];
@@ -332,10 +335,11 @@ export default function TimeSlotSelector({
         startHour={startHour}
         endHour={endHour}
         slotDuration={slotDuration}
+        onGridMount={setGridElement} // Pass the setter
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseUp={handleMouseUp}
-        renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
+        renderCell={(date, hour, slotLabel, key) => (
           <TimeSlotCell
             key={key}
             date={date}
@@ -344,9 +348,7 @@ export default function TimeSlotSelector({
             mode="select"
             isSelected={isCellSelected(date, hour)}
             isSelectable={isSlotSelectable(date, hour)}
-            onMouseDown={onMouseDownGrid}
-            onMouseEnter={onMouseEnterGrid}
-            onMouseUp={onMouseUpGrid}
+            gridScrollElement={gridElement} // Pass the element state
           />
         )}
         renderDateHeader={(date, defaultHeader) => (

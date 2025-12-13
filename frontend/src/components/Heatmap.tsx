@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { parseISO, format, addMinutes, addDays } from 'date-fns';
 import TimeSlotCell from './TimeSlotCell'; 
 import TimeGrid from './TimeGrid'; 
@@ -17,6 +17,8 @@ interface HeatmapProps {
 }
 
 export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }: HeatmapProps) {
+  // State for Grid Element (for Tooltip scroll handling)
+  const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
   
   // Transform data for TimeGrid (and TimeSlotCell)
   const { heatmapData, minDate, maxDate, minHour, maxHour } = useMemo(() => {
@@ -75,7 +77,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
         minHour: finalMinHour,
         maxHour: finalMaxHour,
     };
-  }, [slots, slotDuration]);
+  }, [slots, slotDuration, totalParticipants]); // Added totalParticipants to deps
 
   if (slots.length === 0) {
     return null;
@@ -84,18 +86,20 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
   const noop = () => {};
 
   return (
-    <div className="w-full overflow-x-auto pb-4">
-      <div className="min-w-[600px] p-4 bg-white/90 rounded-xl border border-film-border shadow-sm">
+    <div className="w-full pb-4">
+      {/* Removed min-w-[600px] and overflow-x-auto from here, let TimeGrid handle scroll */}
+      <div className="p-4 bg-white/90 rounded-xl border border-film-border shadow-sm">
         <TimeGrid
             startDate={minDate}
             endDate={maxDate}
             startHour={minHour}
             endHour={maxHour}
             slotDuration={slotDuration}
+            onGridMount={setGridElement} // Pass setter to get grid ref
             onMouseDown={noop}
             onMouseEnter={noop}
             onMouseUp={noop}
-            renderCell={(date, hour, slotLabel, key, onMouseDownGrid, onMouseEnterGrid, onMouseUpGrid) => (
+            renderCell={(date, hour, slotLabel, key) => (
                 <TimeSlotCell
                     key={key}
                     date={date}
@@ -106,9 +110,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
                     isSelectable={false}
                     heatmapData={heatmapData ? heatmapData[key] : undefined}
                     totalParticipants={totalParticipants}
-                    onMouseDown={onMouseDownGrid}
-                    onMouseEnter={onMouseEnterGrid}
-                    onMouseUp={onMouseUpGrid}
+                    gridScrollElement={gridElement} // Pass grid element for tooltip
                 />
             )}
             renderDateHeader={(_date, defaultHeader) => (
@@ -116,7 +118,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
             )}
         />
         
-        <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60">
+        <div className="mt-6 flex items-center justify-end gap-4 text-sm text-ink/60 flex-wrap">
             <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-[rgba(225,29,72,0.40)]"></div>
                 <span>Few</span>

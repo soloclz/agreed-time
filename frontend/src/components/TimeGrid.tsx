@@ -22,22 +22,21 @@ interface TimeGridProps {
   slotDuration: number; // in minutes (e.g., 60)
   maxWeeks?: number; // max number of weeks to display, default 8
 
+  // Callback to provide parent with the scrollable grid element
+  onGridMount?: (element: HTMLDivElement | null) => void;
+
   // Render prop for each cell
   renderCell: (
     date: string, 
     hour: number, 
     slotLabel: string, 
     cellKey: string,
-    // Mouse event handlers from parent for consistent drag behavior
-    onMouseDown: (e: React.MouseEvent, date: string, hour: number) => void,
-    onMouseEnter: (date: string, hour: number) => void,
-    onMouseUp: () => void,
   ) => React.ReactNode;
 
   // Optional render prop for date header for custom interaction
   renderDateHeader?: (date: string, defaultRenderer: React.ReactNode) => React.ReactNode;
 
-  // Interaction handlers to pass down to renderCell
+  // Interaction handlers to pass down from parent (TimeSlotSelector) for delegation
   onMouseDown: (e: React.MouseEvent, date: string, hour: number) => void;
   onMouseEnter: (date: string, hour: number) => void;
   onMouseUp: () => void;
@@ -52,13 +51,21 @@ export default function TimeGrid({
   endHour,
   slotDuration,
   maxWeeks = MAX_WEEKS_DEFAULT,
+  onGridMount,
   renderCell,
   renderDateHeader,
-  onMouseDown,
-  onMouseEnter,
-  onMouseUp,
+  onMouseDown, 
+  onMouseEnter, 
+  onMouseUp, 
 }: TimeGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Expose grid element to parent via callback
+  useEffect(() => {
+    if (onGridMount) {
+      onGridMount(gridRef.current);
+    } 
+  }, [onGridMount]);
 
   // Generate weeks based on date range (timezone-safe)
   const weeks = useMemo((): Week[] => {
@@ -171,6 +178,41 @@ export default function TimeGrid({
     return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
   };
 
+  // Event Delegation Handlers
+  const getCellDataFromEvent = (e: React.MouseEvent) => {
+    const targetTd = (e.target as HTMLElement).closest('td[data-date][data-hour]');
+    if (targetTd) {
+      const date = targetTd.dataset.date!;
+      const hour = parseFloat(targetTd.dataset.hour!);
+      return { date, hour, originalEvent: e };
+    }
+    return null;
+  };
+
+  const handleGridMouseDown = (e: React.MouseEvent) => {
+    const cellData = getCellDataFromEvent(e);
+    if (cellData) {
+      onMouseDown(cellData.originalEvent, cellData.date, cellData.hour);
+    }
+  };
+
+  const handleGridMouseEnter = (e: React.MouseEvent) => {
+    const cellData = getCellDataFromEvent(e);
+    if (cellData) {
+      onMouseEnter(cellData.date, cellData.hour);
+    } else {
+      // If mouse leaves a cell but stays within the grid container,
+      // we might want to end a drag selection.
+      onMouseUp(); 
+    }
+  };
+
+  const handleGridMouseUp = (e: React.MouseEvent) => {
+    // This will always end a selection if one is active, regardless of where the mouseup happened.
+    onMouseUp();
+  };
+
+
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink">
       {weeks.length > 1 && (
@@ -237,7 +279,10 @@ export default function TimeGrid({
           {/* Right: Scrollable Grid */}
           <div
             ref={gridRef}
-            className="time-grid-scroll-area overflow-x-auto flex-1"
+            className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0"
+            onMouseDown={handleGridMouseDown}
+            onMouseEnter={handleGridMouseEnter}
+            onMouseUp={handleGridMouseUp}
           >
             <div className="flex">
               {weeks.map((week, weekIndex) => (
@@ -283,9 +328,6 @@ export default function TimeGrid({
                                     slot.startHour,
                                     slot.label,
                                     key,
-                                    onMouseDown,
-                                    onMouseEnter,
-                                    onMouseUp,
                                 )
                             );
                           })}
