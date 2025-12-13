@@ -282,7 +282,7 @@ export default function TimeGrid({
             className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0 select-none"
             style={{ WebkitTouchCallout: 'none' }}
             onMouseDown={handleGridMouseDown}
-            onMouseEnter={handleGridMouseEnter}
+            onMouseOver={handleGridMouseEnter}
             onMouseUp={handleGridMouseUp}
             onContextMenu={(e) => e.preventDefault()}
           >
