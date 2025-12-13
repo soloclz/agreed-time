@@ -57,6 +57,7 @@ Optional future route (not required for first UI pass, can be a simple section o
 - Responsive design with mobile considerations
 - Public result view and organizer dashboard share a heatmap/participant list backed by the results API.
 - Organizer name is required by the backend; the UI defaults an empty name to `"Organizer"` when creating an event.
+- **Participant Comments**: Participants can add optional text comments when submitting availability.
 
 ---
 
@@ -184,23 +185,44 @@ The time selection grid displays multiple weeks side-by-side with horizontal scr
    - Native horizontal scroll with mouse wheel or trackpad
    - Touch-friendly swipe on mobile
 
-**Layout Details**
+### 3.5. Smart Time Selection (Next Gen UX - Planned)
 
-```
-Week 1: 12/1 - 12/7          │ Week 2: 12/8 - 12/14
-────────────────────────────  │ ────────────────────────────
-Time │ Sun Mon Tue Wed Thu... │ Time │ Sun Mon Tue Wed Thu...
-─────┼────────────────────... │ ─────┼────────────────────...
-9 AM │ [ ] [ ] [ ] [ ] [ ]    │ 9 AM │ [ ] [ ] [ ] [ ] [ ]
-10AM │ [ ] [ ] [ ] [ ] [ ]    │ 10AM │ [ ] [ ] [ ] [ ] [ ]
-...  │                        │ ...  │
-```
+To improve the mobile experience and handle repetitive schedules, a new interaction model is planned.
 
-**Responsive Behavior**
+**Core Concept: Rolling Week + Pattern Replication**
 
-- Desktop: Full multi-week horizontal scroll
-- Tablet/Mobile: Same layout, relies on native touch scroll
-- Time column sticky on left for orientation
+Instead of selecting individual dates from a calendar, users define a "Weekly Pattern" and apply it.
+
+1.  **Rolling 7-Day Canvas**:
+    - The grid starts from **Today** (or a selected start date) and shows the next 6 days (e.g., Wed -> Tue).
+    - It ignores the traditional Sunday/Monday start, focusing on the immediate future.
+
+2.  **Interaction: Ghost Mode & Replication**:
+    - **Drag-to-Copy**: Pulling the grid's edge to the next week (e.g., swipe left past the last day) triggers a "Duplicate" action.
+    - **Ghost Mode**: When viewing a new, empty week, the previous week's pattern is shown as a semi-transparent "ghost". Tapping confirms/fills it.
+    - **Magic Button**: A FAB "Copy to Next Week" allows 1-tap replication of the current view's pattern to the next 7 days.
+
+3.  **Constraints**:
+    - Supports up to **5 Weeks** (approx. 1 month) for the free tier.
+    - Navigation uses a week-based pagination (Week 1, Week 2...) rather than infinite scroll on mobile.
+
+### 3.6. Event Polls (Attached Voting - Planned)
+
+To solve the "Where/What" problem alongside "When", AgreedTime will support attached polls.
+
+1.  **Organizer Flow**:
+    - During event creation (or edit), the organizer can add a "Poll Question" (e.g., "Where should we eat?").
+    - Add Options (e.g., "Hotpot", "BBQ", "Sushi").
+
+2.  **Participant Flow**:
+    - Below the Time Grid (or in a dedicated step), participants see the poll.
+    - Selection: Multiple choice (Checkbox) or Single choice (Radio), configurable by organizer.
+    - Submission: Sent together with time availability.
+
+3.  **Results View**:
+    - **Heatmap**: Shows best time.
+    - **Poll Results**: Shows bar chart of votes (e.g., "BBQ: 5 votes", "Hotpot: 2 votes").
+    - **Integrated Decision**: Helps the group decide "Friday 7PM @ BBQ".
 
 ---
 
@@ -788,4 +810,6 @@ Once this checklist is done, the UI is effectively "drawn" and end-to-end flows 
 - **Custom branding**: Allow organizers to customize colors/logo
 - **Event templates**: Save commonly used time ranges
 - **Anonymous mode**: Allow participation without display name
-- **Comments**: Let participants add notes/constraints
+- **Comments**: ✅ Done
+- **Polls**: Add attached voting for locations/topics.
+- **Smart UX**: Implement Ghost Mode and Drag-to-Copy interaction.
