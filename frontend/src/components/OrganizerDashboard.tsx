@@ -104,7 +104,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   const publicResultsDisplayUrl = truncateUrl(publicResultsUrl);
 
   return (
-    <div className="space-y-8 bg-paper p-4 sm:p-6 rounded-lg shadow-md">
+    <div className="space-y-8">
        {/* Admin Controls Section */}
        <div className="bg-white border-l-4 border-film-accent p-4 sm:p-6 shadow-sm rounded-r-lg space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
