@@ -69,7 +69,7 @@ export default function CreateEventForm() {
 
       toast.success('Event created successfully!');
       // Direct redirect to manage page
-      window.location.href = `/manage/${result.organizer_token}`;
+      window.location.replace(`/manage/${result.organizer_token}`);
 
     } catch (error) {
       console.error("Event creation failed:", error);
