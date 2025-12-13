@@ -11,11 +11,8 @@ export default {
 				'film-border': '#d4e8ed', // Matching logo border color
 				'film-light': '#FFFFFF', // Pure white, for elements like inputs
 			},
-			fontFamily: {
-				serif: ['"Shippori Mincho"', 'serif'],
-				mono: ['"Space Mono"', 'monospace'],
-				sans: ['"Zen Kaku Gothic New"', 'sans-serif'],
-			},
+			// Removed custom font family definitions to use Tailwind's default system font stacks.
+			// This eliminates external font downloads for improved performance.
 		},
 	},
 	corePlugins: {
