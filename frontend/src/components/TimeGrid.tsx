@@ -180,7 +180,7 @@ export default function TimeGrid({
 
   // Event Delegation Handlers
   const getCellDataFromEvent = (e: React.MouseEvent) => {
-    const targetTd = (e.target as HTMLElement).closest('td[data-date][data-hour]');
+    const targetTd = (e.target as HTMLElement).closest('td[data-date][data-hour]') as HTMLElement | null;
     if (targetTd) {
       const date = targetTd.dataset.date!;
       const hour = parseFloat(targetTd.dataset.hour!);
@@ -207,7 +207,7 @@ export default function TimeGrid({
     }
   };
 
-  const handleGridMouseUp = (e: React.MouseEvent) => {
+  const handleGridMouseUp = () => {
     // This will always end a selection if one is active, regardless of where the mouseup happened.
     onMouseUp();
   };
