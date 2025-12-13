@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { TimeSlot } from '../types';
 
 interface TimeSlotBottomPanelProps {
@@ -17,17 +19,35 @@ export default function TimeSlotBottomPanel({
   showBottomPanel,
   onTogglePanel
 }: TimeSlotBottomPanelProps) {
+  const [mounted, setMounted] = useState(false);
   const selectedCount = selectedCells.size;
   const selectedDates = Object.keys(selectedSlotsByDate).sort();
 
-  if (selectedCount === 0) return null;
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-  return (
+  // Lock body scroll when panel is open to prevent background scrolling
+  useEffect(() => {
+    if (showBottomPanel) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showBottomPanel]);
+
+  if (selectedCount === 0 || !mounted) return null;
+
+  return createPortal(
     <>
       {/* Bottom Panel Overlay */}
       {showBottomPanel && (
         <div
-          className="fixed inset-0 bg-black/20 z-40"
+          className="fixed inset-0 bg-black/20 z-[70]"
           onClick={onTogglePanel}
           role="button"
           tabIndex={0}
@@ -41,10 +61,10 @@ export default function TimeSlotBottomPanel({
       )}
 
       {/* Bottom Fixed Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed bottom-0 left-0 right-0 z-[80]">
         {/* Expanded Panel */}
         {showBottomPanel && (
-          <div className="bg-white/95 border-t border-film-border shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
+          <div className="bg-white border-t border-film-border shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
             {/* Panel Header */}
             <div className="px-6 py-4 border-b border-film-border flex items-center justify-between">
               <div>
@@ -64,7 +84,7 @@ export default function TimeSlotBottomPanel({
             </div>
 
             {/* Panel Content */}
-            <div className="overflow-y-auto p-6 space-y-4">
+            <div className="overflow-y-auto p-6 space-y-4 max-h-[60vh] overscroll-contain">
               
               {selectedDates.map(date => (
                 <div key={date} className="border-b border-dashed border-gray-300 pb-4 last:border-b-0">
@@ -108,7 +128,7 @@ export default function TimeSlotBottomPanel({
             e.stopPropagation();
             onTogglePanel();
           }}
-          className="w-full bg-white/95 hover:bg-white text-ink px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
+          className="w-full bg-white hover:bg-gray-50 text-ink px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between transition-colors border-t border-film-border shadow-[0_-4px_30px_rgba(0,0,0,0.08)]"
         >
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="flex items-center justify-center min-w-[2rem] h-8 px-2 bg-film-accent text-white font-mono font-bold text-sm rounded-full shadow-sm">
@@ -126,6 +146,7 @@ export default function TimeSlotBottomPanel({
           </div>
         </button>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
