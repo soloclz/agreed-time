@@ -2,12 +2,6 @@
 import Layout from '../../../layouts/Layout.astro';
 import EventResultView from '../../../components/EventResultView';
 
-// For static build, provide an empty getStaticPaths
-// The actual routing will be handled by the web server's fallback configuration
-export async function getStaticPaths() {
-  return [];
-}
-
 const { public_token } = Astro.params;
 
 if (!public_token) {
