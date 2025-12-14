@@ -589,20 +589,18 @@ export default function TimeSlotSelector({
       </div>
 
       {/* Sticky Edit Menu */}
-      {highlightWeekends && (
-          <div className="sticky bottom-24 z-50 flex justify-end pointer-events-none -mb-12 md:-mr-4">
-             <div className="pointer-events-auto relative top-4">
-                <FloatingEditMenu 
-                  onCopyPattern={copyFirstWeekPattern} 
-                  canCopy={hasFirstWeekSelection}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onUndo={undo}
-                  onRedo={redo}
-                />
-             </div>
-          </div>
-      )}
+      <div className="sticky bottom-24 z-50 flex justify-end pointer-events-none -mb-12 md:-mr-4 shadow-none">
+         <div className="pointer-events-auto relative top-4">
+            <FloatingEditMenu 
+              onCopyPattern={copyFirstWeekPattern} 
+              canCopy={!isGuestMode && hasFirstWeekSelection}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+            />
+         </div>
+      </div>
     </div>
   );
 }
