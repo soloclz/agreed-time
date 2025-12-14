@@ -3,12 +3,16 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 interface UseTimeSlotDragSelectionProps {
   initialSelectedCells?: Set<string>;
   slotDuration: number;
-  getCellKey: (date: string, hour: number) => string; // Simplified: date + hour only
+  getCellKey: (date: string, hour: number) => string;
   isSlotSelectable: (date: string, hour: number) => boolean;
-  onSelectedCellsChange?: (cells: Set<string>) => void;
+  onSelectedCellsChange?: (cells: Set<string>) => void; // Legacy callback (effect based)
   startDate: string; 
   endDate: string;
-  setSelectedCells?: (cells: Set<string>) => void; // Optional controlled state setter
+  
+  // Controlled mode props
+  value?: Set<string>;
+  onChange?: (cells: Set<string>) => void;
+  onDragStart?: () => void;
 }
 
 export function useTimeSlotDragSelection({
@@ -19,20 +23,29 @@ export function useTimeSlotDragSelection({
   onSelectedCellsChange,
   startDate,
   endDate,
+  value,
+  onChange,
+  onDragStart,
 }: UseTimeSlotDragSelectionProps) {
   const [internalSelectedCells, setInternalSelectedCells] = useState<Set<string>>(initialSelectedCells);
   
-  // Use internal state or derived from somewhere? 
-  // Actually, TimeSlotSelector seems to want to control this state via onRangesChange but 
-  // currently it relies on this hook to manage the Set.
-  // Ideally this hook manages the Set and notifies parent.
+  // Use controlled value if provided, otherwise internal state
+  const isControlled = value !== undefined;
+  const selectedCells = isControlled ? value : internalSelectedCells;
   
-  const selectedCells = internalSelectedCells;
-  
-  // We expose setSelectedCells to let parent clear it if needed
-  const setSelectedCells = useCallback((newState: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-    setInternalSelectedCells(newState);
-  }, []);
+  // Unified setter
+  const updateSelectedCells = useCallback((newState: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    if (isControlled && onChange) {
+      // If it's a functional update, we need to resolve it with current state
+      const resolvedState = typeof newState === 'function' ? newState(selectedCells) : newState;
+      onChange(resolvedState);
+    } else {
+      setInternalSelectedCells(newState);
+    }
+  }, [isControlled, onChange, selectedCells]);
+
+  // Expose setSelectedCells (now updateSelectedCells)
+  const setSelectedCells = updateSelectedCells;
 
   // Interaction state
   const isDragging = useRef(false);
@@ -55,79 +68,94 @@ export function useTimeSlotDragSelection({
     }
   }, [selectedCells]);
 
-  // Update internal state if initialSelectedCells changes (e.g. loading from API)
+  // Update internal state if initialSelectedCells changes (only in uncontrolled mode)
   useEffect(() => {
-    setInternalSelectedCells(initialSelectedCells);
-  }, [initialSelectedCells]);
+    if (!isControlled) {
+      setInternalSelectedCells(initialSelectedCells);
+    }
+  }, [initialSelectedCells, isControlled]);
 
   // Clean up selected cells that fall outside the new date range
   useEffect(() => {
     if (!startDate || !endDate) return;
 
-    setSelectedCells(prev => {
-      const newSet = new Set<string>();
-      let hasChanges = false;
-
-      prev.forEach(key => {
+    // Use current state (ref or dep) to calculate cleanup
+    // We need to be careful not to trigger infinite loops in controlled mode
+    // Let's perform cleanup only if strictly necessary? 
+    // Actually, parent usually handles this or we rely on display logic.
+    // But keeping state clean is good.
+    
+    // Logic: Iterate current cells, if any outside, update.
+    let hasOutside = false;
+    selectedCells.forEach(key => {
         const [datePart] = key.split('_');
-        if (datePart >= startDate && datePart <= endDate) {
-          newSet.add(key);
-        } else {
-          hasChanges = true;
+        if (datePart < startDate || datePart > endDate) {
+            hasOutside = true;
         }
-      });
-
-      return hasChanges ? newSet : prev;
     });
-  }, [startDate, endDate]);
+
+    if (hasOutside) {
+        const newSet = new Set<string>();
+        selectedCells.forEach(key => {
+            const [datePart] = key.split('_');
+            if (datePart >= startDate && datePart <= endDate) {
+            newSet.add(key);
+            }
+        });
+        updateSelectedCells(newSet);
+    }
+  }, [startDate, endDate, updateSelectedCells, selectedCells]); // Added selectedCells dep
 
   const toggleCell = useCallback((date: string, hour: number) => {
     if (!isSlotSelectable(date, hour)) return;
     const key = getCellKey(date, hour);
     
-    setSelectedCells(prev => {
+    updateSelectedCells(prev => {
       const newSet = new Set(prev);
       if (newSet.has(key)) newSet.delete(key);
       else newSet.add(key);
       return newSet;
     });
-  }, [isSlotSelectable, getCellKey]);
+  }, [isSlotSelectable, getCellKey, updateSelectedCells]);
 
   const setCell = useCallback((date: string, hour: number, selected: boolean) => {
     if (!isSlotSelectable(date, hour)) return;
     const key = getCellKey(date, hour);
     
-    setSelectedCells(prev => {
+    updateSelectedCells(prev => {
       const newSet = new Set(prev);
       if (selected) newSet.add(key);
       else newSet.delete(key);
       return newSet;
     });
-  }, [isSlotSelectable, getCellKey]);
+  }, [isSlotSelectable, getCellKey, updateSelectedCells]);
 
   const removeSlot = useCallback((key: string) => {
-    setSelectedCells(prev => {
+    updateSelectedCells(prev => {
       const newSet = new Set(prev);
       newSet.delete(key);
       return newSet;
     });
-  }, []);
+  }, [updateSelectedCells]);
 
   const clearAllSlots = useCallback(() => {
-    setSelectedCells(new Set());
-  }, []);
+    updateSelectedCells(new Set());
+  }, [updateSelectedCells]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent, date: string, hour: number) => {
     if (e.button !== 0) return; // Only left click
 
     e.preventDefault(); // Prevent text selection
     isDragging.current = true;
+    
+    // Notify drag start (e.g. for undo snapshot)
+    if (onDragStart) onDragStart();
 
     const key = getCellKey(date, hour);
     const isSelected = selectedCellsRef.current.has(key);
     dragMode.current = isSelected ? 'deselect' : 'select';
     toggleCell(date, hour);
-  }, [toggleCell, getCellKey]);
+  }, [toggleCell, getCellKey, onDragStart]);
 
   const handleMouseEnter = useCallback((date: string, hour: number) => {
     if (isDragging.current) {
@@ -169,6 +197,9 @@ export function useTimeSlotDragSelection({
       longPressTimerRef.current = window.setTimeout(() => {
         const hour = parseFloat(hourStr);
         isDragging.current = true;
+        
+        // Notify drag start
+        if (onDragStart) onDragStart();
 
         // Safe vibration: wrapped in try-catch to avoid console warnings
         try {
