@@ -81,8 +81,7 @@ export default function TimeSlotSelector({
     undo,
     redo,
     canUndo,
-    canRedo,
-    clearHistory
+    canRedo
   } = useHistory<CalendarState>({
     selectedCells: initialSelectedCells,
     startDate: '', // Will be initialized by effect
@@ -100,7 +99,6 @@ export default function TimeSlotSelector({
       ...state,
       selectedCells: initialSelectedCells
     });
-    // clearHistory(); // Typically we don't clear history on simple prop updates unless it's a full reset
   }, [initialSelectedCells, setState]);
 
   // Available cells set for fast lookup in Guest Mode
@@ -222,10 +220,7 @@ export default function TimeSlotSelector({
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,
-    toggleCell: _toggleCell,
-    setCell,
     removeSlot,
-    clearAllSlots: _clearAllSlots,
   } = useTimeSlotDragSelection({
     initialSelectedCells, 
     slotDuration,
