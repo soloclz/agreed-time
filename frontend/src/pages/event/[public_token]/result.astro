@@ -5,7 +5,7 @@ import EventResultView from '../../../components/EventResultView';
 const { public_token } = Astro.params;
 
 if (!public_token) {
-  // Client-side redirect will handle this for static output
+  return Astro.redirect('/');
 }
 ---
 
