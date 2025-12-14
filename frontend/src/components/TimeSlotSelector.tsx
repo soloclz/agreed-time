@@ -34,13 +34,22 @@ const getTimeSlotFromHour = (hour: number, duration: number): { startTime: strin
 };
 
 interface TimeSlotSelectorProps {
-  onRangesChange?: (ranges: ApiTimeRange[]) => void; // Changed from onSlotsChange
-  initialRanges?: ApiTimeRange[]; // Changed from initialSlots
-  availableRanges?: ApiTimeRange[]; // Changed from availableSlots (Guest Mode)
-  slotDuration?: number; // Duration in minutes (default: 60)
+  onRangesChange?: (ranges: ApiTimeRange[]) => void;
+  initialRanges?: ApiTimeRange[];
+  availableRanges?: ApiTimeRange[];
+  slotDuration?: number;
 }
 
 const DEFAULT_RANGES: ApiTimeRange[] = [];
+
+// Define the complete state managed by history
+interface CalendarState {
+  selectedCells: Set<string>;
+  startDate: string;
+  endDate: string;
+  startHour: number;
+  endHour: number;
+}
 
 export default function TimeSlotSelector({ 
   onRangesChange, 
@@ -51,14 +60,6 @@ export default function TimeSlotSelector({
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
 
-  // Date range controls
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // Time range controls (hours)
-  const [startHour, setStartHour] = useState(9);
-  const [endHour, setEndHour] = useState(18);
-
   // Determine if it's Guest Mode
   const isGuestMode = availableRanges !== undefined;
   // Based on feedback, only highlight weekends in Organizer mode
@@ -68,30 +69,38 @@ export default function TimeSlotSelector({
   const initialSelectedCells = useMemo(() => {
     return rangesToCells(initialRanges, slotDuration);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(initialRanges), slotDuration]); // Stabilize dependency by content
-  
+  }, [JSON.stringify(initialRanges), slotDuration]);
+
   // Undo/Redo History Management
-  // Use useHistory to manage selectedCells instead of useState
+  // Now managing the FULL state (cells + range)
   const {
-    state: selectedCells,
-    setState: setSelectedCells, // Update present without history (for drag move)
-    pushState, // Commit current state to history and set new state (for drag start/copy)
+    state,
+    setState, 
+    pushState, 
     undo,
     redo,
     canUndo,
     canRedo,
     clearHistory
-  } = useHistory<Set<string>>(initialSelectedCells);
+  } = useHistory<CalendarState>({
+    selectedCells: initialSelectedCells,
+    startDate: '', // Will be initialized by effect
+    endDate: '',
+    startHour: 9,
+    endHour: 18
+  });
+
+  // Destructure for easier access
+  const { selectedCells, startDate, endDate, startHour, endHour } = state;
 
   // Sync history state with initialSelectedCells on load (if props change)
-  // This is tricky with history. We only want to reset if it's a "hard" reset.
-  // For now, we trust initialSelectedCells only on mount or strict dependency change.
-  // Let's add a useEffect to reset history if initialRanges fundamentally changes (e.g. navigation)
   useEffect(() => {
-      setSelectedCells(initialSelectedCells);
-      clearHistory();
-  }, [initialSelectedCells, setSelectedCells, clearHistory]);
-
+    setState({
+      ...state,
+      selectedCells: initialSelectedCells
+    });
+    // clearHistory(); // Typically we don't clear history on simple prop updates unless it's a full reset
+  }, [initialSelectedCells, setState]);
 
   // Available cells set for fast lookup in Guest Mode
   const availableCells = useMemo(() => {
@@ -100,7 +109,7 @@ export default function TimeSlotSelector({
   }, [availableRanges, slotDuration]);
 
   useEffect(() => {
-    // Guest Mode: Calculate date/time range from availableRanges
+    // Initialize dates/hours based on mode
     if (isGuestMode && availableRanges && availableRanges.length > 0) {
       const dates: string[] = [];
       const startTimes: number[] = [];
@@ -110,18 +119,15 @@ export default function TimeSlotSelector({
         const start = new Date(range.start_at);
         const end = new Date(range.end_at);
         
-        // Local Date
         const year = start.getFullYear();
         const month = String(start.getMonth() + 1).padStart(2, '0');
         const day = String(start.getDate()).padStart(2, '0');
         dates.push(`${year}-${month}-${day}`);
         
-        // Local Hours
         startTimes.push(start.getHours() + start.getMinutes() / 60);
         endTimes.push(end.getHours() + end.getMinutes() / 60);
       });
 
-      // Find min/max date string (lexicographically works for ISO dates)
       dates.sort();
       const minDate = dates[0];
       const maxDate = dates[dates.length - 1];
@@ -129,25 +135,31 @@ export default function TimeSlotSelector({
       const minSlotHour = Math.floor(Math.min(...startTimes));
       const maxSlotHour = Math.ceil(Math.max(...endTimes));
 
-      // Business Hours (09:00 - 18:00) + Auto-expand logic
       const displayStartHour = Math.min(minSlotHour, 9);
       const displayEndHour = Math.max(maxSlotHour, 18);
 
-      setStartDate(minDate);
-      setEndDate(maxDate);
-      setStartHour(displayStartHour);
-      setEndHour(displayEndHour);
+      setState(prev => ({
+        ...prev,
+        startDate: minDate,
+        endDate: maxDate,
+        startHour: displayStartHour,
+        endHour: displayEndHour
+      }));
+
     } else {
       // Organizer Mode: Default to 4 weeks from today
       const today = getTodayLocal();
-      const future = addDays(today, 27); // 4 weeks
+      const future = addDays(today, 27);
 
-      setStartDate(today);
-      setEndDate(future);
+      setState(prev => ({
+        ...prev,
+        startDate: today,
+        endDate: future
+      }));
     }
 
     setIsMounted(true);
-  }, [isGuestMode, availableRanges]);
+  }, [isGuestMode, availableRanges, setState]);
 
   const isSlotSelectable = useCallback((date: string, hour: number): boolean => {
     // 1. Range Check
@@ -165,9 +177,72 @@ export default function TimeSlotSelector({
     return true;
   }, [startDate, endDate, availableCells]);
 
+  const handleDateChange = useCallback((type: 'start' | 'end', newDate: string) => {
+    const effStart = type === 'start' ? newDate : startDate;
+    const effEnd = type === 'end' ? newDate : endDate;
+
+    // Filter out slots that are no longer in the date range
+    const newSelectedCells = new Set<string>();
+    let hasFiltered = false;
+
+    selectedCells.forEach(key => {
+      const [datePart] = key.split('_');
+      if (datePart >= effStart && datePart <= effEnd) {
+        newSelectedCells.add(key);
+      } else {
+        hasFiltered = true;
+      }
+    });
+
+    const newState = {
+      ...state,
+      startDate: effStart,
+      endDate: effEnd,
+      selectedCells: newSelectedCells
+    };
+
+    // Push to history so undo restores the previous range AND the deleted slots
+    pushState(newState);
+
+    if (hasFiltered && onRangesChange) {
+      onRangesChange(cellsToRanges(newSelectedCells, slotDuration));
+    }
+  }, [state, startDate, endDate, selectedCells, pushState, onRangesChange, slotDuration]);
+
+  const handleTimeChange = useCallback((type: 'start' | 'end', newHour: number) => {
+    const effStartHour = type === 'start' ? newHour : startHour;
+    const effEndHour = type === 'end' ? newHour : endHour;
+
+    // Filter out slots that are no longer in the time range
+    const newSelectedCells = new Set<string>();
+    let hasFiltered = false;
+
+    selectedCells.forEach(key => {
+      const [, hourStr] = key.split('_');
+      const hour = parseFloat(hourStr);
+      if (hour >= effStartHour && hour < effEndHour) {
+        newSelectedCells.add(key);
+      } else {
+        hasFiltered = true;
+      }
+    });
+
+    const newState = {
+      ...state,
+      startHour: effStartHour,
+      endHour: effEndHour,
+      selectedCells: newSelectedCells
+    };
+
+    // Push to history
+    pushState(newState);
+
+    if (hasFiltered && onRangesChange) {
+      onRangesChange(cellsToRanges(newSelectedCells, slotDuration));
+    }
+  }, [state, startHour, endHour, selectedCells, pushState, onRangesChange, slotDuration]);
+
   const {
-    // selectedCells, // Managed by useHistory now
-    // setSelectedCells, // Managed by useHistory now
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,
@@ -176,7 +251,7 @@ export default function TimeSlotSelector({
     removeSlot,
     clearAllSlots: _clearAllSlots,
   } = useTimeSlotDragSelection({
-    initialSelectedCells, // Still passed for fallback, but ignored in controlled mode
+    initialSelectedCells, 
     slotDuration,
     getCellKey,
     isSlotSelectable,
@@ -188,14 +263,13 @@ export default function TimeSlotSelector({
     },
     startDate,
     endDate,
-    // Controlled Mode Props
+    // Pass managed state
     value: selectedCells,
-    onChange: setSelectedCells,
+    // Update only the cells part of the state (live update during drag)
+    onChange: (newCells) => setState({ ...state, selectedCells: newCells }),
     onDragStart: () => {
-        // Snapshot current state to history before dragging starts modifying it
-        // pushState pushes 'present' to 'past' and sets new 'present' (which is the same for now)
-        // This creates a checkpoint.
-        pushState(new Set(selectedCells)); // Clone to ensure new reference for history
+        // Snapshot current FULL state to history
+        pushState({ ...state, selectedCells: new Set(selectedCells) });
     }
   });
 
@@ -204,13 +278,11 @@ export default function TimeSlotSelector({
   };
   
   const [showBottomPanel, setShowBottomPanel] = useState(false);
-
-  // State to hold the scrollable grid element (instead of Ref, to trigger updates)
   const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
   
   const handleHeaderClick = (date: string) => {
-    // Snapshot state before header click modification
-    pushState(new Set(selectedCells));
+    // Snapshot state
+    pushState({ ...state, selectedCells: new Set(selectedCells) });
 
     const timeSlotsForDay: Array<{ startHour: number; label: string }> = [];
     const durationInHours = slotDuration / 60;
@@ -237,26 +309,24 @@ export default function TimeSlotSelector({
     } else {
       allCellsInColumn.forEach(key => newSet.add(key));
     }
-    setSelectedCells(newSet);
+    
+    // Update state
+    setState({ ...state, selectedCells: newSet });
   };
 
   // Logic to copy first week's pattern to subsequent weeks
   const copyFirstWeekPattern = () => {
     if (!startDate || !endDate) return;
 
-    // 1. Extract pattern from the first 7 days (Day 0 to Day 6)
-    // Pattern: Map<dayIndex (0-6), Set<hour>>
+    // 1. Extract pattern
     const pattern = new Map<number, Set<number>>();
     let hasPattern = false;
 
     for (let i = 0; i < 7; i++) {
       const date = addDays(startDate, i);
-      // Skip if date exceeds endDate (unlikely for first week but safe check)
       if (date > endDate) break;
 
       const dayPattern = new Set<number>();
-      
-      // Check all possible hours in the current view
       const durationInHours = slotDuration / 60;
       let currentHour = startHour;
       while (currentHour < endHour) {
@@ -266,7 +336,6 @@ export default function TimeSlotSelector({
         }
         currentHour += durationInHours;
       }
-      
       if (dayPattern.size > 0) {
         pattern.set(i, dayPattern);
       }
@@ -277,26 +346,23 @@ export default function TimeSlotSelector({
       return;
     }
 
-    // 2. Determine target endDate. If current range < 14 days, extend it.
+    // 2. Extend Date Range if needed
     let targetEndDate = endDate;
     const currentDurationDays = diffInDays(startDate, endDate) + 1;
+    let rangeUpdated = false;
+    
     if (currentDurationDays < 14) {
-      // Extend to at least 28 days (4 weeks) if expanding, or just ensure > 1 week
-      // Let's default to the standard 4-week view if the user asks to copy
       targetEndDate = addDays(startDate, 27);
-      setEndDate(targetEndDate);
-      toast('Extended date range to 4 weeks', { icon: '📅' });
+      rangeUpdated = true;
     }
 
-    // 3. Apply pattern to subsequent weeks (Overwrite Mode)
-    // Start with a set containing ONLY the first week's selections from current state
+    // 3. Apply pattern
     const newSelectedCells = new Set<string>();
     
-    // Copy existing selections from first 7 days
+    // Keep existing first week
     for (let i = 0; i < 7; i++) {
         const date = addDays(startDate, i);
-        if (date > endDate) break;
-        // Keep existing selections for this day
+        if (date > targetEndDate) break; // Check against new target
         const durationInHours = slotDuration / 60;
         let currentHour = startHour;
         while (currentHour < endHour) {
@@ -308,9 +374,6 @@ export default function TimeSlotSelector({
         }
     }
 
-    let addedCount = 0;
-
-    // Start from Day 7 applying pattern
     let currentDayOffset = 7; 
     let currentDate = addDays(startDate, currentDayOffset);
 
@@ -321,9 +384,7 @@ export default function TimeSlotSelector({
       if (hoursToSelect) {
         hoursToSelect.forEach(hour => {
           const key = getCellKey(currentDate, hour);
-          // Always add (overwrite logic: we didn't copy old selections for these days)
           newSelectedCells.add(key);
-          addedCount++;
         });
       }
 
@@ -331,22 +392,27 @@ export default function TimeSlotSelector({
       currentDate = addDays(startDate, currentDayOffset);
     }
 
-    // Commit to history and update
-    pushState(newSelectedCells);
+    // Commit to history: New Cells AND New Date Range
+    pushState({
+        ...state,
+        selectedCells: newSelectedCells,
+        endDate: targetEndDate
+    });
     
-    // Trigger update callback manually since we bypassed setCell/toggleCell
     if (onRangesChange) {
         const ranges = cellsToRanges(newSelectedCells, slotDuration);
         onRangesChange(ranges);
     }
-    toast.success(`Copied pattern to following weeks!`);
+    
+    if (rangeUpdated) {
+        toast('Extended date range to 4 weeks and copied pattern', { icon: '📅' });
+    } else {
+        toast.success(`Copied pattern to following weeks!`);
+    }
   };
 
-  // Check if there are any selected slots in the first week to enable "Copy"
   const hasFirstWeekSelection = useMemo(() => {
     if (!startDate || selectedCells.size === 0) return false;
-    
-    // Check first 7 days
     const durationInHours = slotDuration / 60;
     for (let i = 0; i < 7; i++) {
       const date = addDays(startDate, i);
@@ -361,7 +427,6 @@ export default function TimeSlotSelector({
     return false;
   }, [selectedCells, startDate, startHour, endHour, slotDuration]);
 
-  // Convert selected cells to UI TimeSlots for BottomPanel
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
     selectedCells.forEach(key => {
@@ -373,7 +438,7 @@ export default function TimeSlotSelector({
         grouped[datePart] = [];
       }
       grouped[datePart].push({
-        id: key, // Use key as ID for UI
+        id: key, 
         date: datePart,
         hour,
         startTime,
@@ -390,7 +455,7 @@ export default function TimeSlotSelector({
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
-      {/* Header and Controls (Same as before) */}
+      {/* Header and Controls */}
       <div>
         <h3 className="text-lg sm:text-xl font-serif font-bold text-ink">
             Select Your Available Time Slots
@@ -420,7 +485,7 @@ export default function TimeSlotSelector({
                     name="startDate"
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => handleDateChange('start', e.target.value)}
                     className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
                     title="Start date"
                   />
@@ -433,7 +498,7 @@ export default function TimeSlotSelector({
                     name="endDate"
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => handleDateChange('end', e.target.value)}
                     className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
                     title="End date"
                   />
@@ -450,7 +515,7 @@ export default function TimeSlotSelector({
                     id="startHour"
                     name="startHour"
                     value={startHour}
-                    onChange={(e) => setStartHour(parseInt(e.target.value))}
+                    onChange={(e) => handleTimeChange('start', parseInt(e.target.value))}
                     className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
                     title="Start hour"
                   >
@@ -466,7 +531,7 @@ export default function TimeSlotSelector({
                     id="endHour"
                     name="endHour"
                     value={endHour}
-                    onChange={(e) => setEndHour(parseInt(e.target.value))}
+                    onChange={(e) => handleTimeChange('end', parseInt(e.target.value))}
                     className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
                     title="End hour"
                   >
@@ -481,16 +546,22 @@ export default function TimeSlotSelector({
         </div>
       )}
 
-
-
       <TimeSlotBottomPanel
           selectedCells={selectedCells}
           selectedSlotsByDate={selectedSlotsByDate}
-          onRemoveSlot={removeSlot}
+          onRemoveSlot={(slotId) => {
+             // Snapshot current state before removal
+             pushState({ ...state, selectedCells: new Set(selectedCells) });
+             removeSlot(slotId);
+          }}
           onClearAll={() => {
-          // Snapshot before clearing
-          pushState(new Set()); 
-          setShowBottomPanel(false);
+            // Snapshot before clearing
+            pushState({ ...state, selectedCells: new Set(selectedCells) }); 
+            setShowBottomPanel(false);
+            
+            // Clear cells via setState (updates live state without another history push)
+            setState({ ...state, selectedCells: new Set() });
+            if (onRangesChange) onRangesChange([]);
           }}
           showBottomPanel={showBottomPanel}
           onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
@@ -503,8 +574,8 @@ export default function TimeSlotSelector({
             startHour={startHour}
             endHour={endHour}
             slotDuration={slotDuration}
-            highlightWeekends={highlightWeekends} // Pass the prop
-            onGridMount={setGridElement} // Pass the setter
+            highlightWeekends={highlightWeekends}
+            onGridMount={setGridElement}
             onMouseDown={handleMouseDown}
             onMouseEnter={handleMouseEnter}
             onMouseUp={handleMouseUp}
@@ -517,8 +588,8 @@ export default function TimeSlotSelector({
                 mode="select"
                 isSelected={isCellSelected(date, hour)}
                 isSelectable={isSlotSelectable(date, hour)}
-                highlightWeekends={highlightWeekends} // Pass the prop
-                gridScrollElement={gridElement} // Pass the element state
+                highlightWeekends={highlightWeekends}
+                gridScrollElement={gridElement}
             />
             )}
             renderDateHeader={(date, defaultHeader) => (
