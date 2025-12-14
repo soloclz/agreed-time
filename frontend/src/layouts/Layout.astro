@@ -1,7 +1,6 @@
 ---
 import ToastContainer from '../components/ToastContainer';
-const logoDataUri =
-	'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBBZ3JlZWRUaW1lIGxvZ28gwqkgMjAyNSBzb2xvY2x6LiBCcmFuZCBhc3NldHMgYXJlIG5vdCBsaWNlbnNlZCBmb3IgcmV1c2Ugd2l0aG91dCBwZXJtaXNzaW9uLiAtLT4KPHN2ZyB3aWR0aD0iMjUwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDI1MCAyNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTI1LCAxMjUpIj4KICAgIDxnIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMTQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICAgIAogICAgICA8cGF0aCBkPSJNIDAsLTEwMCBDIDMwLC04MCA4MCwtMzAgMTAwLDAgQyA4MCwzMCAzMCw4MCAwLDEwMCBDIC0zMCw4MCAtODAsMzAgLTEwMCwwIEMgLTgwLC0zMCAtMzAsLTgwIDAsLTEwMCBaIiBzdHJva2U9IiNkNGU4ZWQiIGZpbGw9IiNmZmZmZmYiLz4KICAgICAgCiAgICAgIDxnIHN0cm9rZT0iIzA2YjZkNCI+CiAgICAgICAgPHBhdGggZD0iTSAtMjUsLTQwIEwgMCwtNzUgTCAyNSwtNDAiLz4KICAgICAgICA8cGF0aCBkPSJNIDQwLC0yNSBMIDc1LDAgTCA0MCwyNSIvPgogICAgICAgIDxwYXRoIGQ9Ik0gLTI1LDQwIEwgMCw3NSBMIDI1LDQwIi8+CiAgICAgICAgPHBhdGggZD0iTSAtNDAsLTI1IEwgLTc1LDAgTCAtNDAsMjUiLz4KICAgICAgPC9nPgogICAgPC9nPgogICAgCiAgICA8Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iMTgiIGZpbGw9IiMwODkxYjIiLz4KICA8L2c+Cjwvc3ZnPgo=';
+const logoSrc = '/agreed-time-logo.svg';
 
 
 interface Props {
@@ -16,7 +15,11 @@ const { title = 'AgreedTime' } = Astro.props;
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<link rel="icon" type="image/svg+xml" href={logoDataUri} />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<link rel="mask-icon" href="/favicon.svg" color="#0891b2" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 		<style is:global>
@@ -76,7 +79,7 @@ const { title = 'AgreedTime' } = Astro.props;
 		<header class="fixed top-0 left-0 w-full bg-paper z-40 border-b border-film-border shadow-sm">
 			<div class="w-full flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
 				<a href="/" class="flex items-center gap-0 group">
-					<img src={logoDataUri} alt="AgreedTime Logo" class="h-8 w-8 sm:h-9 sm:w-9 transition-transform group-hover:scale-105" />
+					<img src={logoSrc} alt="AgreedTime Logo" class="h-8 w-8 sm:h-9 sm:w-9 transition-transform group-hover:scale-105" />
 					<span class="font-sans font-bold text-xl sm:text-2xl text-ink tracking-tight">AgreedTime</span>
 				</a>
 				<!-- Future: Mobile Menu Toggle / Auth Buttons -->
