@@ -177,70 +177,45 @@ export default function TimeSlotSelector({
     return true;
   }, [startDate, endDate, availableCells]);
 
-  const handleDateChange = useCallback((type: 'start' | 'end', newDate: string) => {
-    const effStart = type === 'start' ? newDate : startDate;
-    const effEnd = type === 'end' ? newDate : endDate;
+  const updateConstraints = useCallback((updates: Partial<CalendarState>) => {
+    const nextState = { ...state, ...updates };
+    const { startDate, endDate, startHour, endHour, selectedCells } = nextState;
 
-    // Filter out slots that are no longer in the date range
     const newSelectedCells = new Set<string>();
     let hasFiltered = false;
 
     selectedCells.forEach(key => {
-      const [datePart] = key.split('_');
-      if (datePart >= effStart && datePart <= effEnd) {
+      const [datePart, hourStr] = key.split('_');
+      const hour = parseFloat(hourStr);
+      
+      const inDateRange = datePart >= startDate && datePart <= endDate;
+      const inTimeRange = hour >= startHour && hour < endHour;
+
+      if (inDateRange && inTimeRange) {
         newSelectedCells.add(key);
       } else {
         hasFiltered = true;
       }
     });
 
-    const newState = {
-      ...state,
-      startDate: effStart,
-      endDate: effEnd,
-      selectedCells: newSelectedCells
-    };
-
-    // Push to history so undo restores the previous range AND the deleted slots
-    pushState(newState);
+    pushState({ ...nextState, selectedCells: newSelectedCells });
 
     if (hasFiltered && onRangesChange) {
       onRangesChange(cellsToRanges(newSelectedCells, slotDuration));
     }
-  }, [state, startDate, endDate, selectedCells, pushState, onRangesChange, slotDuration]);
+  }, [state, pushState, onRangesChange, slotDuration]);
+
+  const handleDateChange = useCallback((type: 'start' | 'end', newDate: string) => {
+    updateConstraints({ 
+      [type === 'start' ? 'startDate' : 'endDate']: newDate 
+    });
+  }, [updateConstraints]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', newHour: number) => {
-    const effStartHour = type === 'start' ? newHour : startHour;
-    const effEndHour = type === 'end' ? newHour : endHour;
-
-    // Filter out slots that are no longer in the time range
-    const newSelectedCells = new Set<string>();
-    let hasFiltered = false;
-
-    selectedCells.forEach(key => {
-      const [, hourStr] = key.split('_');
-      const hour = parseFloat(hourStr);
-      if (hour >= effStartHour && hour < effEndHour) {
-        newSelectedCells.add(key);
-      } else {
-        hasFiltered = true;
-      }
+    updateConstraints({ 
+      [type === 'start' ? 'startHour' : 'endHour']: newHour 
     });
-
-    const newState = {
-      ...state,
-      startHour: effStartHour,
-      endHour: effEndHour,
-      selectedCells: newSelectedCells
-    };
-
-    // Push to history
-    pushState(newState);
-
-    if (hasFiltered && onRangesChange) {
-      onRangesChange(cellsToRanges(newSelectedCells, slotDuration));
-    }
-  }, [state, startHour, endHour, selectedCells, pushState, onRangesChange, slotDuration]);
+  }, [updateConstraints]);
 
   const {
     handleMouseDown,
