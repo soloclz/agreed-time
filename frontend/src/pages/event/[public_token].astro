@@ -5,7 +5,7 @@ import EventGuestForm from '../../components/EventGuestForm';
 const { public_token } = Astro.params;
 
 if (!public_token) {
-  // Client-side redirect will handle this for static output
+  return Astro.redirect('/');
 }
 ---
 

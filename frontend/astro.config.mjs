@@ -6,8 +6,9 @@ import node from '@astrojs/node';
 
 const svgCharsetHeader = () => ({
   name: 'svg-charset-header',
+  /** @param {import('vite').ViteDevServer} server */
   configureServer(server) {
-    server.middlewares.use((req, res, next) => {
+    server.middlewares.use((/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {import('vite').Connect.NextFunction} */ next) => {
       const path = req.url?.split('?')[0] ?? '';
       if (path.endsWith('.svg')) {
         res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
@@ -15,8 +16,9 @@ const svgCharsetHeader = () => ({
       next();
     });
   },
+  /** @param {import('vite').PreviewServer} server */
   configurePreviewServer(server) {
-    server.middlewares.use((req, res, next) => {
+    server.middlewares.use((/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {import('vite').Connect.NextFunction} */ next) => {
       const path = req.url?.split('?')[0] ?? '';
       if (path.endsWith('.svg')) {
         res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');

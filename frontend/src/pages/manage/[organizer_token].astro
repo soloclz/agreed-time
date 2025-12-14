@@ -5,7 +5,7 @@ import OrganizerDashboard from '../../components/OrganizerDashboard';
 const { organizer_token } = Astro.params;
 
 if (!organizer_token) {
-  // Client-side redirect will handle this for static output
+  return Astro.redirect('/');
 }
 ---
 
