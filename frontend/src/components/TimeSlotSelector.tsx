@@ -4,6 +4,7 @@ import type { ApiTimeRange, TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import TimeSlotCell from './TimeSlotCell';
 import TimeGrid from './TimeGrid';
+import FloatingEditMenu from './FloatingEditMenu';
 import {
   getTodayLocal,
   addDays,
@@ -411,20 +412,6 @@ export default function TimeSlotSelector({
         </div>
       )}
 
-      {/* Smart Actions Toolbar (Organizer Mode Only) */}
-      {highlightWeekends && ( // Only show in Organizer Mode
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={copyFirstWeekPattern}
-            className="flex items-center gap-2 px-4 py-2 bg-paper border border-film-border hover:bg-film-light hover:border-film-accent/50 text-ink text-sm font-mono font-bold transition-all shadow-sm active:translate-y-0.5 rounded-sm group"
-          >
-            <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
-            COPY WEEK 1 TO ALL
-          </button>
-        </div>
-      )}
-
       <TimeSlotBottomPanel
           selectedCells={selectedCells}
           selectedSlotsByDate={selectedSlotsByDate}
@@ -473,8 +460,15 @@ export default function TimeSlotSelector({
         )}
       />
 
-      <div className="text-xs text-gray-500 font-mono">
-          <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+      {/* Footer Area with TIP and FloatingEditMenu */}
+      <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
+          <div className="text-xs text-gray-500 font-mono mt-2">
+              <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+          </div>
+          
+          {highlightWeekends && (
+            <FloatingEditMenu onCopyPattern={copyFirstWeekPattern} />
+          )}
       </div>
     </div>
   );
