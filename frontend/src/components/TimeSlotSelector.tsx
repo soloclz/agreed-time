@@ -449,7 +449,7 @@ export default function TimeSlotSelector({
             <div>
               <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Date Range</div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <label htmlFor="startDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start</label>
                   <input
                     id="startDate"
@@ -457,12 +457,12 @@ export default function TimeSlotSelector({
                     type="date"
                     value={startDate}
                     onChange={(e) => handleDateChange('start', e.target.value)}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink appearance-none min-h-[52px]"
                     title="Start date"
                   />
                 </div>
                 <span className="text-ink font-bold text-center hidden sm:block">→</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <label htmlFor="endDate" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End</label>
                   <input
                     id="endDate"
@@ -470,7 +470,7 @@ export default function TimeSlotSelector({
                     type="date"
                     value={endDate}
                     onChange={(e) => handleDateChange('end', e.target.value)}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink"
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink appearance-none min-h-[52px]"
                     title="End date"
                   />
                 </div>
@@ -480,14 +480,14 @@ export default function TimeSlotSelector({
             <div>
               <div className="block text-sm font-bold text-ink mb-2 font-mono uppercase tracking-wider">Time Range</div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <label htmlFor="startHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">Start Time</label>
                   <select
                     id="startHour"
                     name="startHour"
                     value={startHour}
                     onChange={(e) => handleTimeChange('start', parseInt(e.target.value))}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer appearance-none min-h-[52px]"
                     title="Start hour"
                   >
                     {Array.from({ length: 24 }, (_, i) => (
@@ -496,14 +496,14 @@ export default function TimeSlotSelector({
                   </select>
                 </div>
                 <span className="text-ink font-bold text-center hidden sm:block">→</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
                   <select
                     id="endHour"
                     name="endHour"
                     value={endHour}
                     onChange={(e) => handleTimeChange('end', parseInt(e.target.value))}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer"
+                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer appearance-none min-h-[52px]"
                     title="End hour"
                   >
                     {Array.from({ length: 24 }, (_, i) => (
