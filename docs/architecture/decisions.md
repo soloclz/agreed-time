@@ -66,3 +66,32 @@
     *   (+) Provides better control over user interaction flows.
     *   (-) Adds a small dependency (`react-hot-toast`) and custom component implementation for modals.
 
+## ADR-006: Capability Links, No Auth, Auto-Expiry
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-12
+*   **Context**: The product needs shareable links without building accounts/auth. Security is handled by hard-to-guess tokens.
+*   **Decision**:
+    *   Use capability URLs: `public_token` for guest/result access, `organizer_token` for manage/close actions.
+    *   No login or invite flow; tokens are the only access control and must be treated as secrets.
+    *   Auto-delete events (and cascading data) 7 days after creation via an hourly cleanup task.
+*   **Consequences**:
+    *   (+) Very fast to share and use; zero onboarding friction.
+    *   (+) Automatic hygiene keeps the database small and limits exposure window.
+    *   (-) Token leakage grants control; relies on user care when sharing links.
+    *   (-) Expiry will 404 links after 7 days; long-running events must be recreated.
+
+## ADR-007: Event Closure Without Final Selection, Binary Availability
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-12
+*   **Context**: The current backend and UI do not support picking a “winner” slot or multi-state voting; simplicity and delivery speed are prioritized.
+*   **Decision**:
+    *   Event states are `open` and `closed`. Closing stops new submissions but does not mark a final slot.
+    *   Availability is binary (selected/not selected). No `if_needed`/`no` tri-state.
+    *   Aggregation is computed client-side from participant ranges using the event’s `slot_duration`.
+*   **Consequences**:
+    *   (+) Keeps flows and data model simple; minimal UI complexity.
+    *   (+) Avoids backend changes for finalization logic.
+    *   (-) Organizers must decide a time manually outside the app.
+    *   (-) Less expressiveness for participants (no soft/conditional votes).
