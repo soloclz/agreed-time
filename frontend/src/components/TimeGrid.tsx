@@ -5,6 +5,7 @@ import {
   diffInDays,
   formatDateDisplay,
   getDayOfWeek,
+  formatMinimalTimeLabel, // Import the new function
 } from '../utils/dateUtils';
 
 interface TimeGridProps {
@@ -55,7 +56,7 @@ export default function TimeGrid({
   useEffect(() => {
     if (onGridMount) {
       onGridMount(gridRef.current);
-    } 
+    }
   }, [onGridMount]);
 
   // Generate flat array of days based on date range (timezone-safe)
@@ -82,18 +83,13 @@ export default function TimeGrid({
     while (currentHour < endHour) {
       const nextHour = Math.min(currentHour + durationInHours, endHour);
 
-      const startMinutes = Math.floor((currentHour % 1) * 60);
-      const endMinutes = Math.floor((nextHour % 1) * 60);
-      const startHourInt = Math.floor(currentHour);
-      const endHourInt = Math.floor(nextHour);
-
-      const startLabel = `${String(startHourInt).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
-      const endLabel = `${String(endHourInt).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      // Use the new minimal time label formatter
+      const minimalLabel = formatMinimalTimeLabel(currentHour);
 
       result.push({
         startHour: currentHour,
         endHour: nextHour,
-        label: `${startLabel}-${endLabel}`,
+        label: minimalLabel,
       });
 
       currentHour = nextHour;
@@ -158,7 +154,7 @@ export default function TimeGrid({
             <table className="border-collapse">
               <thead>
                 <tr>
-                  <th className="border-b border-film-border bg-paper px-2 sm:px-3 text-xs font-mono font-bold text-ink h-12 box-border align-middle min-w-[3.5rem] sm:min-w-[4.5rem]">
+                  <th className="border-b border-film-border bg-paper px-1 sm:px-2 text-[10px] font-mono font-bold text-ink h-12 box-border align-middle min-w-[3rem] sm:min-w-[3.5rem]">
                     TIME
                   </th>
                 </tr>
@@ -166,7 +162,7 @@ export default function TimeGrid({
               <tbody>
                 {timeSlots.map((slot, index) => (
                   <tr key={index}>
-                    <th className="border-b border-film-border bg-paper px-2 sm:px-3 text-[10px] sm:text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-middle">
+                    <th className="border-b border-film-border bg-paper px-1 sm:px-2 text-[10px] sm:text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-top pt-1">
                       {slot.label}
                     </th>
                   </tr>
@@ -174,7 +170,6 @@ export default function TimeGrid({
               </tbody>
             </table>
           </div>
-
           {/* Right: Scrollable Grid (Rolling Canvas) */}
           <div
             ref={gridRef}

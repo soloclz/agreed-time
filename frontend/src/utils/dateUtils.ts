@@ -120,3 +120,24 @@ export function getTimezoneOffsetString(): string {
 
   return `GMT${sign}${formattedHours}:${formattedMinutes}`;
 }
+
+/**
+ * Format hour as 12-hour time string without leading zero for hour (e.g., "9 AM", "2 PM", "9:30 AM")
+ * @param hour - Hour in 24-hour format (0-23, can be decimal for minutes)
+ * @returns Formatted time string
+ */
+export function formatMinimalTimeLabel(hour: number): string {
+  const h = Math.floor(hour);
+  const m = Math.round((hour % 1) * 60); // Round to nearest minute
+
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+
+  if (m === 0) {
+    return `${displayHour} ${ampm}`;
+  } else {
+    const displayMinutes = String(m).padStart(2, '0');
+    return `${displayHour}:${displayMinutes} ${ampm}`;
+  }
+}
+
