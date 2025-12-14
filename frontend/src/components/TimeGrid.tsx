@@ -5,8 +5,9 @@ import {
   diffInDays,
   formatDateDisplay,
   getDayOfWeek,
-  formatMinimalTimeLabel, // Import the new function
+  formatMinimalTimeLabel,
 } from '../utils/dateUtils';
+import { GRID_STYLES } from '../constants/gridStyles';
 
 interface TimeGridProps {
   startDate: string; // "YYYY-MM-DD"
@@ -154,7 +155,7 @@ export default function TimeGrid({
             <table className="border-collapse">
               <thead>
                 <tr>
-                  <th className="border-b border-film-border bg-paper px-1 sm:px-2 text-[10px] font-mono font-bold text-ink h-12 box-border align-middle min-w-[3rem] sm:min-w-[3.5rem]">
+                  <th className={`border-b border-film-border bg-paper ${GRID_STYLES.HEADER_PADDING} text-[10px] font-mono font-bold text-ink ${GRID_STYLES.HEADER_HEIGHT} box-border align-middle ${GRID_STYLES.COL_WIDTH_CLASS}`}>
                     TIME
                   </th>
                 </tr>
@@ -162,7 +163,7 @@ export default function TimeGrid({
               <tbody>
                 {timeSlots.map((slot, index) => (
                   <tr key={index}>
-                    <th className="border-b border-film-border bg-paper px-1 sm:px-2 text-[10px] sm:text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-top pt-1">
+                    <th className={`border-b border-film-border bg-paper ${GRID_STYLES.HEADER_PADDING} text-[10px] sm:text-xs font-mono text-ink text-right ${GRID_STYLES.CELL_HEIGHT} box-border last:border-b-0 align-top pt-1 ${GRID_STYLES.COL_WIDTH_CLASS}`}>
                       {slot.label}
                     </th>
                   </tr>
@@ -193,7 +194,7 @@ export default function TimeGrid({
                     }
 
                     const defaultHeader = (
-                      <div className="w-full h-full px-1 sm:px-2 flex items-center justify-center min-w-[3rem] sm:min-w-[3rem]">
+                      <div className={`w-full h-full ${GRID_STYLES.HEADER_PADDING} flex items-center justify-center ${GRID_STYLES.COL_WIDTH_CLASS}`}>
                         {formatDateDisplay(date)}
                       </div>
                     );
@@ -201,7 +202,7 @@ export default function TimeGrid({
                       <th
                         key={date}
                         data-date={date}
-                        className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 snap-start ${headerClass}`}
+                        className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center ${GRID_STYLES.HEADER_HEIGHT} box-border last:border-r-0 snap-start ${headerClass}`}
                       >
                         {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
                       </th>

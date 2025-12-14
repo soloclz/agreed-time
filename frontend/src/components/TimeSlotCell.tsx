@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { HeatmapCellData } from '../types';
 import { getDayOfWeek } from '../utils/dateUtils';
+import { GRID_STYLES } from '../constants/gridStyles';
 
 interface TimeSlotCellProps {
   // Coordinates
@@ -134,7 +135,7 @@ export default function TimeSlotCell({
 
   // Base classes shared by both modes
   // Removed hover:z-[60] as we are using Portal now
-  const baseClasses = "relative group border-r border-b border-film-border h-12 box-border last:border-r-0 align-middle transition-colors";
+  const baseClasses = `relative group border-r border-b border-film-border ${GRID_STYLES.CELL_HEIGHT} box-border last:border-r-0 align-middle transition-colors`;
 
   // Mode-specific styles/classes
   let modeClasses = "";
