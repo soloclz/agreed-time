@@ -481,23 +481,7 @@ export default function TimeSlotSelector({
         </div>
       )}
 
-      {/* Footer Area with TIP and FloatingEditMenu */}
-      <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
-          <div className="text-xs text-gray-500 font-mono mt-2">
-              <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
-          </div>
-          
-          {highlightWeekends && (
-            <FloatingEditMenu 
-              onCopyPattern={copyFirstWeekPattern} 
-              canCopy={hasFirstWeekSelection}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={undo}
-              onRedo={redo}
-            />
-          )}
-      </div>
+
 
       <TimeSlotBottomPanel
           selectedCells={selectedCells}
@@ -512,41 +496,61 @@ export default function TimeSlotSelector({
           onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
       />
       
-      <TimeGrid
-        startDate={startDate}
-        endDate={endDate}
-        startHour={startHour}
-        endHour={endHour}
-        slotDuration={slotDuration}
-        highlightWeekends={highlightWeekends} // Pass the prop
-        onGridMount={setGridElement} // Pass the setter
-        onMouseDown={handleMouseDown}
-        onMouseEnter={handleMouseEnter}
-        onMouseUp={handleMouseUp}
-        renderCell={(date, hour, slotLabel, key) => (
-          <TimeSlotCell
-            key={key}
-            date={date}
-            hour={hour}
-            slotLabel={slotLabel}
-            mode="select"
-            isSelected={isCellSelected(date, hour)}
-            isSelectable={isSlotSelectable(date, hour)}
+      <div className="flex flex-col gap-1">
+        <TimeGrid
+            startDate={startDate}
+            endDate={endDate}
+            startHour={startHour}
+            endHour={endHour}
+            slotDuration={slotDuration}
             highlightWeekends={highlightWeekends} // Pass the prop
-            gridScrollElement={gridElement} // Pass the element state
-          />
-        )}
-        renderDateHeader={(date, defaultHeader) => (
-            <button
-                type="button"
-                className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
-                onClick={() => handleHeaderClick(date)}
-                aria-label={`Toggle selection for ${date}`}
-            >
-                {defaultHeader}
-            </button>
-        )}
-      />
+            onGridMount={setGridElement} // Pass the setter
+            onMouseDown={handleMouseDown}
+            onMouseEnter={handleMouseEnter}
+            onMouseUp={handleMouseUp}
+            renderCell={(date, hour, slotLabel, key) => (
+            <TimeSlotCell
+                key={key}
+                date={date}
+                hour={hour}
+                slotLabel={slotLabel}
+                mode="select"
+                isSelected={isCellSelected(date, hour)}
+                isSelectable={isSlotSelectable(date, hour)}
+                highlightWeekends={highlightWeekends} // Pass the prop
+                gridScrollElement={gridElement} // Pass the element state
+            />
+            )}
+            renderDateHeader={(date, defaultHeader) => (
+                <button
+                    type="button"
+                    className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
+                    onClick={() => handleHeaderClick(date)}
+                    aria-label={`Toggle selection for ${date}`}
+                >
+                    {defaultHeader}
+                </button>
+            )}
+        />
+
+        {/* Footer Area with TIP and FloatingEditMenu */}
+        <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
+            <div className="text-xs text-gray-500 font-mono">
+                <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+            </div>
+            
+            {highlightWeekends && (
+                <FloatingEditMenu 
+                onCopyPattern={copyFirstWeekPattern} 
+                canCopy={hasFirstWeekSelection}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={undo}
+                onRedo={redo}
+                />
+            )}
+        </div>
+      </div>
     </div>
   );
 }
