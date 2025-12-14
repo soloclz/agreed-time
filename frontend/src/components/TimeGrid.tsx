@@ -2,17 +2,9 @@ import { useMemo, useRef, useEffect } from 'react';
 import {
   addDays,
   parseLocalDate,
-  getFirstSunday,
-  getLastSaturday,
   diffInDays,
   formatDateDisplay,
 } from '../utils/dateUtils';
-
-interface Week {
-  weekNumber: number;
-  startDate: Date;
-  dates: string[];
-}
 
 interface TimeGridProps {
   startDate: string; // "YYYY-MM-DD"
@@ -20,8 +12,7 @@ interface TimeGridProps {
   startHour: number; // 0-23
   endHour:   number; // 0-23
   slotDuration: number; // in minutes (e.g., 60)
-  maxWeeks?: number; // max number of weeks to display, default 8
-
+  
   // Callback to provide parent with the scrollable grid element
   onGridMount?: (element: HTMLDivElement | null) => void;
 
@@ -42,15 +33,12 @@ interface TimeGridProps {
   onMouseUp: () => void;
 }
 
-const MAX_WEEKS_DEFAULT = 4;
-
 export default function TimeGrid({
   startDate,
   endDate,
   startHour,
   endHour,
   slotDuration,
-  maxWeeks = MAX_WEEKS_DEFAULT,
   onGridMount,
   renderCell,
   renderDateHeader,
@@ -67,32 +55,20 @@ export default function TimeGrid({
     } 
   }, [onGridMount]);
 
-  // Generate weeks based on date range (timezone-safe)
-  const weeks = useMemo((): Week[] => {
+  // Generate flat array of days based on date range (timezone-safe)
+  const days = useMemo((): string[] => {
     if (!startDate || !endDate) return [];
-
-    const firstSundayStr = getFirstSunday(startDate);
-    const lastSaturdayStr = getLastSaturday(endDate);
-
-    const weeksArray: Week[] = [];
-    let currentDateStr = firstSundayStr;
-    let weekNum = 0;
-
-    while (currentDateStr <= lastSaturdayStr && weekNum < maxWeeks) {
-      const weekDates: string[] = [];
-      for (let i = 0; i < 7; i++) {
-        weekDates.push(addDays(currentDateStr, i));
-      }
-      weeksArray.push({
-        weekNumber: weekNum,
-        startDate: parseLocalDate(currentDateStr),
-        dates: weekDates,
-      });
-      currentDateStr = addDays(currentDateStr, 7);
-      weekNum++;
+    
+    // We generate days strictly from startDate to endDate
+    // No more forcing start-on-Sunday / end-on-Saturday
+    const dayList: string[] = [];
+    let current = startDate;
+    while (current <= endDate) {
+      dayList.push(current);
+      current = addDays(current, 1);
     }
-    return weeksArray;
-  }, [startDate, endDate, maxWeeks]);
+    return dayList;
+  }, [startDate, endDate]);
 
   // Generate time slots based on slotDuration
   const timeSlots = useMemo(() => {
@@ -125,58 +101,17 @@ export default function TimeGrid({
   // Validate date range
   const dateRangeError = useMemo(() => {
     if (!startDate || !endDate) return null;
-
     if (endDate < startDate) return 'End date cannot be before start date';
-
-    const days = diffInDays(startDate, endDate);
-    const diffWeeks = Math.ceil(days / 7);
-
-    if (diffWeeks > maxWeeks) return `Date range cannot exceed ${maxWeeks} weeks`;
     return null;
-  }, [startDate, endDate, maxWeeks]);
+  }, [startDate, endDate]);
 
   const isDateInRange = (dateStr: string): boolean => {
     return dateStr >= startDate && dateStr <= endDate;
   };
 
-  // Auto-scroll to startDate on mount or change
-  useEffect(() => {
-    if (!gridRef.current || !startDate) return;
-
-    // Wait for render cycle to complete ensuring DOM is ready
-    requestAnimationFrame(() => {
-      if (!gridRef.current) return;
-      
-      const startEl = gridRef.current.querySelector(`[data-date="${startDate}"]`) as HTMLElement;
-      
-      if (startEl) {
-        const containerRect = gridRef.current.getBoundingClientRect();
-        const elementRect = startEl.getBoundingClientRect();
-        
-        // Calculate the relative position to scroll to
-        // elementRect.left is relative to viewport, containerRect.left is relative to viewport
-        // currentScrollLeft + (elementRelativeOffset)
-        const relativeOffset = elementRect.left - containerRect.left;
-        const currentScroll = gridRef.current.scrollLeft;
-        
-        // Scroll to the element, adding a small buffer
-        gridRef.current.scrollTo({
-          left: currentScroll + relativeOffset,
-          behavior: 'smooth'
-        });
-      }
-    });
-  }, [startDate, weeks]);
-
   // Helper to generate time slot key
   const getCellKey = (date: string, startTime: string, endTime: string): string =>
     `${date}_${startTime}-${endTime}`;
-
-  const formatWeekRange = (week: Week): string => {
-    const start = parseLocalDate(week.dates[0]);
-    const end = parseLocalDate(week.dates[6]);
-    return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
-  };
 
   // Event Delegation Handlers
   const getCellDataFromEvent = (e: React.MouseEvent) => {
@@ -201,65 +136,26 @@ export default function TimeGrid({
     if (cellData) {
       onMouseEnter(cellData.date, cellData.hour);
     } else {
-      // If mouse leaves a cell but stays within the grid container,
-      // we might want to end a drag selection.
       onMouseUp(); 
     }
   };
 
   const handleGridMouseUp = () => {
-    // This will always end a selection if one is active, regardless of where the mouseup happened.
     onMouseUp();
   };
 
-
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink">
-      {weeks.length > 1 && (
-        <div className="flex items-center justify-between font-mono text-xs sm:text-sm gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (gridRef.current) {
-                gridRef.current.scrollBy({ left: -800, behavior: 'smooth' });
-              }
-            }}
-            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
-            aria-label="Scroll to previous week"
-          >
-            ← <span className="hidden sm:inline">PREV</span>
-          </button>
-          <span className="text-ink font-bold text-xs sm:text-sm">
-            {weeks.length} {weeks.length === 1 ? 'WEEK' : 'WEEKS'}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              if (gridRef.current) {
-                gridRef.current.scrollBy({ left: 800, behavior: 'smooth' });
-              }
-            }}
-            className="px-3 sm:px-4 py-2 border border-film-border bg-paper hover:bg-film-light flex items-center gap-1 sm:gap-2 transition-colors active:translate-y-0.5 text-xs sm:text-sm"
-            aria-label="Scroll to next week"
-          >
-            <span className="hidden sm:inline">NEXT</span> →
-          </button>
-        </div>
-      )}
-
       {dateRangeError && <p className="text-xs text-red-600 mt-2 font-mono font-bold">{dateRangeError}</p>}
       
       {!dateRangeError && (
-        <div className="flex border border-film-border bg-paper relative overflow-hidden rounded-sm">
+        <div className="flex border border-film-border bg-paper relative overflow-hidden rounded-sm shadow-sm max-w-full">
           {/* Left: Fixed Time Column */}
-          <div className="flex-shrink-0 z-30 bg-paper border-r border-film-border shadow-sm">
-            <div className="bg-paper px-3 py-3 text-sm font-serif font-bold text-transparent border-b border-film-border tracking-wide select-none">
-              &nbsp;
-            </div>
+          <div className="flex-shrink-0 z-30 bg-paper border-r border-film-border shadow-[4px_0_12px_-4px_rgba(0,0,0,0.05)] sticky left-0">
             <table className="border-collapse">
               <thead>
                 <tr>
-                  <th className="border-b border-film-border bg-paper px-3 text-xs font-mono font-bold text-ink h-12 box-border align-middle">
+                  <th className="border-b border-film-border bg-paper px-2 sm:px-3 text-xs font-mono font-bold text-ink h-12 box-border align-middle min-w-[3.5rem] sm:min-w-[4.5rem]">
                     TIME
                   </th>
                 </tr>
@@ -267,7 +163,7 @@ export default function TimeGrid({
               <tbody>
                 {timeSlots.map((slot, index) => (
                   <tr key={index}>
-                    <th className="border-b border-film-border bg-paper px-3 text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-middle">
+                    <th className="border-b border-film-border bg-paper px-2 sm:px-3 text-[10px] sm:text-xs font-mono text-ink text-right h-12 box-border last:border-b-0 align-middle">
                       {slot.label}
                     </th>
                   </tr>
@@ -276,70 +172,56 @@ export default function TimeGrid({
             </table>
           </div>
 
-          {/* Right: Scrollable Grid */}
+          {/* Right: Scrollable Grid (Rolling Canvas) */}
           <div
             ref={gridRef}
-            className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0 select-none"
+            className="time-grid-scroll-area overflow-x-auto flex-1 min-w-0 select-none snap-x snap-mandatory scroll-smooth"
             style={{ WebkitTouchCallout: 'none' }}
             onMouseDown={handleGridMouseDown}
             onMouseOver={handleGridMouseEnter}
             onMouseUp={handleGridMouseUp}
             onContextMenu={(e) => e.preventDefault()}
           >
-            <div className="flex">
-              {weeks.map((week, weekIndex) => (
-                <div
-                  key={week.weekNumber}
-                  className={`flex-shrink-0 ${weekIndex > 0 ? 'border-l border-film-border' : ''}`}
-                >
-                  <div className="bg-paper px-4 py-3 text-sm font-serif font-bold text-ink border-b border-film-border tracking-wide whitespace-nowrap">
-                    WEEK {week.weekNumber + 1}: {formatWeekRange(week)}
-                  </div>
-
-                  <table className="border-collapse">
-                    <thead>
-                      <tr>
-                        {week.dates.map(date => {
-                          const inRange = isDateInRange(date);
-                          const defaultHeader = (
-                                <div className="w-full h-full px-4 flex items-center justify-center">
-                                  {formatDateDisplay(date)}
-                                </div>
-                          );
-                          return (
-                            <th
-                              key={date}
-                              data-date={date}
-                              className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 ${inRange ? 'bg-paper text-ink' : 'bg-gray-100/80 text-gray-400'}`}
-                            >
-                              {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timeSlots.map((slot, slotIndex) => (
-                        <tr key={slotIndex}>
-                          {week.dates.map(date => {
-                            const { startTime, endTime } = getCellKeyParts(slot.startHour, slotDuration);
-                            const key = getCellKey(date, startTime, endTime);
-                            return (
-                                renderCell(
-                                    date,
-                                    slot.startHour,
-                                    slot.label,
-                                    key,
-                                )
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
+            <table className="border-collapse w-max">
+              <thead>
+                <tr>
+                  {days.map(date => {
+                    const defaultHeader = (
+                      <div className="w-full h-full px-2 sm:px-4 flex items-center justify-center min-w-[4rem] sm:min-w-[6rem]">
+                        {formatDateDisplay(date)}
+                      </div>
+                    );
+                    return (
+                      <th
+                        key={date}
+                        data-date={date}
+                        className="border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 bg-paper text-ink snap-start scroll-ml-14"
+                      >
+                        {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map((slot, slotIndex) => (
+                  <tr key={slotIndex}>
+                    {days.map(date => {
+                      const { startTime, endTime } = getCellKeyParts(slot.startHour, slotDuration);
+                      const key = getCellKey(date, startTime, endTime);
+                      return (
+                        renderCell(
+                          date,
+                          slot.startHour,
+                          slot.label,
+                          key,
+                        )
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -69,29 +69,7 @@ export function formatDateDisplay(dateStr: string): string {
   return `${day}\n${month}/${dateNum}`;
 }
 
-/**
- * Get the first Sunday on or before a date
- * @param dateStr - Date string in YYYY-MM-DD format
- * @returns Date string of the first Sunday
- */
-export function getFirstSunday(dateStr: string): string {
-  const date = parseLocalDate(dateStr);
-  const dayOfWeek = date.getDay();
-  date.setDate(date.getDate() - dayOfWeek);
-  return formatLocalDate(date);
-}
 
-/**
- * Get the last Saturday on or after a date
- * @param dateStr - Date string in YYYY-MM-DD format
- * @returns Date string of the last Saturday
- */
-export function getLastSaturday(dateStr: string): string {
-  const date = parseLocalDate(dateStr);
-  const dayOfWeek = date.getDay();
-  date.setDate(date.getDate() + (6 - dayOfWeek));
-  return formatLocalDate(date);
-}
 
 /**
  * Calculate difference in days between two date strings

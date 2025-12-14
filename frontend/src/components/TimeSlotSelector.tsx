@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import type { ApiTimeRange, TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
 import TimeSlotCell from './TimeSlotCell';
@@ -6,6 +7,7 @@ import TimeGrid from './TimeGrid';
 import {
   getTodayLocal,
   addDays,
+  diffInDays,
   formatHour,
 } from '../utils/dateUtils';
 import {
@@ -197,6 +199,93 @@ export default function TimeSlotSelector({
     }
   };
 
+  // Logic to copy first week's pattern to subsequent weeks
+  const copyFirstWeekPattern = () => {
+    if (!startDate || !endDate) return;
+
+    // 1. Extract pattern from the first 7 days (Day 0 to Day 6)
+    // Pattern: Map<dayIndex (0-6), Set<hour>>
+    const pattern = new Map<number, Set<number>>();
+    let hasPattern = false;
+
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(startDate, i);
+      // Skip if date exceeds endDate (unlikely for first week but safe check)
+      if (date > endDate) break;
+
+      const dayPattern = new Set<number>();
+      
+      // Check all possible hours in the current view
+      const durationInHours = slotDuration / 60;
+      let currentHour = startHour;
+      while (currentHour < endHour) {
+        if (selectedCells.has(getCellKey(date, currentHour))) {
+          dayPattern.add(currentHour);
+          hasPattern = true;
+        }
+        currentHour += durationInHours;
+      }
+      
+      if (dayPattern.size > 0) {
+        pattern.set(i, dayPattern);
+      }
+    }
+
+    if (!hasPattern) {
+      toast.error('No slots selected in the first week to copy.');
+      return;
+    }
+
+    // 2. Determine target endDate. If current range < 14 days, extend it.
+    let targetEndDate = endDate;
+    const currentDurationDays = diffInDays(startDate, endDate) + 1;
+    if (currentDurationDays < 14) {
+      // Extend to at least 28 days (4 weeks) if expanding, or just ensure > 1 week
+      // Let's default to the standard 4-week view if the user asks to copy
+      targetEndDate = addDays(startDate, 27);
+      setEndDate(targetEndDate);
+      toast('Extended date range to 4 weeks', { icon: '📅' });
+    }
+
+    // 3. Apply pattern to subsequent weeks
+    const newSelectedCells = new Set(selectedCells);
+    let addedCount = 0;
+
+    // Start from Day 7
+    let currentDayOffset = 7; 
+    let currentDate = addDays(startDate, currentDayOffset);
+
+    while (currentDate <= targetEndDate) {
+      const patternDayIndex = currentDayOffset % 7;
+      const hoursToSelect = pattern.get(patternDayIndex);
+
+      if (hoursToSelect) {
+        hoursToSelect.forEach(hour => {
+          const key = getCellKey(currentDate, hour);
+          if (!newSelectedCells.has(key)) {
+            newSelectedCells.add(key);
+            addedCount++;
+          }
+        });
+      }
+
+      currentDayOffset++;
+      currentDate = addDays(startDate, currentDayOffset);
+    }
+
+    if (addedCount > 0) {
+      setSelectedCells(newSelectedCells);
+      // Trigger update callback manually since we bypassed setCell/toggleCell
+      if (onRangesChange) {
+        const ranges = cellsToRanges(newSelectedCells, slotDuration);
+        onRangesChange(ranges);
+      }
+      toast.success(`Copied pattern to following weeks! (+${addedCount} slots)`);
+    } else {
+      toast('Pattern already applied to all weeks.', { icon: '✨' });
+    }
+  };
+
   // Convert selected cells to UI TimeSlots for BottomPanel
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
@@ -314,6 +403,20 @@ export default function TimeSlotSelector({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Smart Actions Toolbar (Organizer Mode Only) */}
+      {!availableRanges && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={copyFirstWeekPattern}
+            className="flex items-center gap-2 px-4 py-2 bg-paper border border-film-border hover:bg-film-light hover:border-film-accent/50 text-ink text-sm font-mono font-bold transition-all shadow-sm active:translate-y-0.5 rounded-sm group"
+          >
+            <span className="text-lg group-hover:scale-110 transition-transform">✨</span>
+            COPY WEEK 1 TO ALL
+          </button>
         </div>
       )}
 
