@@ -18,14 +18,25 @@ export default function FloatingEditMenu({
   canRedo = false
 }: FloatingEditMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  
+  const allDisabled = !canCopy && !canUndo && !canRedo;
 
-  // Auto-close if suddenly disabled while open
-  if (!canCopy && !canUndo && !canRedo && isOpen) {
-    setIsOpen(false);
+  // Don't render anything if all actions are disabled
+  if (allDisabled) {
+    return null;
   }
 
+  // Auto-close if suddenly disabled while open (though with the check above, this component unmounts)
+  // We keep this logical check just in case we change the return null behavior later, 
+  // but strictly speaking, if we return null above, the state is lost on unmount anyway.
+  
+  // Common button classes
+  const actionBtnBase = "flex items-center justify-center transition-all shadow-md border border-film-border";
+  const actionBtnEnabled = "bg-white text-ink hover:bg-film-light hover:scale-110 active:scale-95";
+  const actionBtnDisabled = "bg-gray-50 text-gray-300 border-film-border/50 shadow-none cursor-not-allowed";
+
   return (
-    <div className="z-40 print:hidden">
+    <div className="z-40 print:hidden animate-pop-in">
       {/* Container for the dock and its expanded menu */}
       <div className="flex items-center">
         {/* Expanded Actions Menu (slides out from left) */}
@@ -42,15 +53,15 @@ export default function FloatingEditMenu({
                 type="button"
                 onClick={onUndo}
                 disabled={!canUndo}
-                className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
-                  canUndo 
-                    ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
-                    : 'text-gray-300 cursor-not-allowed'
+                className={`${actionBtnBase} w-10 h-10 rounded-full ${
+                  canUndo ? actionBtnEnabled : actionBtnDisabled
                 }`}
                 aria-label="Undo"
                 title="Undo"
               >
-                <span className="text-lg">↩️</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                </svg>
               </button>
             )}
 
@@ -60,15 +71,15 @@ export default function FloatingEditMenu({
                 type="button"
                 onClick={onRedo}
                 disabled={!canRedo}
-                className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
-                  canRedo 
-                    ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
-                    : 'text-gray-300 cursor-not-allowed'
+                className={`${actionBtnBase} w-10 h-10 rounded-full ${
+                  canRedo ? actionBtnEnabled : actionBtnDisabled
                 }`}
                 aria-label="Redo"
                 title="Redo"
               >
-                <span className="text-lg">↪️</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" />
+                </svg>
               </button>
             )}
 
@@ -83,10 +94,10 @@ export default function FloatingEditMenu({
                   setIsOpen(false);
                 }}
                 disabled={!canCopy}
-                className={`flex items-center justify-center h-10 px-3 py-1 rounded-md border border-film-border text-sm font-bold shadow-md transition-all whitespace-nowrap ${
+                className={`${actionBtnBase} h-10 px-3 py-1 rounded-md text-sm font-bold whitespace-nowrap ${
                   canCopy
                     ? 'bg-white text-film-accent hover:bg-film-light hover:scale-105 active:scale-95'
-                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                    : actionBtnDisabled
                 }`}
                 aria-label="Copy Week 1 Pattern to All Weeks"
                 title="Copy Week 1 Pattern to All Weeks"
@@ -99,16 +110,18 @@ export default function FloatingEditMenu({
         {/* Main Toggle Button (The Dock itself) */}
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => !allDisabled && setIsOpen(!isOpen)}
+          disabled={allDisabled}
           className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg transition-all duration-300 ${
-             // Always enabled now as it holds Undo/Redo too
-             'bg-ink text-white hover:scale-105 active:scale-95 cursor-pointer'
+             allDisabled 
+             ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+             : 'bg-ink text-white hover:scale-105 active:scale-95 cursor-pointer'
           } ${
               isOpen ? 'rotate-45' : 'rotate-0'
           }`}
           aria-label={isOpen ? "Close actions menu" : "Open edit actions"}
           aria-expanded={isOpen}
-          title="Edit Actions"
+          title={allDisabled ? "No actions available" : "Edit Actions"}
         >
           <span className="text-xl font-light">{isOpen ? '＋' : '⚡'}</span>
         </button>
