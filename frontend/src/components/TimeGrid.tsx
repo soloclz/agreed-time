@@ -198,7 +198,7 @@ export default function TimeGrid({
                     }
 
                     const defaultHeader = (
-                      <div className="w-full h-full px-2 sm:px-4 flex items-center justify-center min-w-[4rem] sm:min-w-[6rem]">
+                      <div className="w-full h-full px-1 sm:px-2 flex items-center justify-center min-w-[3rem] sm:min-w-[4rem]">
                         {formatDateDisplay(date)}
                       </div>
                     );
