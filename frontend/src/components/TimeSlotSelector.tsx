@@ -18,6 +18,7 @@ import {
 } from '../utils/eventUtils';
 import { useTimeSlotDragSelection } from '../hooks/useTimeSlotDragSelection';
 import { useHistory } from '../hooks/useHistory';
+import { GRID_STYLES } from '../constants/gridStyles';
 
 // Helper to convert hour to time slot with duration for display logic
 const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
@@ -570,7 +571,7 @@ export default function TimeSlotSelector({
             renderDateHeader={(date, defaultHeader) => (
                 <button
                     type="button"
-                    className="w-full h-full px-4 hover:bg-film-light focus:bg-film-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-film-accent transition-colors"
+                    className={GRID_STYLES.HEADER_BUTTON_CLASS}
                     onClick={() => handleHeaderClick(date)}
                     aria-label={`Toggle selection for ${date}`}
                 >
