@@ -112,7 +112,7 @@ export default function FloatingEditMenu({
           type="button"
           onClick={() => !allDisabled && setIsOpen(!isOpen)}
           disabled={allDisabled}
-          className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg transition-all duration-300 ${
+          className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] border border-white/20 transition-all duration-300 ${
              allDisabled 
              ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
              : 'bg-ink text-white hover:scale-105 active:scale-95 cursor-pointer'
