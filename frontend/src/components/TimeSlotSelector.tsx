@@ -17,6 +17,7 @@ import {
   cellsToRanges
 } from '../utils/eventUtils';
 import { useTimeSlotDragSelection } from '../hooks/useTimeSlotDragSelection';
+import { useHistory } from '../hooks/useHistory';
 
 // Helper to convert hour to time slot with duration for display logic
 const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
@@ -69,6 +70,29 @@ export default function TimeSlotSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(initialRanges), slotDuration]); // Stabilize dependency by content
   
+  // Undo/Redo History Management
+  // Use useHistory to manage selectedCells instead of useState
+  const {
+    state: selectedCells,
+    setState: setSelectedCells, // Update present without history (for drag move)
+    pushState, // Commit current state to history and set new state (for drag start/copy)
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory
+  } = useHistory<Set<string>>(initialSelectedCells);
+
+  // Sync history state with initialSelectedCells on load (if props change)
+  // This is tricky with history. We only want to reset if it's a "hard" reset.
+  // For now, we trust initialSelectedCells only on mount or strict dependency change.
+  // Let's add a useEffect to reset history if initialRanges fundamentally changes (e.g. navigation)
+  useEffect(() => {
+      setSelectedCells(initialSelectedCells);
+      clearHistory();
+  }, [initialSelectedCells, setSelectedCells, clearHistory]);
+
+
   // Available cells set for fast lookup in Guest Mode
   const availableCells = useMemo(() => {
     if (!availableRanges) return null;
@@ -142,8 +166,8 @@ export default function TimeSlotSelector({
   }, [startDate, endDate, availableCells]);
 
   const {
-    selectedCells,
-    setSelectedCells,
+    // selectedCells, // Managed by useHistory now
+    // setSelectedCells, // Managed by useHistory now
     handleMouseDown,
     handleMouseEnter,
     handleMouseUp,
@@ -152,7 +176,7 @@ export default function TimeSlotSelector({
     removeSlot,
     clearAllSlots: _clearAllSlots,
   } = useTimeSlotDragSelection({
-    initialSelectedCells,
+    initialSelectedCells, // Still passed for fallback, but ignored in controlled mode
     slotDuration,
     getCellKey,
     isSlotSelectable,
@@ -164,6 +188,15 @@ export default function TimeSlotSelector({
     },
     startDate,
     endDate,
+    // Controlled Mode Props
+    value: selectedCells,
+    onChange: setSelectedCells,
+    onDragStart: () => {
+        // Snapshot current state to history before dragging starts modifying it
+        // pushState pushes 'present' to 'past' and sets new 'present' (which is the same for now)
+        // This creates a checkpoint.
+        pushState(new Set(selectedCells)); // Clone to ensure new reference for history
+    }
   });
 
   const isCellSelected = (date: string, hour: number): boolean => {
@@ -176,6 +209,9 @@ export default function TimeSlotSelector({
   const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
   
   const handleHeaderClick = (date: string) => {
+    // Snapshot state before header click modification
+    pushState(new Set(selectedCells));
+
     const timeSlotsForDay: Array<{ startHour: number; label: string }> = [];
     const durationInHours = slotDuration / 60;
     let currentHour = startHour;
@@ -195,14 +231,13 @@ export default function TimeSlotSelector({
     });
     const allSelected = allCellsInColumn.every(key => selectedCells.has(key));
 
+    const newSet = new Set(selectedCells);
     if (allSelected) {
-      allCellsInColumn.forEach(key => removeSlot(key));
+      allCellsInColumn.forEach(key => newSet.delete(key));
     } else {
-      allCellsInColumn.forEach(slotKey => {
-        const [dateStr, hourStr] = slotKey.split('_');
-        setCell(dateStr, parseFloat(hourStr), true);
-      });
+      allCellsInColumn.forEach(key => newSet.add(key));
     }
+    setSelectedCells(newSet);
   };
 
   // Logic to copy first week's pattern to subsequent weeks
@@ -253,11 +288,29 @@ export default function TimeSlotSelector({
       toast('Extended date range to 4 weeks', { icon: '📅' });
     }
 
-    // 3. Apply pattern to subsequent weeks
-    const newSelectedCells = new Set(selectedCells);
+    // 3. Apply pattern to subsequent weeks (Overwrite Mode)
+    // Start with a set containing ONLY the first week's selections from current state
+    const newSelectedCells = new Set<string>();
+    
+    // Copy existing selections from first 7 days
+    for (let i = 0; i < 7; i++) {
+        const date = addDays(startDate, i);
+        if (date > endDate) break;
+        // Keep existing selections for this day
+        const durationInHours = slotDuration / 60;
+        let currentHour = startHour;
+        while (currentHour < endHour) {
+            const key = getCellKey(date, currentHour);
+            if (selectedCells.has(key)) {
+                newSelectedCells.add(key);
+            }
+            currentHour += durationInHours;
+        }
+    }
+
     let addedCount = 0;
 
-    // Start from Day 7
+    // Start from Day 7 applying pattern
     let currentDayOffset = 7; 
     let currentDate = addDays(startDate, currentDayOffset);
 
@@ -268,10 +321,9 @@ export default function TimeSlotSelector({
       if (hoursToSelect) {
         hoursToSelect.forEach(hour => {
           const key = getCellKey(currentDate, hour);
-          if (!newSelectedCells.has(key)) {
-            newSelectedCells.add(key);
-            addedCount++;
-          }
+          // Always add (overwrite logic: we didn't copy old selections for these days)
+          newSelectedCells.add(key);
+          addedCount++;
         });
       }
 
@@ -279,17 +331,15 @@ export default function TimeSlotSelector({
       currentDate = addDays(startDate, currentDayOffset);
     }
 
-    if (addedCount > 0) {
-      setSelectedCells(newSelectedCells);
-      // Trigger update callback manually since we bypassed setCell/toggleCell
-      if (onRangesChange) {
+    // Commit to history and update
+    pushState(newSelectedCells);
+    
+    // Trigger update callback manually since we bypassed setCell/toggleCell
+    if (onRangesChange) {
         const ranges = cellsToRanges(newSelectedCells, slotDuration);
         onRangesChange(ranges);
-      }
-      toast.success(`Copied pattern to following weeks! (+${addedCount} slots)`);
-    } else {
-      toast('Pattern already applied to all weeks.', { icon: '✨' });
     }
+    toast.success(`Copied pattern to following weeks!`);
   };
 
   // Check if there are any selected slots in the first week to enable "Copy"
@@ -431,12 +481,31 @@ export default function TimeSlotSelector({
         </div>
       )}
 
+      {/* Footer Area with TIP and FloatingEditMenu */}
+      <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
+          <div className="text-xs text-gray-500 font-mono mt-2">
+              <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+          </div>
+          
+          {highlightWeekends && (
+            <FloatingEditMenu 
+              onCopyPattern={copyFirstWeekPattern} 
+              canCopy={hasFirstWeekSelection}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={undo}
+              onRedo={redo}
+            />
+          )}
+      </div>
+
       <TimeSlotBottomPanel
           selectedCells={selectedCells}
           selectedSlotsByDate={selectedSlotsByDate}
           onRemoveSlot={removeSlot}
           onClearAll={() => {
-          setSelectedCells(new Set());
+          // Snapshot before clearing
+          pushState(new Set()); 
           setShowBottomPanel(false);
           }}
           showBottomPanel={showBottomPanel}
@@ -478,20 +547,6 @@ export default function TimeSlotSelector({
             </button>
         )}
       />
-
-      {/* Footer Area with TIP and FloatingEditMenu */}
-      <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
-          <div className="text-xs text-gray-500 font-mono mt-2">
-              <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
-          </div>
-          
-          {highlightWeekends && (
-            <FloatingEditMenu 
-              onCopyPattern={copyFirstWeekPattern} 
-              canCopy={hasFirstWeekSelection}
-            />
-          )}
-      </div>
     </div>
   );
 }
