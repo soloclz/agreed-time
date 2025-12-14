@@ -1,5 +1,7 @@
 # UX Design Concepts: Smart Time Selection
 
+> Status: concept/backlog only. The current product ships the standard grid selection; this pattern is recorded here for future exploration.
+
 To address the limitations of traditional grid selection on mobile devices, AgreedTime introduces a "Pattern-First" interaction model.
 
 ## 1. The Core Problem
