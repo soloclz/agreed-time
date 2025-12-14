@@ -292,6 +292,25 @@ export default function TimeSlotSelector({
     }
   };
 
+  // Check if there are any selected slots in the first week to enable "Copy"
+  const hasFirstWeekSelection = useMemo(() => {
+    if (!startDate || selectedCells.size === 0) return false;
+    
+    // Check first 7 days
+    const durationInHours = slotDuration / 60;
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(startDate, i);
+      let currentHour = startHour;
+      while (currentHour < endHour) {
+        if (selectedCells.has(getCellKey(date, currentHour))) {
+          return true;
+        }
+        currentHour += durationInHours;
+      }
+    }
+    return false;
+  }, [selectedCells, startDate, startHour, endHour, slotDuration]);
+
   // Convert selected cells to UI TimeSlots for BottomPanel
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
@@ -467,7 +486,10 @@ export default function TimeSlotSelector({
           </div>
           
           {highlightWeekends && (
-            <FloatingEditMenu onCopyPattern={copyFirstWeekPattern} />
+            <FloatingEditMenu 
+              onCopyPattern={copyFirstWeekPattern} 
+              canCopy={hasFirstWeekSelection}
+            />
           )}
       </div>
     </div>

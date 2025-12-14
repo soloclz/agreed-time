@@ -2,11 +2,17 @@ import { useState } from 'react';
 
 interface FloatingEditMenuProps {
   onCopyPattern: () => void;
+  canCopy?: boolean;
   // Future props: onUndo, onRedo, etc.
 }
 
-export default function FloatingEditMenu({ onCopyPattern }: FloatingEditMenuProps) {
+export default function FloatingEditMenu({ onCopyPattern, canCopy = false }: FloatingEditMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Auto-close if suddenly disabled while open
+  if (!canCopy && isOpen) {
+    setIsOpen(false);
+  }
 
   return (
     <div className="z-40 print:hidden">
@@ -37,11 +43,17 @@ export default function FloatingEditMenu({ onCopyPattern }: FloatingEditMenuProp
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-ink text-white shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+          disabled={!canCopy}
+          className={`flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg transition-all duration-300 ${
+            canCopy 
+              ? 'bg-ink text-white hover:scale-105 active:scale-95 cursor-pointer' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          } ${
               isOpen ? 'rotate-45' : 'rotate-0'
           }`}
           aria-label={isOpen ? "Close actions menu" : "Open edit actions"}
           aria-expanded={isOpen}
+          title={!canCopy ? "Select slots in Week 1 to enable copy" : "Edit Actions"}
         >
           <span className="text-xl font-light">{isOpen ? '＋' : '⚡'}</span>
         </button>
