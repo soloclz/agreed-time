@@ -30,67 +30,70 @@ export default function FloatingEditMenu({
       <div className="flex items-center">
         {/* Expanded Actions Menu (slides out from left) */}
         <div 
-          className={`flex items-center space-x-2 mr-2 transition-all duration-300 ease-in-out ${
-            isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full pointer-events-none'
+          className={`flex items-center overflow-hidden transition-all duration-300 ease-in-out ${
+            isOpen ? 'max-w-[16rem] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'
           }`}
         >
-          {/* Undo Button */}
-          {onUndo && (
+          {/* Inner container to hold width stable while outer clips */}
+          <div className="flex items-center space-x-2 min-w-max px-1">
+            {/* Undo Button */}
+            {onUndo && (
+              <button
+                type="button"
+                onClick={onUndo}
+                disabled={!canUndo}
+                className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
+                  canUndo 
+                    ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
+                    : 'text-gray-300 cursor-not-allowed'
+                }`}
+                aria-label="Undo"
+                title="Undo"
+              >
+                <span className="text-lg">↩️</span>
+              </button>
+            )}
+
+            {/* Redo Button */}
+            {onRedo && (
+              <button
+                type="button"
+                onClick={onRedo}
+                disabled={!canRedo}
+                className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
+                  canRedo 
+                    ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
+                    : 'text-gray-300 cursor-not-allowed'
+                }`}
+                aria-label="Redo"
+                title="Redo"
+              >
+                <span className="text-lg">↪️</span>
+              </button>
+            )}
+
+            {/* Divider */}
+            <div className="w-px h-6 bg-film-border/50 mx-1"></div>
+
+            {/* Copy Pattern Button */}
             <button
-              type="button"
-              onClick={onUndo}
-              disabled={!canUndo}
-              className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
-                canUndo 
-                  ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
-                  : 'text-gray-300 cursor-not-allowed'
-              }`}
-              aria-label="Undo"
-              title="Undo"
+                type="button"
+                onClick={() => {
+                  onCopyPattern();
+                  setIsOpen(false);
+                }}
+                disabled={!canCopy}
+                className={`flex items-center justify-center h-10 px-3 py-1 rounded-md border border-film-border text-sm font-bold shadow-md transition-all whitespace-nowrap ${
+                  canCopy
+                    ? 'bg-white text-film-accent hover:bg-film-light hover:scale-105 active:scale-95'
+                    : 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                }`}
+                aria-label="Copy Week 1 Pattern to All Weeks"
+                title="Copy Week 1 Pattern to All Weeks"
             >
-              <span className="text-lg">↩️</span>
+                <span className="text-lg mr-2">✨</span> Copy Week 1
             </button>
-          )}
-
-          {/* Redo Button */}
-          {onRedo && (
-            <button
-              type="button"
-              onClick={onRedo}
-              disabled={!canRedo}
-              className={`flex items-center justify-center w-10 h-10 rounded-full bg-white border border-film-border shadow-md transition-all ${
-                canRedo 
-                  ? 'text-ink hover:bg-film-light hover:scale-110 active:scale-95' 
-                  : 'text-gray-300 cursor-not-allowed'
-              }`}
-              aria-label="Redo"
-              title="Redo"
-            >
-              <span className="text-lg">↪️</span>
-            </button>
-          )}
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-film-border/50 mx-1"></div>
-
-          {/* Copy Pattern Button */}
-          <button
-              type="button"
-              onClick={() => {
-                onCopyPattern();
-                setIsOpen(false);
-              }}
-              disabled={!canCopy}
-              className={`flex items-center justify-center h-10 px-3 py-1 rounded-md border border-film-border text-sm font-bold shadow-md transition-all whitespace-nowrap ${
-                canCopy
-                  ? 'bg-white text-film-accent hover:bg-film-light hover:scale-105 active:scale-95'
-                  : 'bg-gray-50 text-gray-300 cursor-not-allowed'
-              }`}
-              aria-label="Copy Week 1 Pattern to All Weeks"
-              title="Copy Week 1 Pattern to All Weeks"
-          >
-              <span className="text-lg mr-2">✨</span> Copy Week 1
-          </button>
+          </div>
         </div>
 
         {/* Main Toggle Button (The Dock itself) */}

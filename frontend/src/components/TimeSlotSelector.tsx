@@ -534,20 +534,23 @@ export default function TimeSlotSelector({
         />
 
         {/* Footer Area with TIP and FloatingEditMenu */}
-        <div className="flex justify-between items-start pt-1 relative min-h-[3rem]">
-            <div className="text-xs text-gray-500 font-mono">
-                <p>💡 TIP: CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</p>
+        <div className="mt-1 pt-1 relative min-h-[3rem]">
+            <div className="text-xs text-gray-500 font-mono pr-12 sm:pr-0 flex">
+                <span className="flex-shrink-0 mr-1">💡</span>
+                <span className="flex-grow">CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</span>
             </div>
             
             {highlightWeekends && (
-                <FloatingEditMenu 
-                onCopyPattern={copyFirstWeekPattern} 
-                canCopy={hasFirstWeekSelection}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onUndo={undo}
-                onRedo={redo}
-                />
+                <div className="absolute right-0 top-4 sm:top-0">
+                    <FloatingEditMenu 
+                    onCopyPattern={copyFirstWeekPattern} 
+                    canCopy={hasFirstWeekSelection}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={undo}
+                    onRedo={redo}
+                    />
+                </div>
             )}
         </div>
       </div>
