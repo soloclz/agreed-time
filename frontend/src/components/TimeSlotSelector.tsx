@@ -57,6 +57,11 @@ export default function TimeSlotSelector({
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(18);
 
+  // Determine if it's Guest Mode
+  const isGuestMode = availableRanges !== undefined;
+  // Based on feedback, only highlight weekends in Organizer mode
+  const highlightWeekends = !isGuestMode;
+
   // Convert initial ranges to selected cells set
   const initialSelectedCells = useMemo(() => {
     return rangesToCells(initialRanges, slotDuration);
@@ -71,7 +76,7 @@ export default function TimeSlotSelector({
 
   useEffect(() => {
     // Guest Mode: Calculate date/time range from availableRanges
-    if (availableRanges && availableRanges.length > 0) {
+    if (isGuestMode && availableRanges && availableRanges.length > 0) {
       const dates: string[] = [];
       const startTimes: number[] = [];
       const endTimes: number[] = [];
@@ -117,7 +122,7 @@ export default function TimeSlotSelector({
     }
 
     setIsMounted(true);
-  }, [availableRanges]);
+  }, [isGuestMode, availableRanges]);
 
   const isSlotSelectable = useCallback((date: string, hour: number): boolean => {
     // 1. Range Check
@@ -407,7 +412,7 @@ export default function TimeSlotSelector({
       )}
 
       {/* Smart Actions Toolbar (Organizer Mode Only) */}
-      {!availableRanges && (
+      {highlightWeekends && ( // Only show in Organizer Mode
         <div className="flex justify-end">
           <button
             type="button"
@@ -438,6 +443,7 @@ export default function TimeSlotSelector({
         startHour={startHour}
         endHour={endHour}
         slotDuration={slotDuration}
+        highlightWeekends={highlightWeekends} // Pass the prop
         onGridMount={setGridElement} // Pass the setter
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
@@ -451,6 +457,7 @@ export default function TimeSlotSelector({
             mode="select"
             isSelected={isCellSelected(date, hour)}
             isSelectable={isSlotSelectable(date, hour)}
+            highlightWeekends={highlightWeekends} // Pass the prop
             gridScrollElement={gridElement} // Pass the element state
           />
         )}

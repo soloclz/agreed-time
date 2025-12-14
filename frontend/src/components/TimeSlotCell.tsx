@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { HeatmapCellData } from '../types';
+import { getDayOfWeek } from '../utils/dateUtils';
 
 interface TimeSlotCellProps {
   // Coordinates
@@ -12,6 +13,7 @@ interface TimeSlotCellProps {
   mode: 'select' | 'heatmap';
   isSelected: boolean;
   isSelectable: boolean;
+  highlightWeekends?: boolean; // New prop, defaults to true
   
   // Heatmap Data
   heatmapData?: HeatmapCellData;
@@ -28,6 +30,7 @@ export default function TimeSlotCell({
   mode,
   isSelected,
   isSelectable,
+  highlightWeekends = true,
   heatmapData,
   totalParticipants = 0,
   gridScrollElement, // Changed from ref to direct element
@@ -143,7 +146,18 @@ export default function TimeSlotCell({
     } else if (!isSelectable) {
       modeClasses = "bg-gray-100/50 cursor-not-allowed pattern-diagonal-lines opacity-50";
     } else {
-      modeClasses = "cursor-pointer bg-film-light hover:bg-white active:bg-white";
+      const dayOfWeek = getDayOfWeek(date);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      let bgClass = 'bg-film-light'; // Default for weekdays
+      let hoverActiveClasses = 'hover:bg-film-border active:bg-film-accent/20'; // Default for weekdays
+      
+      if (highlightWeekends && isWeekend) {
+        bgClass = 'bg-film-accent/5';
+        hoverActiveClasses = 'hover:bg-film-accent/10 active:bg-film-accent/20';
+      }
+
+      modeClasses = `cursor-pointer ${bgClass} ${hoverActiveClasses}`;
     }
   } else {
     // Heatmap mode
