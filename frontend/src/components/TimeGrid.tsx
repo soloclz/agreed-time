@@ -4,6 +4,7 @@ import {
   parseLocalDate,
   diffInDays,
   formatDateDisplay,
+  getDayOfWeek,
 } from '../utils/dateUtils';
 
 interface TimeGridProps {
@@ -12,6 +13,7 @@ interface TimeGridProps {
   startHour: number; // 0-23
   endHour:   number; // 0-23
   slotDuration: number; // in minutes (e.g., 60)
+  highlightWeekends?: boolean; // Defaults to true
   
   // Callback to provide parent with the scrollable grid element
   onGridMount?: (element: HTMLDivElement | null) => void;
@@ -39,6 +41,7 @@ export default function TimeGrid({
   startHour,
   endHour,
   slotDuration,
+  highlightWeekends = true,
   onGridMount,
   renderCell,
   renderDateHeader,
@@ -186,6 +189,14 @@ export default function TimeGrid({
               <thead>
                 <tr>
                   {days.map(date => {
+                    const dayOfWeek = getDayOfWeek(date);
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    let headerClass = 'bg-paper text-ink'; // Default weekday
+                    
+                    if (highlightWeekends && isWeekend) {
+                      headerClass = 'bg-film-accent/5 text-ink'; // Weekend background, but default text color
+                    }
+
                     const defaultHeader = (
                       <div className="w-full h-full px-2 sm:px-4 flex items-center justify-center min-w-[4rem] sm:min-w-[6rem]">
                         {formatDateDisplay(date)}
@@ -195,7 +206,7 @@ export default function TimeGrid({
                       <th
                         key={date}
                         data-date={date}
-                        className="border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 bg-paper text-ink snap-start scroll-ml-14"
+                        className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 snap-start scroll-ml-14 ${headerClass}`}
                       >
                         {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
                       </th>
