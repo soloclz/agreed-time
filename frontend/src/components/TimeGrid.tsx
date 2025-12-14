@@ -1,8 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import {
   addDays,
-  parseLocalDate,
-  diffInDays,
   formatDateDisplay,
   getDayOfWeek,
   formatMinimalTimeLabel,
@@ -104,10 +102,6 @@ export default function TimeGrid({
     if (endDate < startDate) return 'End date cannot be before start date';
     return null;
   }, [startDate, endDate]);
-
-  const isDateInRange = (dateStr: string): boolean => {
-    return dateStr >= startDate && dateStr <= endDate;
-  };
 
   // Helper to generate time slot key
   const getCellKey = (date: string, startTime: string, endTime: string): string =>

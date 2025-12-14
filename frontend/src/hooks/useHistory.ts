@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 
+type StateOrUpdater<T> = T | ((prev: T) => T);
+
 interface HistoryResult<T> {
   state: T;
-  setState: (newState: T) => void; // Standard setter, does NOT commit to history (update in place)
-  pushState: (newState: T) => void; // Update state AND commit previous state to history
+  setState: (newState: StateOrUpdater<T>) => void; // Standard setter, does NOT commit to history (update in place)
+  pushState: (newState: StateOrUpdater<T>) => void; // Update state AND commit previous state to history
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -43,15 +45,16 @@ export function useHistory<T>(initialState: T): HistoryResult<T> {
 
   // Standard setState: Just updates the current value, doesn't touch history.
   // Useful for intermediate drag states.
-  const setState = useCallback((newState: T) => {
-    setPresent(newState);
+  const setState = useCallback((newState: StateOrUpdater<T>) => {
+    setPresent(prev => (typeof newState === 'function' ? (newState as (value: T) => T)(prev) : newState));
   }, []);
 
   // Push new state: Commits the *current* 'present' to history, then sets new 'present'.
   // Use this for discrete actions (like Copy, or Drag Start/End boundary).
-  const pushState = useCallback((newState: T) => {
+  const pushState = useCallback((newState: StateOrUpdater<T>) => {
     setPast(prev => [...prev, present]);
-    setPresent(newState);
+    const resolvedState = typeof newState === 'function' ? (newState as (value: T) => T)(present) : newState;
+    setPresent(resolvedState);
     setFuture([]); // Clear future when a new action is taken
   }, [present]);
 
