@@ -193,7 +193,7 @@ export default function TimeGrid({
                     }
 
                     const defaultHeader = (
-                      <div className="w-full h-full px-1 sm:px-2 flex items-center justify-center min-w-[3rem] sm:min-w-[4rem]">
+                      <div className="w-full h-full px-1 sm:px-2 flex items-center justify-center min-w-[3rem] sm:min-w-[3rem]">
                         {formatDateDisplay(date)}
                       </div>
                     );
@@ -201,7 +201,7 @@ export default function TimeGrid({
                       <th
                         key={date}
                         data-date={date}
-                        className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 snap-start scroll-ml-14 ${headerClass}`}
+                        className={`border-b border-r border-film-border p-0 text-xs font-serif font-bold whitespace-pre-line text-center h-12 box-border last:border-r-0 snap-start ${headerClass}`}
                       >
                         {renderDateHeader ? renderDateHeader(date, defaultHeader) : defaultHeader}
                       </th>

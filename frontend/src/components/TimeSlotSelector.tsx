@@ -590,7 +590,7 @@ export default function TimeSlotSelector({
 
       {/* Sticky Edit Menu */}
       {highlightWeekends && (
-          <div className="sticky bottom-24 z-50 flex justify-end pointer-events-none -mb-12 -mr-7">
+          <div className="sticky bottom-24 z-50 flex justify-end pointer-events-none -mb-12 md:-mr-4">
              <div className="pointer-events-auto relative top-4">
                 <FloatingEditMenu 
                   onCopyPattern={copyFirstWeekPattern} 
