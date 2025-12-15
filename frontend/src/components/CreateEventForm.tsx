@@ -84,8 +84,9 @@ export default function CreateEventForm() {
       <div className="space-y-4 sm:space-y-6">
 
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-ink mb-2 font-serif">
+          <label htmlFor="title" className="block text-sm font-medium text-ink mb-2 font-serif relative">
             Event Title <span className="text-red-500">*</span>
+            <span className="absolute top-0 right-0 text-sm text-gray-500">{title.length}/50</span>
           </label>
           <input
             id="title"
@@ -97,12 +98,14 @@ export default function CreateEventForm() {
             className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono rounded-t-sm placeholder-gray-400 text-ink"
             required
             autoComplete="off"
+            maxLength={50}
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-ink mb-2 font-serif">
+          <label htmlFor="description" className="block text-sm font-medium text-ink mb-2 font-serif relative">
             Description (optional)
+            <span className="absolute top-0 right-0 text-sm text-gray-500">{description.length}/500</span>
           </label>
           <textarea
             ref={textareaRef}
@@ -116,12 +119,14 @@ export default function CreateEventForm() {
             placeholder="Add any details about the event..."
             rows={1}
             className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
+            maxLength={500}
           />
         </div>
 
         <div>
-          <label htmlFor="organizerName" className="block text-sm font-medium text-ink mb-2 font-serif">
+          <label htmlFor="organizerName" className="block text-sm font-medium text-ink mb-2 font-serif relative">
             Your name (optional)
+            <span className="absolute top-0 right-0 text-sm text-gray-500">{organizerName.length}/50</span>
           </label>
           <input
             id="organizerName"
@@ -132,6 +137,7 @@ export default function CreateEventForm() {
             placeholder="Organizer"
             className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono rounded-t-sm placeholder-gray-400 text-ink"
             autoComplete="name"
+            maxLength={50}
           />
         </div>
       </div>
