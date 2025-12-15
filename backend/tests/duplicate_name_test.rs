@@ -81,7 +81,10 @@ async fn test_duplicate_participant_names_allowed() {
     if let Err(e) = &result {
         eprintln!("Submit availability failed: {:?}", e);
     }
-    assert!(result.is_ok(), "Duplicate name submission should be allowed");
+    assert!(
+        result.is_ok(),
+        "Duplicate name submission should be allowed"
+    );
 
     // 3. Verify there are now TWO participants named "Alice"
     let count = sqlx::query_scalar!(
@@ -94,7 +97,10 @@ async fn test_duplicate_participant_names_allowed() {
     .unwrap()
     .unwrap_or(0);
 
-    assert_eq!(count, 2, "Should have 2 participants named Alice (Organizer + Guest)");
+    assert_eq!(
+        count, 2,
+        "Should have 2 participants named Alice (Organizer + Guest)"
+    );
 
     // 4. Cleanup
     sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
