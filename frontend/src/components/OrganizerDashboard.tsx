@@ -186,9 +186,6 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                 <div className="bg-film-light/30 p-4 rounded-lg border border-film-border/50 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
                    <div className="flex-grow">
                       <p className="text-sm text-ink/70 mb-2">Share this public link with others to vote:</p>
-                      <div className="font-mono text-sm bg-white px-3 py-2 rounded border border-film-border text-ink truncate select-all">
-                        {publicEventUrl}
-                      </div>
                    </div>
                    <button 
                      onClick={() => {
