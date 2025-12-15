@@ -57,7 +57,6 @@ export interface HeatmapCellData {
   count: number;
   ratio: number;
   participants: string[];
-  attendees: string[]; // Alias for participants or just extra field
 }
 
 export interface EventData {

@@ -41,13 +41,13 @@ export default function TimeSlotCell({
 }: TimeSlotCellProps) {
   
   // Memoize opacity calculation
-  const { finalOpacity, hasVotes, count, attendees } = useMemo(() => {
+  const { finalOpacity, hasAvailability, count, participants } = useMemo(() => {
     if (mode !== 'heatmap') {
-      return { finalOpacity: 0, hasVotes: false, count: 0, attendees: [] };
+      return { finalOpacity: 0, hasAvailability: false, count: 0, participants: [] };
     }
 
     const count = heatmapData?.count || 0;
-    const attendees = heatmapData?.attendees || [];
+    const participants = heatmapData?.participants || [];
     
     // 1. Get raw ratio (0 to 1)
     const rawRatio = totalParticipants > 0 ? count / totalParticipants : 0;
@@ -60,7 +60,7 @@ export default function TimeSlotCell({
         ? Math.min(1, Math.max(0.15, scaledOpacity)) 
         : 0;
 
-    return { finalOpacity, hasVotes: count > 0, count, attendees };
+    return { finalOpacity, hasAvailability: count > 0, count, participants };
   }, [mode, heatmapData, totalParticipants]);
 
   // Tooltip State (Portal)
@@ -112,7 +112,7 @@ export default function TimeSlotCell({
 
   const handleMouseEnter = () => {
     // Only handling tooltip here. Selection/Drag events are delegated in TimeGrid.
-    if (mode === 'heatmap' && hasVotes) {
+    if (mode === 'heatmap' && hasAvailability) {
       updateTooltipPosition();
       setShowTooltip(true);
     }
@@ -126,7 +126,7 @@ export default function TimeSlotCell({
 
   const handleClick = () => {
     // Mobile toggle support for Heatmap tooltip
-    if (mode === 'heatmap' && hasVotes) {
+    if (mode === 'heatmap' && hasAvailability) {
       if (showTooltip) {
         setShowTooltip(false);
       } else {
@@ -165,7 +165,7 @@ export default function TimeSlotCell({
     }
   } else {
     // Heatmap mode
-    if (hasVotes) {
+    if (hasAvailability) {
       modeClasses = "heatmap-cell";
       cssVars = { '--cell-opacity': finalOpacity };
     } else {
@@ -193,7 +193,7 @@ export default function TimeSlotCell({
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       >
-        {mode === 'heatmap' && hasVotes && (
+        {mode === 'heatmap' && hasAvailability && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className={`text-xs font-bold ${finalOpacity > 0.6 ? 'text-white' : 'text-film-accent'}`}>
               {count}
@@ -203,7 +203,7 @@ export default function TimeSlotCell({
       </td>
 
       {/* Portal Tooltip */}
-      {mounted && showTooltip && mode === 'heatmap' && hasVotes && createPortal(
+      {mounted && showTooltip && mode === 'heatmap' && hasAvailability && createPortal(
         <div 
           className="absolute z-[9999] pointer-events-none flex flex-col items-center"
           style={{
@@ -216,7 +216,7 @@ export default function TimeSlotCell({
             <div className="bg-ink text-white text-xs rounded p-2 shadow-lg max-w-[200px] mb-[-1px]">
                 <div className="font-bold mb-1">{date} @ {slotLabel}</div>
                 <div className="text-white/80 whitespace-normal">
-                    {attendees.join(', ')}
+                    {participants.join(', ')}
                 </div>
             </div>
             {/* Arrow - using border hack */}

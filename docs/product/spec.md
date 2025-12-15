@@ -47,7 +47,7 @@ The current build lets an organizer create an event with proposed time windows, 
 - Computes counts client-side from participant ranges (no aggregated counts from the API).
 - Sections:
   - Header with timezone note using the viewer's offset string.
-  - **Best Times:** all slots tied for highest availability, showing date/time and attendee list.
+  - **Best Times:** all slots tied for highest availability, showing date/time and participant list.
   - **Other Options:** remaining slots sorted by count then time.
   - **Participants:** list with organizer badge and optional comments; empty-state handling for zero or organizer-only responses.
   - **Heatmap:** read-only grid intensity based on availability counts.

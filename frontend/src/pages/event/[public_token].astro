@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import EventGuestForm from '../../components/EventGuestForm';
+import EventParticipantForm from '../../components/EventParticipantForm';
 
 const { public_token } = Astro.params;
 
@@ -12,7 +12,7 @@ if (!public_token) {
 <Layout title="Event Invitation">
   <main class="min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-paper">
     <div class="max-w-3xl mx-auto">
-      <EventGuestForm client:load publicToken={public_token} />
+      <EventParticipantForm client:load publicToken={public_token} />
     </div>
   </main>
 </Layout>

@@ -7,7 +7,7 @@ import type { HeatmapCellData, TimeSlot } from '../types';
 interface SlotData {
   slot: string; // ISO string
   count: number;
-  attendees: string[];
+  participants: string[];
 }
 
 interface HeatmapProps {
@@ -50,8 +50,7 @@ export default function Heatmap({ slots, totalParticipants, slotDuration = 60 }:
         hour,
         count: s.count,
         ratio: totalParticipants > 0 ? s.count / totalParticipants : 0,
-        participants: s.attendees,
-        attendees: s.attendees,
+        participants: s.participants,
       };
 
       if (s.count > 0) {

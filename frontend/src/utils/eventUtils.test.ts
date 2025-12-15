@@ -34,27 +34,27 @@ describe('eventUtils', () => {
 
   describe('isOrganizerOnlySlot', () => {
     it('should return true for slot with only organizer', () => {
-      const slot = { count: 1, attendees: ['Organizer'] };
+      const slot = { count: 1, participants: ['Organizer'] };
       expect(isOrganizerOnlySlot(slot, 'Organizer')).toBe(true);
     });
 
     it('should return false for slot with organizer and others', () => {
-      const slot = { count: 2, attendees: ['Organizer', 'Alice'] };
+      const slot = { count: 2, participants: ['Organizer', 'Alice'] };
       expect(isOrganizerOnlySlot(slot, 'Organizer')).toBe(false);
     });
 
     it('should return false for slot with only non-organizer', () => {
-      const slot = { count: 1, attendees: ['Alice'] };
+      const slot = { count: 1, participants: ['Alice'] };
       expect(isOrganizerOnlySlot(slot, 'Organizer')).toBe(false);
     });
 
     it('should return false if organizer name is undefined', () => {
-      const slot = { count: 1, attendees: ['Someone'] };
+      const slot = { count: 1, participants: ['Someone'] };
       expect(isOrganizerOnlySlot(slot, undefined)).toBe(false);
     });
 
-    it('should handle empty attendees list', () => {
-      const slot = { count: 0, attendees: [] };
+    it('should handle empty participants list', () => {
+      const slot = { count: 0, participants: [] };
       expect(isOrganizerOnlySlot(slot, 'Organizer')).toBe(false);
     });
   });
@@ -92,10 +92,10 @@ describe('eventUtils', () => {
 
   describe('filterOrganizerOnlySlots', () => {
     const slots = [
-      { count: 3, attendees: ['Organizer', 'Alice', 'Bob'], date: '2025-12-10' },
-      { count: 2, attendees: ['Organizer', 'Alice'], date: '2025-12-11' },
-      { count: 1, attendees: ['Organizer'], date: '2025-12-12' },
-      { count: 1, attendees: ['Alice'], date: '2025-12-13' },
+      { count: 3, participants: ['Organizer', 'Alice', 'Bob'], date: '2025-12-10' },
+      { count: 2, participants: ['Organizer', 'Alice'], date: '2025-12-11' },
+      { count: 1, participants: ['Organizer'], date: '2025-12-12' },
+      { count: 1, participants: ['Alice'], date: '2025-12-13' },
     ];
 
     it('should filter out organizer-only slots when multiple participants', () => {
@@ -127,10 +127,10 @@ describe('eventUtils', () => {
 
     it('should preserve slot order', () => {
       const orderedSlots = [
-        { count: 1, attendees: ['Organizer'], priority: 1 },
-        { count: 2, attendees: ['Organizer', 'Alice'], priority: 2 },
-        { count: 1, attendees: ['Organizer'], priority: 3 },
-        { count: 2, attendees: ['Alice', 'Bob'], priority: 4 },
+        { count: 1, participants: ['Organizer'], priority: 1 },
+        { count: 2, participants: ['Organizer', 'Alice'], priority: 2 },
+        { count: 1, participants: ['Organizer'], priority: 3 },
+        { count: 2, participants: ['Alice', 'Bob'], priority: 4 },
       ];
 
       const filtered = filterOrganizerOnlySlots(orderedSlots, 3, 'Organizer');
@@ -148,10 +148,10 @@ describe('eventUtils', () => {
       ];
 
       const allSlots = [
-        { count: 3, attendees: ['Alice', 'Bob', 'Charlie'] }, // All available
-        { count: 2, attendees: ['Alice', 'Bob'] },            // 2 available
-        { count: 1, attendees: ['Alice'] },                   // Only organizer
-        { count: 2, attendees: ['Bob', 'Charlie'] },          // 2 non-organizers
+        { count: 3, participants: ['Alice', 'Bob', 'Charlie'] }, // All available
+        { count: 2, participants: ['Alice', 'Bob'] },            // 2 available
+        { count: 1, participants: ['Alice'] },                   // Only organizer
+        { count: 2, participants: ['Bob', 'Charlie'] },          // 2 non-organizers
       ];
 
       const organizerName = findOrganizerName(participants);
