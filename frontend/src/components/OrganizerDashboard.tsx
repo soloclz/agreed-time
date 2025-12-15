@@ -187,7 +187,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                    <div className="flex-grow">
                       <p className="text-sm text-ink/70 mb-2">Share this public link with others to vote:</p>
                       <div className="font-mono text-sm bg-white px-3 py-2 rounded border border-film-border text-ink truncate select-all">
-                        {publicEventDisplayUrl}
+                        {publicEventUrl}
                       </div>
                    </div>
                    <button 
@@ -217,9 +217,6 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                         <h4 className="text-sm font-bold text-ink">Read-Only Results Link</h4>
                         <p className="text-xs text-ink/60 mb-2">Use this if you want to share the results without allowing people to vote or modify entries.</p>
                         <div className="flex items-center gap-3">
-                           <code className="text-xs bg-gray-100 px-2 py-1 rounded flex-grow truncate text-ink/70">
-                             {publicResultsDisplayUrl}
-                           </code>
                            <button 
                              onClick={() => {
                                 navigator.clipboard.writeText(publicResultsUrl);
