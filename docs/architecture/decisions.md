@@ -95,3 +95,21 @@
     *   (+) Avoids backend changes for finalization logic.
     *   (-) Organizers must decide a time manually outside the app.
     *   (-) Less expressiveness for participants (no soft/conditional votes).
+
+## ADR-008: Allowing Duplicate Participant Names for Security & Simplicity
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-15
+*   **Context**:
+    *   Initially, `participants` table had `UNIQUE(event_id, name)` to allow "update by re-entering name" for anonymous users.
+    *   This led to a security vulnerability where any user could overwrite an existing participant's (including the organizer's) data by submitting with the same name.
+    *   The previous approach of simply blocking organizer names was deemed insufficient as it didn't align with the principle of "modification should be handled by other means."
+*   **Decision**:
+    *   Remove the `UNIQUE(event_id, name)` constraint from the `participants` table.
+    *   Modify the `submit_availability` endpoint in the backend to **always insert a new participant entry** for every submission, even if the name already exists for that event.
+*   **Consequences**:
+    *   (+) **Security greatly improved**: Prevents any form of name-based participant data overwriting, including the organizer. Every submission is a new record.
+    *   (+) Simplifies backend logic for `submit_availability`, removing complex lookup and update paths.
+    *   (-) **Loss of "update by re-entering name" feature**: Users can no longer modify their previous submissions by typing the same name. Each submission will create a new entry with a duplicate name.
+    *   (-) Leads to potentially multiple entries with the same name for a single event in the database and UI, which might require UI adjustments to distinguish or group them.
+    *   (Future Work): If modification functionality is desired, a more robust identity mechanism (e.g., cookie-based `participant_token` or magic links) will need to be implemented.
