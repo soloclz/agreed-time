@@ -75,15 +75,12 @@ where
             let mut extracted_ip = conn_info.0;
 
             // Check X-Forwarded-For
-            if let Some(x_forwarded_for) = req.headers().get("x-forwarded-for") {
-                if let Ok(ip_str) = x_forwarded_for.to_str() {
-                    if let Some(client_ip) = ip_str.split(',').next() {
-                        if let Ok(ip_addr) = client_ip.trim().parse::<Ipv4Addr>() {
-                            extracted_ip =
-                                SocketAddr::V4(SocketAddrV4::new(ip_addr, conn_info.0.port()));
-                        }
-                    }
-                }
+            if let Some(x_forwarded_for) = req.headers().get("x-forwarded-for")
+                && let Ok(ip_str) = x_forwarded_for.to_str()
+                && let Some(client_ip) = ip_str.split(',').next()
+                && let Ok(ip_addr) = client_ip.trim().parse::<Ipv4Addr>()
+            {
+                extracted_ip = SocketAddr::V4(SocketAddrV4::new(ip_addr, conn_info.0.port()));
             }
             extracted_ip
         } else {
