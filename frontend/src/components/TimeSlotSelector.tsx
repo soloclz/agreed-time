@@ -432,14 +432,7 @@ export default function TimeSlotSelector({
             Select Your Available Time Slots
         </h3>
         <p className="text-xs sm:text-sm text-gray-600 mt-1 font-mono">
-            <>
-            <span className="md:hidden">
-                Long press & drag to select.
-            </span>
-            <span className="hidden md:inline">
-                Click and drag to select time slots, or click date headers to select a full day.
-            </span>
-            </>
+            Pick when you're free in the grid.
         </p>
       </div>
 
@@ -579,7 +572,10 @@ export default function TimeSlotSelector({
         <div className="mt-1 pt-1 relative min-h-[3rem]">
             <div className="text-xs text-gray-500 font-mono flex">
                 <span className="flex-shrink-0 mr-1">💡</span>
-                <span className="flex-grow">CLICK AND DRAG TO SELECT MULTIPLE SLOTS.</span>
+                <span className="flex-grow">
+                    <span className="md:hidden">Long press & drag on the grid to select time slots. Tap the date header to toggle that day.</span>
+                    <span className="hidden md:inline">Click and drag on the grid to select time slots; click a date header to toggle the full day.</span>
+                </span>
             </div>
         </div>
       </div>
