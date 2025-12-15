@@ -75,8 +75,12 @@ import type {
         console.error('Create event failed:', response.status, text);
         try {
             const errorData = JSON.parse(text);
-            throw new Error(errorData.message || 'Failed to create event');
-        } catch (e) {
+            throw new Error(errorData.error || errorData.message || 'Failed to create event');
+        } catch (e: any) {
+             // If the error we just threw is ours, rethrow it.
+             if (e.message && e.message !== 'Failed to create event' && !e.message.startsWith('Unexpected token')) {
+                 throw e;
+             }
             throw new Error(`Failed to create event: ${response.status} ${response.statusText}`);
         }
       }
@@ -101,7 +105,8 @@ import type {
   
       if (!apiResponse.ok) {
         const errorDetail = await apiResponse.json();
-        throw new Error(errorDetail.message || `Failed to submit response: ${apiResponse.statusText}`);
+        // Backend returns { "error": "message" }
+        throw new Error(errorDetail.error || errorDetail.message || `Failed to submit response: ${apiResponse.statusText}`);
       }
     },
   
@@ -160,8 +165,11 @@ import type {
         console.error('Close event failed:', response.status, text);
         try {
             const errorData = JSON.parse(text);
-            throw new Error(errorData.message || 'Failed to close event');
-        } catch (e) {
+            throw new Error(errorData.error || errorData.message || 'Failed to close event');
+        } catch (e: any) {
+             if (e.message && e.message !== 'Failed to close event' && !e.message.startsWith('Unexpected token')) {
+                 throw e;
+             }
             throw new Error(`Failed to close event: ${response.status} ${response.statusText}`);
         }
       }
