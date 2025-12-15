@@ -1,8 +1,9 @@
 use agreed_time_backend::handlers::events::submit_availability;
 use agreed_time_backend::models::{SubmitAvailabilityRequest, TimeRangeRequest};
+use agreed_time_backend::error::AppError; // Added import
 use axum::extract::{Path, State};
 use axum::Json;
-use chrono::Utc;
+use chrono::{Utc, Duration};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use uuid::Uuid;
@@ -79,7 +80,7 @@ async fn test_participant_limit() {
         participant_name: "Guest 10".to_string(),
         availabilities: vec![TimeRangeRequest {
             start_at: Utc::now(),
-            end_at: Utc::now(),
+            end_at: Utc::now() + Duration::hours(1),
         }],
         comment: None,
     };
@@ -99,7 +100,7 @@ async fn test_participant_limit() {
         participant_name: "Guest 11".to_string(),
         availabilities: vec![TimeRangeRequest {
             start_at: Utc::now(),
-            end_at: Utc::now(),
+            end_at: Utc::now() + Duration::hours(1),
         }],
         comment: None,
     };
@@ -114,8 +115,7 @@ async fn test_participant_limit() {
     match result_11 {
         Ok(_) => panic!("Should have failed due to participant limit"),
         Err(e) => {
-             let err_msg = format!("{:?}", e);
-             assert!(err_msg.contains("Event has reached maximum limit of 10 participants") || err_msg.contains("BadRequest"), "Unexpected error: {:?}", e);
+             assert_eq!(e.code(), "PARTICIPANT_LIMIT_REACHED", "Unexpected error code: {:?}", e);
         }
     }
     

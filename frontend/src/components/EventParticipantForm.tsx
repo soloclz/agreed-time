@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { ApiTimeRange, EventData } from '../types';
 import TimeSlotSelector from './TimeSlotSelector';
-import { eventService } from '../services/eventService';
+import { eventService, ApiError } from '../services/eventService';
 
 export default function EventParticipantForm({ publicToken }: { publicToken: string }) {
   const [eventData, setEventData] = useState<EventData | null>(null);
@@ -60,7 +60,11 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
       setSubmitted(true);
       toast.success('Your availability has been submitted!');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to submit response.');
+      if (err instanceof ApiError && err.code === 'PARTICIPANT_LIMIT_REACHED') {
+         toast.error('This event has reached the maximum number of participants (10).');
+      } else {
+         toast.error(err.message || 'Failed to submit response.');
+      }
     }
   };
 

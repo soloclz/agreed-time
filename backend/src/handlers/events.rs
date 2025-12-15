@@ -283,9 +283,7 @@ pub async fn submit_availability(
         .unwrap_or(0);
 
         if count >= 10 {
-            return Err(AppError::BadRequest(
-                "Event has reached maximum limit of 10 participants".to_string(),
-            ));
+            return Err(AppError::ParticipantLimitReached(10));
         }
 
         // New participant, insert with comment

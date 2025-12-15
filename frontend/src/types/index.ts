@@ -103,3 +103,8 @@ export interface OrganizerEventResponse extends EventResultsResponse {
   organizer_token: string;
   created_at: string;
 }
+
+export interface ApiErrorResponse {
+  error: string;
+  code?: string;
+}
