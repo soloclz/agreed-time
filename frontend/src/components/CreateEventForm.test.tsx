@@ -80,4 +80,33 @@ describe('CreateEventForm', () => {
     expect(organizerNameArg).toBe('Organizer');
     expect(rangesArg).toEqual(mockRanges);
   });
+
+  it('enforces character limits and shows counters', () => {
+    render(<CreateEventForm />);
+
+    // Title
+    const titleInput = screen.getByLabelText(/Event Title/i);
+    expect(titleInput).toHaveAttribute('maxLength', '50');
+    expect(screen.getByText('0/50')).toBeInTheDocument();
+
+    fireEvent.change(titleInput, { target: { value: 'Test Title' } });
+    expect(screen.getByText('10/50')).toBeInTheDocument();
+
+    // Description
+    const descriptionInput = screen.getByLabelText(/Description/i);
+    expect(descriptionInput).toHaveAttribute('maxLength', '500');
+    expect(screen.getByText('0/500')).toBeInTheDocument();
+
+    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
+    expect(screen.getByText('16/500')).toBeInTheDocument();
+
+    // Organizer Name
+    const organizerInput = screen.getByLabelText(/Your name/i);
+    expect(organizerInput).toHaveAttribute('maxLength', '50');
+    // Note: Default value is 'Organizer', so initial count is 9
+    expect(screen.getByText('9/50')).toBeInTheDocument(); 
+
+    fireEvent.change(organizerInput, { target: { value: 'Alice' } });
+    expect(screen.getByText('5/50')).toBeInTheDocument();
+  });
 });
