@@ -47,12 +47,24 @@ async fn test_participant_limit() {
     .await
     .expect("Failed to create test event");
 
-    // 2. Add 9 Participants directly to DB
-    for i in 1..=9 {
+    // 2. Add Organizer (Participant 1)
+    sqlx::query!(
+        "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4)",
+        event_id,
+        "Organizer",
+        true,
+        Some("Host".to_string())
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to insert organizer");
+
+    // 3. Add 8 Guests (Participants 2 to 9)
+    for i in 2..=9 {
         sqlx::query!(
             "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4)",
             event_id,
-            format!("Participant {}", i),
+            format!("Guest {}", i),
             false,
             Some("Comment".to_string())
         )
@@ -61,9 +73,10 @@ async fn test_participant_limit() {
         .expect("Failed to insert participant");
     }
 
-    // 3. Try to add 10th participant via handler
-    let payload = SubmitAvailabilityRequest {
-        participant_name: "Participant 10".to_string(),
+    // 4. Try to add 10th participant via handler (Should Succeed)
+    // Current count in DB is 9. Limit is 10.
+    let payload_10 = SubmitAvailabilityRequest {
+        participant_name: "Guest 10".to_string(),
         availabilities: vec![TimeRangeRequest {
             start_at: Utc::now(),
             end_at: Utc::now(),
@@ -71,24 +84,42 @@ async fn test_participant_limit() {
         comment: None,
     };
 
-    let result = submit_availability(
+    let result_10 = submit_availability(
         State(pool.clone()),
         Path(public_token.clone()),
-        Json(payload),
+        Json(payload_10),
     )
     .await;
 
-    // 4. Verify it fails
-    match result {
+    assert!(result_10.is_ok(), "10th participant should be allowed");
+
+    // 5. Try to add 11th participant via handler (Should Fail)
+    // Current count in DB is 10. Limit is 10.
+    let payload_11 = SubmitAvailabilityRequest {
+        participant_name: "Guest 11".to_string(),
+        availabilities: vec![TimeRangeRequest {
+            start_at: Utc::now(),
+            end_at: Utc::now(),
+        }],
+        comment: None,
+    };
+
+    let result_11 = submit_availability(
+        State(pool.clone()),
+        Path(public_token.clone()),
+        Json(payload_11),
+    )
+    .await;
+
+    match result_11 {
         Ok(_) => panic!("Should have failed due to participant limit"),
         Err(e) => {
-             // Check error message or type if possible
              let err_msg = format!("{:?}", e);
-             assert!(err_msg.contains("Event has reached maximum limit of 9 participants") || err_msg.contains("BadRequest"), "Unexpected error: {:?}", e);
+             assert!(err_msg.contains("Event has reached maximum limit of 10 participants") || err_msg.contains("BadRequest"), "Unexpected error: {:?}", e);
         }
     }
     
-    // 5. Cleanup
+    // 6. Cleanup
     sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
         .execute(&pool)
         .await

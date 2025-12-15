@@ -282,9 +282,9 @@ pub async fn submit_availability(
         .await?
         .unwrap_or(0);
 
-        if count >= 9 {
+        if count >= 10 {
             return Err(AppError::BadRequest(
-                "Event has reached maximum limit of 9 participants".to_string(),
+                "Event has reached maximum limit of 10 participants".to_string(),
             ));
         }
 
