@@ -73,6 +73,6 @@ If you skip the bootstrap script, ensure you have a `.env` file in the `backend/
     - [ ] Authentication system
 - [ ] **Advanced Features**
     - [ ] Public Roadmap Page (`/roadmap`)
-    - [ ] Timezone auto-detection for guests
+    - [ ] Timezone auto-detection for participants
     - [ ] GitHub Actions CI/CD
     - [ ] VPS deployment
