@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import toast from 'react-hot-toast';
 import type { ApiTimeRange, TimeSlot } from '../types';
 import TimeSlotBottomPanel from './TimeSlotBottomPanel';
@@ -42,6 +42,7 @@ interface TimeSlotSelectorProps {
 }
 
 const DEFAULT_RANGES: ApiTimeRange[] = [];
+const TUTORIAL_STORAGE_KEY = 'timegrid_tutorial_seen';
 
 // Define the complete state managed by history
 interface CalendarState {
@@ -60,11 +61,23 @@ export default function TimeSlotSelector({
 }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<'idle' | 'header' | 'grid' | 'done'>('idle');
+  const [focusPosition, setFocusPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const gridWrapperRef = useRef<HTMLDivElement>(null);
+  const firstDateHeaderRef = useRef<HTMLButtonElement | null>(null);
+  const firstSelectableCellRef = useRef<HTMLTableCellElement | null>(null);
 
   // Determine if it's Guest Mode
   const isGuestMode = availableRanges !== undefined;
   // Based on feedback, only highlight weekends in Organizer mode
   const highlightWeekends = !isGuestMode;
+  const [showBottomPanel, setShowBottomPanel] = useState(false);
+  const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
 
   // Convert initial ranges to selected cells set
   const initialSelectedCells = useMemo(() => {
@@ -160,6 +173,86 @@ export default function TimeSlotSelector({
     setIsMounted(true);
   }, [isGuestMode, availableRanges, setState]);
 
+  // Two-step tutorial
+  useEffect(() => {
+    if (!isMounted) return;
+    let timer: number | undefined;
+    try {
+      const seen = localStorage.getItem(TUTORIAL_STORAGE_KEY);
+      if (!seen) {
+        timer = window.setTimeout(() => setTutorialStep('header'), 400);
+      } else {
+        setTutorialStep('done');
+      }
+    } catch (_) {
+      timer = window.setTimeout(() => setTutorialStep('header'), 400);
+    }
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [isMounted]);
+
+  const computeFocusPosition = useCallback(() => {
+    if (!gridWrapperRef.current) return;
+    const wrapperRect = gridWrapperRef.current.getBoundingClientRect();
+    let target: HTMLElement | null = null;
+
+    if (tutorialStep === 'header') {
+      target = firstDateHeaderRef.current;
+    } else if (tutorialStep === 'grid') {
+      target = firstSelectableCellRef.current;
+    }
+
+    if (!target) {
+      setFocusPosition(null);
+      return;
+    }
+
+    const targetRect = target.getBoundingClientRect();
+    setFocusPosition({
+      top: targetRect.top - wrapperRect.top,
+      left: targetRect.left - wrapperRect.left,
+      width: targetRect.width,
+      height: targetRect.height,
+    });
+  }, [tutorialStep]);
+
+  useLayoutEffect(() => {
+    if (tutorialStep === 'done' || tutorialStep === 'idle') return;
+    computeFocusPosition();
+  }, [tutorialStep, computeFocusPosition, startDate, endDate, startHour, endHour, gridElement]);
+
+  const markTutorialSeen = useCallback(() => {
+    setTutorialStep('done');
+    setFocusPosition(null);
+    try {
+      localStorage.setItem(TUTORIAL_STORAGE_KEY, '1');
+    } catch (_) {
+      // Ignore storage failures; hint will simply reappear on next load
+    }
+  }, []);
+
+  const goToGridStep = useCallback(() => {
+    setTutorialStep('grid');
+    setFocusPosition(null);
+  }, []);
+
+  useEffect(() => {
+    if (tutorialStep === 'done' || tutorialStep === 'idle') return;
+    const handleReflow = () => computeFocusPosition();
+
+    window.addEventListener('resize', handleReflow);
+    const scroller = gridElement;
+    if (scroller) scroller.addEventListener('scroll', handleReflow, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', handleReflow);
+      const scrollerCleanup = gridElement;
+      if (scrollerCleanup) scrollerCleanup.removeEventListener('scroll', handleReflow);
+    };
+  }, [tutorialStep, computeFocusPosition, gridElement]);
+
   const isSlotSelectable = useCallback((date: string, hour: number): boolean => {
     // 1. Range Check
     if (date < startDate || date > endDate) {
@@ -248,10 +341,20 @@ export default function TimeSlotSelector({
     return selectedCells.has(getCellKey(date, hour));
   };
   
-  const [showBottomPanel, setShowBottomPanel] = useState(false);
-  const [gridElement, setGridElement] = useState<HTMLDivElement | null>(null);
-  
+  const handleGridMouseDown = useCallback((e: any, date: string, hour: number) => {
+    if (tutorialStep === 'grid') {
+      markTutorialSeen();
+    }
+    handleMouseDown(e, date, hour);
+  }, [tutorialStep, markTutorialSeen, handleMouseDown]);
+
   const handleHeaderClick = (date: string) => {
+    if (tutorialStep === 'header') {
+      goToGridStep();
+    } else if (tutorialStep === 'grid') {
+      markTutorialSeen();
+    }
+
     // Snapshot state
     pushState({ ...state, selectedCells: new Set(selectedCells) });
 
@@ -422,6 +525,24 @@ export default function TimeSlotSelector({
     return grouped;
   }, [selectedCells, slotDuration]);
 
+  let firstHeaderCaptured = false;
+  let firstSelectableCellCaptured = false;
+  const bubbleLeft = focusPosition && gridWrapperRef.current
+    ? Math.min(
+        Math.max(focusPosition.left - 8, 8),
+        Math.max(gridWrapperRef.current.clientWidth - 280, 8),
+      )
+    : 12;
+  const bubbleTop = focusPosition ? focusPosition.top + focusPosition.height + 12 : 16;
+  const spotlightStyle = focusPosition
+    ? {
+        top: Math.max(focusPosition.top - 6, 4),
+        left: Math.max(focusPosition.left - 4, 4),
+        width: focusPosition.width + 8,
+        height: focusPosition.height + 12
+      }
+    : undefined;
+
   if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
@@ -531,42 +652,158 @@ export default function TimeSlotSelector({
           onTogglePanel={() => setShowBottomPanel(!showBottomPanel)}
       />
       
-      <div className="flex flex-col gap-1">
-        <TimeGrid
-            startDate={startDate}
-            endDate={endDate}
-            startHour={startHour}
-            endHour={endHour}
-            slotDuration={slotDuration}
-            highlightWeekends={highlightWeekends}
-            onGridMount={setGridElement}
-            onMouseDown={handleMouseDown}
-            onMouseEnter={handleMouseEnter}
-            onMouseUp={handleMouseUp}
-            renderCell={(date, hour, slotLabel, key) => (
-            <TimeSlotCell
-                key={key}
-                date={date}
-                hour={hour}
-                slotLabel={slotLabel}
-                mode="select"
-                isSelected={isCellSelected(date, hour)}
-                isSelectable={isSlotSelectable(date, hour)}
-                highlightWeekends={highlightWeekends}
-                gridScrollElement={gridElement}
-            />
-            )}
-            renderDateHeader={(date, defaultHeader) => (
-                <button
-                    type="button"
-                    className={GRID_STYLES.HEADER_BUTTON_CLASS}
-                    onClick={() => handleHeaderClick(date)}
-                    aria-label={`Toggle selection for ${date}`}
-                >
-                    {defaultHeader}
-                </button>
-            )}
-        />
+      <div className="flex flex-col gap-2">
+        <div className="relative" ref={gridWrapperRef}>
+          {(tutorialStep === 'header' || tutorialStep === 'grid') && focusPosition && (
+            <>
+              {/* Four overlay panes to blur/dim everything except the focus area */}
+              <div
+                className="pointer-events-auto absolute z-20 transition-opacity select-none"
+                style={{
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: Math.max(focusPosition.top, 0),
+                  background: 'rgba(0,0,0,0.3)',
+                  backdropFilter: 'blur(2px)',
+                  WebkitBackdropFilter: 'blur(2px)',
+                }}
+              />
+              <div
+                className="pointer-events-auto absolute z-20 transition-opacity select-none"
+                style={{
+                  top: focusPosition.top,
+                  left: 0,
+                  width: Math.max(focusPosition.left, 0),
+                  height: focusPosition.height,
+                  background: 'rgba(0,0,0,0.3)',
+                  backdropFilter: 'blur(2px)',
+                  WebkitBackdropFilter: 'blur(2px)',
+                }}
+              />
+              <div
+                className="pointer-events-auto absolute z-20 transition-opacity select-none"
+                style={{
+                  top: focusPosition.top,
+                  left: focusPosition.left + focusPosition.width,
+                  right: 0,
+                  height: focusPosition.height,
+                  background: 'rgba(0,0,0,0.3)',
+                  backdropFilter: 'blur(2px)',
+                  WebkitBackdropFilter: 'blur(2px)',
+                }}
+              />
+              <div
+                className="pointer-events-auto absolute z-20 transition-opacity select-none"
+                style={{
+                  top: focusPosition.top + focusPosition.height,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.3)',
+                  backdropFilter: 'blur(2px)',
+                  WebkitBackdropFilter: 'blur(2px)',
+                }}
+              />
+
+              {/* Highlight frame for the focus area */}
+              <div className="pointer-events-none absolute z-30" style={spotlightStyle}>
+                <div className="absolute inset-0 rounded-md shadow-[0_12px_28px_rgba(0,0,0,0.35)] bg-transparent" />
+              </div>
+              <div
+                className="absolute z-40"
+                style={{
+                  top: bubbleTop,
+                  left: bubbleLeft
+                }}
+              >
+                <div className="relative bg-paper border border-film-border shadow-lg rounded-md px-3 py-2 text-[11px] sm:text-xs text-ink max-w-[260px] sm:max-w-[320px]">
+                  <div className="absolute left-6 -top-[6px] h-3 w-3 bg-paper border-l border-t border-film-border rotate-45" />
+                  <div className="pr-2 leading-relaxed">
+                    {tutorialStep === 'header'
+                      ? 'Tap or click a date header to toggle the whole day.'
+                      : 'Drag to paint slots; on mobile, long press then drag.'}
+                  </div>
+                  <div className="flex gap-2 pt-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide">
+                    {tutorialStep === 'header' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="px-3 py-1 rounded border border-film-border bg-white/85 hover:bg-white text-film-accent"
+                          onClick={goToGridStep}
+                        >
+                          Next
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1 rounded border border-film-border bg-white/70 hover:bg-white text-ink/70"
+                          onClick={markTutorialSeen}
+                        >
+                          Skip
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="px-3 py-1 rounded border border-film-border bg-white/85 hover:bg-white text-film-accent"
+                        onClick={markTutorialSeen}
+                      >
+                        Start selecting
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          <TimeGrid
+              startDate={startDate}
+              endDate={endDate}
+              startHour={startHour}
+              endHour={endHour}
+              slotDuration={slotDuration}
+              highlightWeekends={highlightWeekends}
+              onGridMount={setGridElement}
+              onMouseDown={handleGridMouseDown}
+              onMouseEnter={handleMouseEnter}
+              onMouseUp={handleMouseUp}
+              renderCell={(date, hour, slotLabel, key) => {
+                  const shouldCaptureSelectableCell = isSlotSelectable(date, hour) && !firstSelectableCellCaptured;
+                  if (shouldCaptureSelectableCell) {
+                    firstSelectableCellCaptured = true;
+                  }
+                  return (
+                    <TimeSlotCell
+                        key={key}
+                        date={date}
+                        hour={hour}
+                        slotLabel={slotLabel}
+                        mode="select"
+                        isSelected={isCellSelected(date, hour)}
+                        isSelectable={isSlotSelectable(date, hour)}
+                        highlightWeekends={highlightWeekends}
+                        gridScrollElement={gridElement}
+                        captureCellRef={shouldCaptureSelectableCell ? (el) => { firstSelectableCellRef.current = el; } : undefined}
+                    />
+                  );
+              }}
+              renderDateHeader={(date, defaultHeader) => {
+                  const isFirstHeader = !firstHeaderCaptured;
+                  if (isFirstHeader) firstHeaderCaptured = true;
+                  return (
+                      <button
+                          ref={isFirstHeader ? (el) => { firstDateHeaderRef.current = el; } : undefined}
+                          type="button"
+                          className={GRID_STYLES.HEADER_BUTTON_CLASS}
+                          onClick={() => handleHeaderClick(date)}
+                          aria-label={`Toggle selection for ${date}`}
+                      >
+                          {defaultHeader}
+                      </button>
+                  );
+              }}
+          />
+        </div>
 
         {/* Footer Area with TIP */}
         <div className="mt-1 pt-1 relative min-h-[3rem]">

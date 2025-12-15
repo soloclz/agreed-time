@@ -22,6 +22,8 @@ interface TimeSlotCellProps {
 
   // Element reference to the TimeGrid's scrollable area for hiding tooltip on scroll
   gridScrollElement?: HTMLDivElement | null;
+  // Optional external ref capture (used for tutorials/spotlight)
+  captureCellRef?: (el: HTMLTableCellElement | null) => void;
 }
 
 export default function TimeSlotCell({
@@ -35,6 +37,7 @@ export default function TimeSlotCell({
   heatmapData,
   totalParticipants = 0,
   gridScrollElement, // Changed from ref to direct element
+  captureCellRef,
 }: TimeSlotCellProps) {
   
   // Memoize opacity calculation
@@ -173,7 +176,10 @@ export default function TimeSlotCell({
   return (
     <>
       <td
-        ref={cellRef}
+        ref={(el) => {
+          cellRef.current = el;
+          if (captureCellRef) captureCellRef(el);
+        }}
         role="gridcell"
         aria-selected={isSelected}
         aria-disabled={!isSelectable}
