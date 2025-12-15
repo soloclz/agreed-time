@@ -107,4 +107,5 @@ export interface OrganizerEventResponse extends EventResultsResponse {
 export interface ApiErrorResponse {
   error: string;
   code?: string;
+  message?: string;
 }
