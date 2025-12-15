@@ -5,7 +5,7 @@ The current build lets an organizer create an event with proposed time windows, 
 ---
 
 ## Product Snapshot
-- Create an event, define time ranges, and share two capability links: guest link (`/event/{public_token}`) and organizer link (`/manage/{organizer_token}`).
+- Create an event, define time ranges, and share two capability links: participant link (`/event/{public_token}`) and organizer link (`/manage/{organizer_token}`). The same public token also serves the results page.
 - Availability state is binary (available or not selected). There is no `if_needed`/`no` tri-state.
 - Event states: `open` or `closed`. Closing an event only locks further submissions; it does not pick a final slot.
 - Events auto-expire and are deleted 7 days after creation (background task runs hourly).
@@ -54,7 +54,7 @@ The current build lets an organizer create an event with proposed time windows, 
 
 ### `/manage/{organizer_token}` – Organizer Dashboard
 - Fetches `GET /api/events/organizer/{organizer_token}`.
-- Shows state badge, expiry hint (`created_at + 7 days`), copy buttons for guest and result links, and reuses the same results display component as the public results page.
+- Shows state badge, expiry hint (`created_at + 7 days`), copy buttons for the participant link and the results link, and reuses the same results display component as the public results page.
 - Close action (only when `open`): `POST /api/events/{organizer_token}/close`, then refetch. Closing locks further submissions; no finalize/pick flow yet.
 
 ---

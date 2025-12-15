@@ -111,7 +111,7 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
 
             <h3 className="text-2xl font-serif font-bold text-ink">No responses yet!</h3>
             <p className="text-ink/70 font-sans max-w-md mx-auto">
-              Share the guest link with your participants.
+              Share the participant link to collect availability.
             </p>
         </div>
       ) : isOrganizerOnly ? (
@@ -122,7 +122,7 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
 
             <h3 className="text-2xl font-serif font-bold text-ink">Waiting for participants</h3>
             <p className="text-ink/70 font-sans max-w-md mx-auto">
-              Only the organizer has filled in their availability. Share the guest link to collect responses.
+              Only the organizer has filled in their availability. Share the participant link to collect responses.
             </p>
         </div>
       ) : (

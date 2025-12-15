@@ -143,8 +143,8 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
               )}
           </div>
 
-          <div className="space-y-6 pt-4">
-             {/* Primary: Invitation Link */}
+         <div className="space-y-6 pt-4">
+             {/* Primary: Participant Link */}
              <div className="flex flex-col gap-2">
                 <div className="text-base font-bold text-ink flex items-center gap-2">
                    Invite Participants
@@ -156,16 +156,16 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                    <button 
                      onClick={() => {
                        navigator.clipboard.writeText(publicEventUrl);
-                       toast.success('Invitation link copied!'); // Use toast
+                       toast.success('Participant link copied!');
                      }} 
                      className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-lg flex-grow sm:flex-grow-0"
                    >
-                     Copy Invitation Link
+                     Copy Participant Link
                    </button>
                    <span className="text-sm text-ink/50 font-mono hidden sm:block">({publicEventDisplayUrl})</span>
                 </div>
                 <p className="text-sm text-ink/60">
-                   Send this link to anyone you want to invite. They can view the event details and select their available times.
+                   Share this capability link with participants so they can view the event and submit availability.
                 </p>
              </div>
 
@@ -227,4 +227,3 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
     </div>
   );
 }
-

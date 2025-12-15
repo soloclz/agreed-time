@@ -15,8 +15,8 @@ This guide reflects the current codebase (no MVP wording) and is grounded in the
 - **Astro pages:** `src/pages/index.astro`, `/new`, `/event/[public_token]`, `/event/[public_token]/result`, `/manage/[organizer_token]`. `Layout.astro` hosts the fixed header, film-grain overlay, and the global toast container.
 - **Core React components:**
   - `CreateEventForm`: Collects title/description/organizer, auto-detects timezone, enforces at least one slot, uses `TimeSlotSelector`, saves the organizer token to `localStorage`, and redirects to the manage page on success.
-  - `EventGuestForm`: Fetches event data, redirects to results when `state === 'closed'`, captures participant name/comment, and reuses `TimeSlotSelector` in guest mode (selection constrained to organizer slots).
-  - `OrganizerDashboard`: Fetches organizer event data, shows copy buttons for guest/result links, displays expiry (created_at + 7 days), and lets the organizer close the event.
+  - `EventGuestForm` (participant form): Fetches event data, redirects to results when `state === 'closed'`, captures participant name/comment, and reuses `TimeSlotSelector` in participant mode (selection constrained to organizer slots).
+  - `OrganizerDashboard`: Fetches organizer event data, shows copy buttons for participant/results links, displays expiry (created_at + 7 days), and lets the organizer close the event.
   - `EventResultView` / `EventResultsDisplay` / `Heatmap`: Fetch results, compute slot counts client-side from participant ranges, render best times, other options, participant list with organizer badge/comments, and a read-only heatmap grid.
   - Grid system: `TimeSlotSelector` (selection logic + controls + bottom panel), `TimeGrid` (multi-week horizontal layout with date/time headers and drag delegation), `TimeSlotCell` (select vs heatmap modes), `TimeSlotBottomPanel` (selected slots list).
 - **Hooks & utils:** `useTimeSlotDragSelection` manages drag state and selection sets; `eventUtils` (`rangesToCells`, `cellsToRanges`, organizer-only helpers); `dateUtils` handles local date arithmetic and timezone-safe formatting.
@@ -28,7 +28,7 @@ This guide reflects the current codebase (no MVP wording) and is grounded in the
 Router (Axum) with shared `PgPool` state:
 - `GET /health`
 - `POST /events` — create event (merges overlapping ranges, auto-creates organizer participant & availability)
-- `GET /events/{public_token}` — guest view
+- `GET /events/{public_token}` — participant view
 - `POST /events/{public_token}/availability` — submit/overwrite a participant's availability (by name) + optional comment
 - `GET /events/{public_token}/results` — participants + slots + totals
 - `GET /events/organizer/{organizer_token}` — organizer view (includes tokens and created_at)
@@ -40,7 +40,7 @@ Data models live in `backend/src/models`, handlers in `backend/src/handlers/even
 
 ## 4) Data & Time Flow
 - Frontend selection state is stored as local-time grid cells; `cellsToRanges` converts to UTC ISO ranges before API calls. `rangesToCells` converts server ranges back to local cells.
-- `TimeSlotSelector` defaults to today → +27 days and 09:00–18:00 for organizers; in guest mode it auto-sizes the visible range to the provided slots. `TimeGrid` caps display to 4 weeks and surfaces a validation message if exceeded.
+- `TimeSlotSelector` defaults to today → +27 days and 09:00–18:00 for organizers; in participant mode it auto-sizes the visible range to the provided slots. `TimeGrid` caps display to 4 weeks and surfaces a validation message if exceeded.
 - Organizer name defaults to `"Organizer"` on the client; backend requires a non-empty name.
 - Closing an event only changes `state` to `closed`; results remain viewable and no final slot is chosen.
 - Aggregated counts are computed in the frontend using the event's `slot_duration`; the API does not return per-slot aggregates.
