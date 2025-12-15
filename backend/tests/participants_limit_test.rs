@@ -1,9 +1,8 @@
 use agreed_time_backend::handlers::events::submit_availability;
 use agreed_time_backend::models::{SubmitAvailabilityRequest, TimeRangeRequest};
-use agreed_time_backend::error::AppError; // Added import
-use axum::extract::{Path, State};
 use axum::Json;
-use chrono::{Utc, Duration};
+use axum::extract::{Path, State};
+use chrono::{Duration, Utc};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use uuid::Uuid;
@@ -115,10 +114,15 @@ async fn test_participant_limit() {
     match result_11 {
         Ok(_) => panic!("Should have failed due to participant limit"),
         Err(e) => {
-             assert_eq!(e.code(), "PARTICIPANT_LIMIT_REACHED", "Unexpected error code: {:?}", e);
+            assert_eq!(
+                e.code(),
+                "PARTICIPANT_LIMIT_REACHED",
+                "Unexpected error code: {:?}",
+                e
+            );
         }
     }
-    
+
     // 6. Cleanup
     sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
         .execute(&pool)
