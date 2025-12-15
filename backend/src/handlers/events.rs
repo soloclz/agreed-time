@@ -247,56 +247,29 @@ pub async fn submit_availability(
     .await?
     .ok_or_else(|| AppError::NotFound)?;
 
-    // Try to find participant by name
-    // Important: We should NOT overwrite the Organizer if someone just enters the organizer's name.
-    // For MVP anonymous, we might allow it, but let's be safe:
-    // If the name matches an existing participant, we update it.
-    // Ideally we should block overwriting organizer if payload is from guest form?
-    // But since organizer uses same submit flow? No, organizer is created at event creation.
-    // Let's keep simple logic: find by name. If it's organizer, so be it (organizer updating their time).
-
-    let participant_id = if let Some(id) = sqlx::query_scalar!(
-        "SELECT id FROM participants WHERE event_id = $1 AND name = $2",
-        event_id,
-        payload.participant_name
+    // Check participant limit
+    let count = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM participants WHERE event_id = $1",
+        event_id
     )
-    .fetch_optional(&mut *transaction)
+    .fetch_one(&mut *transaction)
     .await?
-    {
-        // Participant exists, update their comment
-        sqlx::query!(
-            "UPDATE participants SET comment = $1, updated_at = NOW() WHERE id = $2",
-            payload.comment,
-            id
-        )
-        .execute(&mut *transaction)
-        .await?;
-        id
-    } else {
-        // Check participant limit
-        let count = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM participants WHERE event_id = $1",
-            event_id
-        )
-        .fetch_one(&mut *transaction)
-        .await?
-        .unwrap_or(0);
+    .unwrap_or(0);
 
-        if count >= 10 {
-            return Err(AppError::ParticipantLimitReached(10));
-        }
+    if count >= 10 {
+        return Err(AppError::ParticipantLimitReached(10));
+    }
 
-        // New participant, insert with comment
-        sqlx::query_scalar!(
-            "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id",
-            event_id,
-            payload.participant_name,
-            false, // Default is not organizer
-            payload.comment
-        )
-        .fetch_one(&mut *transaction)
-        .await?
-    };
+    // Insert new participant (Always insert, allowing duplicates)
+    let participant_id = sqlx::query_scalar!(
+        "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id",
+        event_id,
+        payload.participant_name,
+        false, // Default is not organizer
+        payload.comment
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
 
     sqlx::query!(
         "DELETE FROM availabilities WHERE participant_id = $1",
