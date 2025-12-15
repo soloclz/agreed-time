@@ -1,29 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import toast from 'react-hot-toast'; // Import toast
 import type { OrganizerEventResponse } from '../types';
 import { eventService } from '../services/eventService';
 import { getTimezoneOffsetString } from '../utils/dateUtils';
 import EventResultsDisplay from './EventResultsDisplay';
 
-// Helper function to truncate URL for display
-const truncateUrl = (url: string, maxLength = 40) => {
+const formatTokenUrlForDisplay = (url: string) => {
+  try {
     const urlObj = new URL(url);
-    const path = urlObj.pathname;
-    const hostname = urlObj.hostname;
+    const segments = urlObj.pathname.split('/').filter(Boolean);
 
-    // Prioritize showing full hostname + relevant part of token
-    const pathSegments = path.split('/');
-    if (pathSegments.length >= 3 && (pathSegments[1] === 'event' || pathSegments[1] === 'manage')) {
-        const token = pathSegments[pathSegments.length - 1];
-        if (token.length > 8) { // if token is long, show start...end
-            const start = token.substring(0, 4);
-            const end = token.substring(token.length - 4);
-            return `${hostname}${pathSegments.slice(0, -1).join('/')}/${start}...${end}`;
-        }
+    // /event/:token or /event/:token/result
+    // /manage/:token
+    const isEvent = segments[0] === 'event' && segments.length >= 2;
+    const isManage = segments[0] === 'manage' && segments.length >= 2;
+    if (isEvent || isManage) {
+      const tokenIndex = 1;
+      const token = segments[tokenIndex];
+      if (token && token.length > 12) {
+        segments[tokenIndex] = `${token.slice(0, 4)}...${token.slice(-4)}`;
+      }
     }
-    // Fallback to general truncation if path not typical or token short
-    if (url.length <= maxLength) return url;
-    return `${hostname}${path.substring(0, maxLength - hostname.length - 5)}...`;
+
+    return `${urlObj.hostname}/${segments.join('/')}`;
+  } catch {
+    return url;
+  }
 };
 
 
@@ -38,6 +40,9 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   const [isClosing, setIsClosing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false); // State for confirmation modal
   const [timezoneOffsetString, setTimezoneOffsetString] = useState<string>('');
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setTimezoneOffsetString(getTimezoneOffsetString());
@@ -84,6 +89,16 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
     }
   };
 
+  useEffect(() => {
+    if (showConfirmModal) {
+      const id = window.setTimeout(() => cancelButtonRef.current?.focus(), 0);
+      return () => window.clearTimeout(id);
+    }
+
+    previouslyFocusedElementRef.current?.focus?.();
+    previouslyFocusedElementRef.current = null;
+  }, [showConfirmModal]);
+
   if (loading) {
     return <div className="text-center py-12 text-gray-500">Loading organizer dashboard...</div>;
   }
@@ -98,11 +113,114 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
 
   const publicEventUrl = `${window.location.origin}/event/${organizerData.public_token}`;
   const publicResultsUrl = `${window.location.origin}/event/${organizerData.public_token}/result`;
+  const publicEventDisplayUrl = formatTokenUrlForDisplay(publicEventUrl);
+  const publicResultsDisplayUrl = formatTokenUrlForDisplay(publicResultsUrl);
 
-  // Truncated URLs for display
-  const publicEventDisplayUrl = truncateUrl(publicEventUrl);
-  const publicResultsDisplayUrl = truncateUrl(publicResultsUrl);
   const manageLink = window.location.href; // The current page is the manage page
+
+  const copyToClipboard = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(successMessage);
+    } catch (err: any) {
+      toast.error(`Failed to copy: ${err?.message ?? String(err)}`);
+    }
+  };
+
+  const getManageLinkBackupText = () => {
+    const lines = [
+      'Agreed Time — Private Manage Link',
+      '',
+      `Event: ${organizerData.title}`,
+      `Status: ${organizerData.state}`,
+      '',
+      `Manage link (PRIVATE): ${manageLink}`,
+      `Invitation link: ${publicEventUrl}`,
+      `Read-only results link: ${publicResultsUrl}`,
+      '',
+      'Keep the manage link private. Anyone with it can manage the event.',
+    ];
+
+    return `${lines.join('\n')}\n`;
+  };
+
+  const downloadManageLinkBackup = () => {
+    try {
+      const blob = new Blob([getManageLinkBackupText()], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'agreed-time-manage-link.txt';
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success('Backup downloaded.');
+    } catch (err: any) {
+      toast.error(`Failed to download backup: ${err?.message ?? String(err)}`);
+    }
+  };
+
+  const saveManageLink = async () => {
+    if (!('share' in navigator)) {
+      toast('Save is not supported in this browser. Use “Download backup” instead.');
+      return;
+    }
+
+    try {
+      await navigator.share({
+        title: 'Agreed Time — Private Manage Link',
+        text: `Private manage link for “${organizerData.title}”. Keep it safe:\n${manageLink}`,
+        url: manageLink,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return; // user cancelled
+      toast.error(`Failed to open save sheet: ${err?.message ?? String(err)}`);
+    }
+  };
+
+  const copyManageLink = () => copyToClipboard(manageLink, 'Manage link copied! Keep it safe.');
+  const copyInvitationLink = () => copyToClipboard(publicEventUrl, 'Invitation link copied!');
+  const copyResultsLink = () => copyToClipboard(publicResultsUrl, 'Results link copied!');
+
+  const openConfirmModal = () => {
+    previouslyFocusedElementRef.current = document.activeElement as HTMLElement | null;
+    setShowConfirmModal(true);
+  };
+
+  const closeConfirmModal = () => {
+    setShowConfirmModal(false);
+  };
+
+  const handleModalKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeConfirmModal();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable || focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+
+    if (event.shiftKey) {
+      if (active === first || !modalRef.current?.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+      return;
+    }
+
+    if (active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -117,7 +235,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
             </h3>
             <p className="text-amber-700 text-sm">
               <strong>Do not share this page!</strong> This is your private dashboard to manage the event. 
-              Please <strong>bookmark this page</strong> or save the link below to return later.
+              Please <strong>save the private link below</strong> (Notes, password manager, etc.) to return later.
             </p>
             <div className="flex items-center gap-2 mt-2 bg-white/50 p-2 rounded border border-amber-200">
                <input 
@@ -127,15 +245,30 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                  className="flex-grow bg-transparent text-sm text-amber-900 font-mono focus:outline-none truncate"
                  onClick={(e) => e.currentTarget.select()}
                />
-               <button
-                 onClick={() => {
-                    navigator.clipboard.writeText(manageLink);
-                    toast.success('Manage link copied! Keep it safe.');
-                 }}
+                <button
+                 type="button"
+                 onClick={copyManageLink}
                  className="text-xs font-bold text-amber-800 hover:text-amber-900 uppercase tracking-wide px-2"
                >
                  Copy
                </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={saveManageLink}
+                className="text-xs border border-amber-300 bg-white/70 hover:bg-white px-3 py-1.5 rounded text-amber-900 font-semibold transition-colors"
+              >
+                Save…
+              </button>
+              <button
+                type="button"
+                onClick={downloadManageLinkBackup}
+                className="text-xs border border-amber-300 bg-white/70 hover:bg-white px-3 py-1.5 rounded text-amber-900 font-semibold transition-colors"
+              >
+                Download backup
+              </button>
+              <span className="text-xs text-amber-800/70">Keep this link private.</span>
             </div>
           </div>
        </div>
@@ -164,7 +297,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
               
               {organizerData.state === 'open' && (
                 <button
-                  onClick={() => setShowConfirmModal(true)} // Open modal on click
+                  onClick={openConfirmModal} // Open modal on click
                   disabled={isClosing}
                   className="px-4 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium rounded shadow-sm hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-2"
                 >
@@ -184,13 +317,34 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                     <span className="text-sm text-film-accent font-medium">Step 1</span>
                 </div>
                 <div className="bg-film-light/30 p-4 rounded-lg border border-film-border/50 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                   <div className="flex-grow">
+                   <div className="flex-grow space-y-2">
                       <p className="text-sm text-ink/70 mb-2">Share this <strong>Invitation Link</strong> with others to vote:</p>
+                      <div className="flex items-center gap-2 bg-white/70 p-2 rounded border border-film-border/40">
+                        <input
+                          type="text"
+                          readOnly
+                          value={publicEventDisplayUrl}
+                          aria-label="Invitation link"
+                          className="flex-grow bg-transparent text-xs text-ink/80 font-mono focus:outline-none truncate"
+                          onClick={(e) => {
+                            e.currentTarget.select();
+                            copyInvitationLink();
+                          }}
+                        />
+                        <a
+                          href={publicEventUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-semibold text-film-accent hover:text-film-accent-hover whitespace-nowrap"
+                        >
+                          Open
+                        </a>
+                      </div>
+                      <p className="text-[11px] text-ink/50">Tip: click/tap the URL to copy.</p>
                    </div>
                    <button 
                      onClick={() => {
-                       navigator.clipboard.writeText(publicEventUrl);
-                       toast.success('Invitation link copied!');
+                       copyInvitationLink();
                      }} 
                      className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 text-base whitespace-nowrap flex items-center justify-center gap-2"
                    >
@@ -215,18 +369,37 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                           Read-Only Results Link
                         </h4>
                         <p className="text-xs text-ink/60 mb-2">Use this if you want to share the results without allowing people to vote or modify entries.</p>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2 bg-white/70 p-2 rounded border border-film-border/40 sm:flex-1">
+                            <input
+                              type="text"
+                              readOnly
+                              value={publicResultsDisplayUrl}
+                              aria-label="Read-only results link URL"
+                              className="flex-grow bg-transparent text-xs text-ink/80 font-mono focus:outline-none truncate"
+                              onClick={(e) => {
+                                e.currentTarget.select();
+                                copyResultsLink();
+                              }}
+                            />
+                            <a
+                              href={publicResultsUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-film-accent hover:text-film-accent-hover whitespace-nowrap"
+                            >
+                              Open
+                            </a>
+                          </div>
                            <button 
-                             onClick={() => {
-                                navigator.clipboard.writeText(publicResultsUrl);
-                                toast.success('Results link copied!');
-                             }} 
+                             type="button"
+                             onClick={copyResultsLink}
                              className="text-xs border border-film-border hover:bg-gray-50 px-3 py-1.5 rounded text-ink/70 font-medium transition-colors"
                            >
                              Copy Link
                            </button>
                         </div>
-                      </div>
+                     </div>
                   </div>
                 </details>
              </div>
@@ -247,22 +420,37 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
 
        {/* Confirmation Modal for closing event */}
        {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 sm:p-8 w-full max-w-sm space-y-4">
-            <h3 className="text-xl font-bold text-ink font-serif">Confirm Close Event</h3>
-            <p className="text-ink/80 text-sm">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onKeyDown={handleModalKeyDown}
+        >
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-close-title"
+            aria-describedby="confirm-close-description"
+            className="bg-white rounded-lg shadow-xl p-6 sm:p-8 w-full max-w-sm space-y-4"
+          >
+            <h3 id="confirm-close-title" className="text-xl font-bold text-ink font-serif">
+              Confirm Close Event
+            </h3>
+            <p id="confirm-close-description" className="text-ink/80 text-sm">
               Are you sure you want to close this event "{organizerData.title}"?
               Participants will no longer be able to submit or update their availability.
               This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setShowConfirmModal(false)}
+                ref={cancelButtonRef}
+                type="button"
+                onClick={closeConfirmModal}
                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmCloseEvent}
                 className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
               >
