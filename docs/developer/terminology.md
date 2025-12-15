@@ -5,9 +5,9 @@ Canonical wording for docs, UI copy, and code. Terms match current models (`back
 ## Roles & Links
 - **Organizer**: Creates the event, owns the capability tokens (`organizer_token`), can close the event. UI badge: "Organizer".
 - **Participant**: Anyone submitting availability (organizer included). Prefer this term over guest/attendee.
-- **Participant link**: Public link for submitting availability `/event/{public_token}`. Same token powers results.
+- **Invitation link**: Public link for submitting availability `/event/{public_token}`. Same token powers results.
 - **Results link**: Read-only results `/event/{public_token}/result` (uses the same public token).
-- **Organizer link**: Management view `/manage/{organizer_token}` for copying links and closing the event.
+- **Manage link**: Management view `/manage/{organizer_token}` for copying links and closing the event.
 - **Capability token**: Opaque UUID strings (`public_token`, `organizer_token`). No auth beyond possession.
 
 ## Time & Availability Model
@@ -24,9 +24,9 @@ Canonical wording for docs, UI copy, and code. Terms match current models (`back
 - **Time zone**: Organizer-provided `time_zone` stored as metadata; all payloads stay UTC.
 
 ## Copy Guidelines
-- Use **participant link** for the public share URL; avoid "guest link" in UI and docs.
+- Use **invitation link** for the public share URL; avoid "participant link" or "guest link" in UI and docs.
 - Refer to people as **participants**; use **availability** (not vote/response) for submissions.
-- Call URLs **capability links** (participant/results/organizer); avoid "invite link" unless clarifying behavior.
+- Call URLs **capability links** (invitation/results/manage).
 - Mention **UTC ISO 8601** for data exchange; use "local time" only when describing rendering.
 
 ## Pointers

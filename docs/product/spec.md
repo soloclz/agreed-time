@@ -5,7 +5,25 @@ The current build lets an organizer create an event with proposed time windows, 
 ---
 
 ## Product Snapshot
-- Create an event, define time ranges, and share two capability links: participant link (`/event/{public_token}`) and organizer link (`/manage/{organizer_token}`). The same public token also serves the results page.
+- Create an event, define time ranges, and share two capability links: invitation link (`/event/{public_token}`) and manage link (`/manage/{organizer_token}`). The same public token also serves the results page.
+
+## 2. Core User Flows
+
+### A. Organizer Flow
+1. **Create**: User lands on `/`. Inputs "Event Title", optional "Description", "Organizer Name".
+2. **Select Time**: Interactive grid (desktop) or list (mobile) to paint possible time slots.
+3. **Share**: System generates the event and redirects to the **Organizer Dashboard** (`/manage/{organizer_token}`).
+4. **Manage": 
+   - Shows state badge, expiry hint (`created_at + 7 days`), copy buttons for the invitation link and the results link, and reuses the same results display component as the public results page.
+   - Can "Close Event" to stop new submissions.
+   - **Crucial**: This page is the *only* way to manage the event. No login.
+
+### B. Participant Flow
+1. **Receive**: Gets the invitation link (`/event/{public_token}`) via chat/email.
+2. **View**: Sees event title, description, and "Organizer Name".
+3. **Select**: Enters "Your Name" and paints their availability on top of the organizer's time slots.
+   - *Logic*: Participants can only select slots that are within the organizer's offered ranges.
+4. **Submit**: POSTs availability. Redirects to "Results View".
 - Availability state is binary (available or not selected). There is no `if_needed`/`no` tri-state.
 - Event states: `open` or `closed`. Closing an event only locks further submissions; it does not pick a final slot.
 - Events auto-expire and are deleted 7 days after creation (background task runs hourly).
