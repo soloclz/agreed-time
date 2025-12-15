@@ -102,16 +102,52 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   // Truncated URLs for display
   const publicEventDisplayUrl = truncateUrl(publicEventUrl);
   const publicResultsDisplayUrl = truncateUrl(publicResultsUrl);
+  const adminUrl = window.location.href; // The current page is the admin page
 
   return (
     <div className="space-y-8">
-       {/* Admin Controls Section */}
-       <div className="bg-white border-l-4 border-film-accent p-4 sm:p-6 shadow-sm rounded-r-lg space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+       {/* 1. Admin Link Warning (Top Priority) */}
+       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 sm:p-6 shadow-sm rounded-r-lg">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+              </svg>
+              Private Admin Link
+            </h3>
+            <p className="text-amber-700 text-sm">
+              <strong>Do not share this page!</strong> This is your private dashboard to manage the event. 
+              Please <strong>bookmark this page</strong> or save the link below to return later.
+            </p>
+            <div className="flex items-center gap-2 mt-2 bg-white/50 p-2 rounded border border-amber-200">
+               <input 
+                 type="text" 
+                 readOnly 
+                 value={adminUrl} 
+                 className="flex-grow bg-transparent text-sm text-amber-900 font-mono focus:outline-none truncate"
+                 onClick={(e) => e.currentTarget.select()}
+               />
+               <button
+                 onClick={() => {
+                    navigator.clipboard.writeText(adminUrl);
+                    toast.success('Admin link copied! Keep it safe.');
+                 }}
+                 className="text-xs font-bold text-amber-800 hover:text-amber-900 uppercase tracking-wide px-2"
+               >
+                 Copy
+               </button>
+            </div>
+          </div>
+       </div>
+
+       {/* 2. Main Dashboard Controls */}
+       <div className="bg-white border-l-4 border-film-accent p-4 sm:p-6 shadow-sm rounded-r-lg space-y-8">
+          {/* Header & Close Button */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-film-border/20 pb-6">
               <div>
-                  <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                    Organizer Dashboard
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase border ${
+                  <h2 className="text-2xl font-bold text-ink flex items-center gap-3">
+                    {organizerData.title}
+                    <span className={`px-2.5 py-0.5 rounded-full text-sm font-medium uppercase border ${
                       organizerData.state === 'open'
                       ? 'bg-green-100 text-green-700 border-green-200'
                       : 'bg-red-100 text-red-700 border-red-200'
@@ -119,15 +155,9 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                       {organizerData.state}
                     </span>
                   </h2>
-                  <p className="text-sm text-ink/60 mt-1">
-                    Manage your event and view results below.
-                  </p>
                   {organizerData.created_at && (
-                    <p className="text-xs text-ink/50 mt-2 flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      This event will expire on {new Date(new Date(organizerData.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (7 days after creation)
+                    <p className="text-sm text-ink/50 mt-1 flex items-center gap-1">
+                      Expires on {new Date(new Date(organizerData.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   )}
               </div>
@@ -136,59 +166,81 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                 <button
                   onClick={() => setShowConfirmModal(true)} // Open modal on click
                   disabled={isClosing}
-                  className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded shadow hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium rounded shadow-sm hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-2"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
                   {isClosing ? 'Closing...' : 'Close Event'}
                 </button>
               )}
           </div>
 
-         <div className="space-y-6 pt-4">
+         <div className="space-y-8">
              {/* Primary: Participant Link */}
-             <div className="flex flex-col gap-2">
-                <div className="text-base font-bold text-ink flex items-center gap-2">
-                   Invite Participants
-                   <span className="text-xs font-normal bg-film-accent/10 text-film-accent px-2 py-0.5 rounded-full border border-film-accent/20">
-                     Share this link
-                   </span>
+             <div className="flex flex-col gap-3">
+                <div className="flex items-baseline justify-between">
+                    <h3 className="text-lg font-bold text-ink">Invite Participants</h3>
+                    <span className="text-sm text-film-accent font-medium">Step 1</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="bg-film-light/30 p-4 rounded-lg border border-film-border/50 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+                   <div className="flex-grow">
+                      <p className="text-sm text-ink/70 mb-2">Share this public link with others to vote:</p>
+                      <div className="font-mono text-sm bg-white px-3 py-2 rounded border border-film-border text-ink truncate select-all">
+                        {publicEventDisplayUrl}
+                      </div>
+                   </div>
                    <button 
                      onClick={() => {
                        navigator.clipboard.writeText(publicEventUrl);
-                       toast.success('Participant link copied!');
+                       toast.success('Invitation link copied!');
                      }} 
-                     className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-lg flex-grow sm:flex-grow-0"
+                     className="bg-film-accent hover:bg-film-accent-hover text-white px-6 py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 text-base whitespace-nowrap flex items-center justify-center gap-2"
                    >
-                     Copy Participant Link
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5" />
+                     </svg>
+                     Copy Invitation Link
                    </button>
-                   <span className="text-sm text-ink/50 font-mono hidden sm:block">({publicEventDisplayUrl})</span>
                 </div>
-                <p className="text-sm text-ink/60">
-                   Share this capability link with participants so they can view the event and submit availability.
-                </p>
              </div>
 
              {/* Secondary: Results Link */}
-             <div className="flex flex-col gap-1 pt-4">
-                <span className="text-xs font-bold text-ink/40 uppercase tracking-wider">Advanced: Read-only Results Link</span>
-                <div className="flex items-center gap-2">
-                   <button 
-                     onClick={() => {
-                        navigator.clipboard.writeText(publicResultsUrl);
-                        toast.success('Results link copied!'); // Use toast
-                     }} 
-                     className="text-sm bg-white border border-film-border hover:bg-gray-50 px-4 py-2 rounded text-ink/70 font-medium transition-colors shadow-sm"
-                   >
-                     Copy Result Link
-                   </button>
-                   <span className="text-xs text-ink/50 font-mono hidden sm:block">({publicResultsDisplayUrl})</span>
-                </div>
+             <div className="border-t border-film-border/30 pt-6">
+                <details className="group">
+                  <summary className="flex items-center cursor-pointer text-sm text-ink/60 hover:text-ink font-medium select-none list-none">
+                     <span className="mr-2 group-open:rotate-90 transition-transform">▶</span>
+                     Show Advanced Sharing Options
+                  </summary>
+                  <div className="mt-4 pl-4 border-l-2 border-film-border/20 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-ink">Read-Only Results Link</h4>
+                        <p className="text-xs text-ink/60 mb-2">Use this if you want to share the results without allowing people to vote or modify entries.</p>
+                        <div className="flex items-center gap-3">
+                           <code className="text-xs bg-gray-100 px-2 py-1 rounded flex-grow truncate text-ink/70">
+                             {publicResultsDisplayUrl}
+                           </code>
+                           <button 
+                             onClick={() => {
+                                navigator.clipboard.writeText(publicResultsUrl);
+                                toast.success('Results link copied!');
+                             }} 
+                             className="text-xs border border-film-border hover:bg-gray-50 px-3 py-1.5 rounded text-ink/70 font-medium transition-colors"
+                           >
+                             Copy Link
+                           </button>
+                        </div>
+                      </div>
+                  </div>
+                </details>
              </div>
           </div>
        </div>
 
-       <hr className="border-film-border/50" />
+       <div className="flex items-baseline justify-between px-2">
+            <h3 className="text-xl font-bold text-ink font-serif">Current Results</h3>
+            <span className="text-sm text-film-accent font-medium">Step 2</span>
+       </div>
 
        {/* Shared Result View */}
        <EventResultsDisplay 
