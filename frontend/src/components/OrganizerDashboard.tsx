@@ -102,18 +102,18 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
   // Truncated URLs for display
   const publicEventDisplayUrl = truncateUrl(publicEventUrl);
   const publicResultsDisplayUrl = truncateUrl(publicResultsUrl);
-  const adminUrl = window.location.href; // The current page is the admin page
+  const manageLink = window.location.href; // The current page is the manage page
 
   return (
     <div className="space-y-8">
-       {/* 1. Admin Link Warning (Top Priority) */}
+       {/* 1. Manage Link Warning (Top Priority) */}
        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 sm:p-6 shadow-sm rounded-r-lg">
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-bold text-amber-800 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                 <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
               </svg>
-              Private Admin Link
+              Private Manage Link
             </h3>
             <p className="text-amber-700 text-sm">
               <strong>Do not share this page!</strong> This is your private dashboard to manage the event. 
@@ -123,14 +123,14 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                <input 
                  type="text" 
                  readOnly 
-                 value={adminUrl} 
+                 value={manageLink} 
                  className="flex-grow bg-transparent text-sm text-amber-900 font-mono focus:outline-none truncate"
                  onClick={(e) => e.currentTarget.select()}
                />
                <button
                  onClick={() => {
-                    navigator.clipboard.writeText(adminUrl);
-                    toast.success('Admin link copied! Keep it safe.');
+                    navigator.clipboard.writeText(manageLink);
+                    toast.success('Manage link copied! Keep it safe.');
                  }}
                  className="text-xs font-bold text-amber-800 hover:text-amber-900 uppercase tracking-wide px-2"
                >
@@ -177,7 +177,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
           </div>
 
          <div className="space-y-8">
-             {/* Primary: Participant Link */}
+             {/* Primary: Invitation Link */}
              <div className="flex flex-col gap-3">
                 <div className="flex items-baseline justify-between">
                     <h3 className="text-lg font-bold text-ink">Invite Participants</h3>
@@ -185,7 +185,7 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                 </div>
                 <div className="bg-film-light/30 p-4 rounded-lg border border-film-border/50 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
                    <div className="flex-grow">
-                      <p className="text-sm text-ink/70 mb-2">Share this public link with others to vote:</p>
+                      <p className="text-sm text-ink/70 mb-2">Share this <strong>Invitation Link</strong> with others to vote:</p>
                    </div>
                    <button 
                      onClick={() => {
