@@ -211,7 +211,9 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
                   </summary>
                   <div className="mt-4 pl-4 border-l-2 border-film-border/20 space-y-4">
                       <div>
-                        <h4 className="text-sm font-bold text-ink">Read-Only Results Link</h4>
+                        <h4 className="text-sm font-bold text-ink" aria-label="Read-only results link">
+                          Read-Only Results Link
+                        </h4>
                         <p className="text-xs text-ink/60 mb-2">Use this if you want to share the results without allowing people to vote or modify entries.</p>
                         <div className="flex items-center gap-3">
                            <button 
