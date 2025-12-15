@@ -273,6 +273,21 @@ pub async fn submit_availability(
         .await?;
         id
     } else {
+        // Check participant limit
+        let count = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM participants WHERE event_id = $1",
+            event_id
+        )
+        .fetch_one(&mut *transaction)
+        .await?
+        .unwrap_or(0);
+
+        if count >= 9 {
+            return Err(AppError::BadRequest(
+                "Event has reached maximum limit of 9 participants".to_string(),
+            ));
+        }
+
         // New participant, insert with comment
         sqlx::query_scalar!(
             "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id",
