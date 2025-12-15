@@ -60,7 +60,7 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
       setSubmitted(true);
       toast.success('Your availability has been submitted!');
     } catch (err: any) {
-      toast.error(`Failed to submit response: ${err.message}`);
+      toast.error(err.message || 'Failed to submit response.');
     }
   };
 
