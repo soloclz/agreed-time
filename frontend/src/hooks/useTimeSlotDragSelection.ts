@@ -201,9 +201,9 @@ export function useTimeSlotDragSelection({
         // Notify drag start
         if (onDragStart) onDragStart();
 
-        // Safe vibration: wrapped in try-catch to avoid console warnings
+        // Haptic feedback only when user activation is present to avoid blocked warnings
         try {
-          if (navigator.vibrate) {
+          if (navigator.vibrate && (navigator as any).userActivation?.isActive) {
             navigator.vibrate(50);
           }
         } catch (e) {
