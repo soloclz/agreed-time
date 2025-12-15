@@ -15,7 +15,7 @@ This guide reflects the current codebase (no MVP wording) and is grounded in the
 - **Astro pages:** `src/pages/index.astro`, `/new`, `/event/[public_token]`, `/event/[public_token]/result`, `/manage/[organizer_token]`. `Layout.astro` hosts the fixed header, film-grain overlay, and the global toast container.
 - **Core React components:**
   - `CreateEventForm`: Collects title/description/organizer, auto-detects timezone, enforces at least one slot, uses `TimeSlotSelector`, saves the organizer token to `localStorage`, and redirects to the manage page on success.
-  - `EventGuestForm` (participant form): Fetches event data, redirects to results when `state === 'closed'`, captures participant name/comment, and reuses `TimeSlotSelector` in participant mode (selection constrained to organizer slots).
+  - `EventParticipantForm`: Fetches event data, redirects to results when `state === 'closed'`, captures participant name/comment, and reuses `TimeSlotSelector` in participant mode (selection constrained to organizer slots).
   - `OrganizerDashboard`: Fetches organizer event data, shows copy buttons for participant/results links, displays expiry (created_at + 7 days), and lets the organizer close the event.
   - `EventResultView` / `EventResultsDisplay` / `Heatmap`: Fetch results, compute slot counts client-side from participant ranges, render best times, other options, participant list with organizer badge/comments, and a read-only heatmap grid.
   - Grid system: `TimeSlotSelector` (selection logic + controls + bottom panel), `TimeGrid` (multi-week horizontal layout with date/time headers and drag delegation), `TimeSlotCell` (select vs heatmap modes), `TimeSlotBottomPanel` (selected slots list).

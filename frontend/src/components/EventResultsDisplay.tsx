@@ -16,7 +16,7 @@ interface EventResultsDisplayProps {
 interface ComputedSlot {
   slot: string; // ISO string
   count: number;
-  attendees: string[];
+  participants: string[];
 }
 
 export default function EventResultsDisplay({ data, publicToken: _publicToken, timezoneOffsetString }: EventResultsDisplayProps) {
@@ -26,8 +26,8 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
 
   // Transform Participant Ranges into Computed Slots (Intersection Logic)
   const allSortedSlots = useMemo(() => {
-    // 2. Map: "YYYY-MM-DD_H.5" -> { count, attendees }
-    const slotMap = new Map<string, { count: number, attendees: string[] }>();
+    // 2. Map: "YYYY-MM-DD_H.5" -> { count, participants }
+    const slotMap = new Map<string, { count: number, participants: string[] }>();
 
     data.participants.forEach(p => {
       // Convert this participant's ranges to cells
@@ -35,11 +35,11 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
       
       cells.forEach(cellKey => {
         if (!slotMap.has(cellKey)) {
-          slotMap.set(cellKey, { count: 0, attendees: [] });
+          slotMap.set(cellKey, { count: 0, participants: [] });
         }
         const entry = slotMap.get(cellKey)!;
         entry.count += 1;
-        entry.attendees.push(p.name);
+        entry.participants.push(p.name);
       });
     });
 
@@ -59,7 +59,7 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
       result.push({
         slot: date.toISOString(), 
         count: value.count,
-        attendees: value.attendees
+        participants: value.participants
       });
     });
 
@@ -150,7 +150,7 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
                           {pick.count} / {totalParticipants} Available
                         </span>
                         <p className="text-sm text-ink/60 font-medium">
-                          Includes: {pick.attendees.join(', ')}
+                          Includes: {pick.participants.join(', ')}
                         </p>
                       </div>
                     </div>
@@ -175,9 +175,9 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
                               </span>
                           </div>
                           <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                              <span className="text-sm text-ink/60 truncate max-w-[150px]">{item.attendees.join(', ')}</span>
+                              <span className="text-sm text-ink/60 truncate max-w-[150px]">{item.participants.join(', ')}</span>
                               <span className="bg-paper border border-film-border text-ink/70 px-3 py-1 rounded-md text-xs font-bold whitespace-nowrap">
-                                  {item.count} votes
+                                  {item.count} available
                               </span>
                           </div>
                       </div>

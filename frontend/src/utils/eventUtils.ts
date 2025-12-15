@@ -7,7 +7,7 @@ import type { ParticipantAvailability, ApiTimeRange } from '../types';
 
 interface SlotData {
   count: number;
-  attendees: string[];
+  participants: string[];
 }
 
 /**
@@ -25,7 +25,7 @@ export function isOrganizerOnlySlot(
   organizerName: string | undefined
 ): boolean {
   if (!organizerName) return false;
-  return slot.count === 1 && slot.attendees.length === 1 && slot.attendees[0] === organizerName;
+  return slot.count === 1 && slot.participants.length === 1 && slot.participants[0] === organizerName;
 }
 
 /**
