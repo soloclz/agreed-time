@@ -1,6 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import CreateEventForm from '../components/CreateEventForm';
+
+// Provide a stable initial date range for SSR so the calendar can render immediately.
+// The TimeSlotSelector will still normalize to the viewer's local "today" after hydration.
+const initialStartDate = new Date().toISOString().slice(0, 10);
+const initialEndDate = (() => {
+  const end = new Date(`${initialStartDate}T00:00:00.000Z`);
+  end.setUTCDate(end.getUTCDate() + 27);
+  return end.toISOString().slice(0, 10);
+})();
 ---
 
 <Layout title="Create an Event - AgreedTime">
@@ -14,7 +23,7 @@ import CreateEventForm from '../components/CreateEventForm';
       </div>
 
       <div class="bg-white/95 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-film-border p-4 sm:p-8 lg:p-12 transition-shadow duration-500 hover:shadow-[0_12px_50px_rgba(76,181,171,0.1)]">
-        <CreateEventForm client:load />
+        <CreateEventForm client:load initialStartDate={initialStartDate} initialEndDate={initialEndDate} />
       </div>
     </div>
   </main>

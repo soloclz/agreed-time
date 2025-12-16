@@ -1,10 +1,15 @@
-import { useState, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import TimeSlotSelector from './TimeSlotSelector';
 import type { ApiTimeRange } from '../types';
 import { eventService } from '../services/eventService';
 
-export default function CreateEventForm() {
+interface CreateEventFormProps {
+  initialStartDate?: string;
+  initialEndDate?: string;
+}
+
+export default function CreateEventForm({ initialStartDate, initialEndDate }: CreateEventFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organizerName, setOrganizerName] = useState('Organizer');
@@ -26,11 +31,6 @@ export default function CreateEventForm() {
       textarea.style.height = textarea.scrollHeight + 'px';
     }
   }, []);
-
-  // Set initial height for placeholder
-  useLayoutEffect(() => {
-    resizeTextarea();
-  }, [resizeTextarea]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,26 +102,26 @@ export default function CreateEventForm() {
           />
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-ink mb-2 font-serif relative">
-            Description (optional)
-            <span className="absolute top-0 right-0 text-sm text-gray-500">{description.length}/500</span>
-          </label>
-          <textarea
-            ref={textareaRef}
-            id="description"
-            name="description"
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              resizeTextarea();
-            }}
-            placeholder="Add any details about the event..."
-            rows={1}
-            className="w-full px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
-            maxLength={500}
-          />
-        </div>
+	        <div>
+	          <label htmlFor="description" className="block text-sm font-medium text-ink mb-2 font-serif relative">
+	            Description (optional)
+	            <span className="absolute top-0 right-0 text-sm text-gray-500">{description.length}/500</span>
+	          </label>
+	          <textarea
+	            ref={textareaRef}
+	            id="description"
+	            name="description"
+	            value={description}
+	            onChange={(e) => {
+	              setDescription(e.target.value);
+	              resizeTextarea();
+	            }}
+	            placeholder="Add any details about the event..."
+	            rows={1}
+	            className="w-full min-h-[52px] px-4 py-3 border-b border-film-border bg-film-light/50 focus:bg-film-light focus:outline-none focus:border-film-accent transition-colors font-mono resize-none rounded-t-sm placeholder-gray-400 text-ink overflow-hidden"
+	            maxLength={500}
+	          />
+	        </div>
 
         <div>
           <label htmlFor="organizerName" className="block text-sm font-medium text-ink mb-2 font-serif relative">
@@ -147,6 +147,8 @@ export default function CreateEventForm() {
         <TimeSlotSelector 
           slotDuration={SLOT_DURATION}
           onRangesChange={handleRangesChange} 
+          initialStartDate={initialStartDate}
+          initialEndDate={initialEndDate}
         />
       </div>
 
