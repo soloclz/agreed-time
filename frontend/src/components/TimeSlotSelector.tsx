@@ -39,6 +39,8 @@ interface TimeSlotSelectorProps {
   initialRanges?: ApiTimeRange[];
   availableRanges?: ApiTimeRange[];
   slotDuration?: number;
+  initialStartDate?: string;
+  initialEndDate?: string;
 }
 
 const DEFAULT_RANGES: ApiTimeRange[] = [];
@@ -58,6 +60,8 @@ export default function TimeSlotSelector({
   initialRanges = DEFAULT_RANGES, 
   availableRanges, 
   slotDuration = 60,
+  initialStartDate = '',
+  initialEndDate = '',
 }: TimeSlotSelectorProps) {
   // Hydration fix: Track mounted state
   const [isMounted, setIsMounted] = useState(false);
@@ -97,8 +101,8 @@ export default function TimeSlotSelector({
     canRedo
   } = useHistory<CalendarState>({
     selectedCells: initialSelectedCells,
-    startDate: '', // Will be initialized by effect
-    endDate: '',
+    startDate: initialStartDate,
+    endDate: initialEndDate,
     startHour: 9,
     endHour: 18
   });
@@ -489,8 +493,6 @@ export default function TimeSlotSelector({
         height: focusPosition.height + 12
       }
     : undefined;
-
-  if (!isMounted) return <div className="h-96 flex items-center justify-center text-gray-400 font-mono">Loading calendar...</div>;
 
   return (
     <div className="space-y-4 sm:space-y-6 font-sans text-ink" onMouseLeave={handleMouseUp}>
