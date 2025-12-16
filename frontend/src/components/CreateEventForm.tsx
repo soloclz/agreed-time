@@ -152,15 +152,6 @@ export default function CreateEventForm() {
 
       {/* Submit Button */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 py-4 sm:py-6 border-t border-film-border pb-20 sm:pb-6">
-        <div className="text-sm sm:text-base font-sans hidden sm:block">
-          {selectedRanges.length > 0 ? (
-            <span className="text-ink">
-              <span className="font-bold">✓</span> Ranges selected
-            </span>
-          ) : (
-            <span className="text-ink/70">No time slots selected yet</span>
-          )}
-        </div>
         <button
           type="submit"
           disabled={isSubmitting || !title.trim() || selectedRanges.length === 0}
