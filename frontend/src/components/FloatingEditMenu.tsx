@@ -99,10 +99,10 @@ export default function FloatingEditMenu({
                     ? 'bg-white text-film-accent hover:bg-film-light hover:scale-105 active:scale-95'
                     : actionBtnDisabled
                 }`}
-                aria-label="Copy Week 1 Pattern to All Weeks"
-                title="Copy Week 1 Pattern to All Weeks"
+                aria-label="Merge Week 1 selections into following weeks (won't overwrite)"
+                title="Merge Week 1 selections into following weeks (won't overwrite)"
             >
-                <span className="text-lg mr-2">✨</span> Copy Week 1
+                <span className="text-lg mr-2">✨</span> Repeat Week 1
             </button>
           </div>
         </div>

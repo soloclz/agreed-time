@@ -31,10 +31,10 @@ vi.mock('../services/eventService', () => ({
 }));
 
 vi.mock('react-hot-toast', () => ({
-  default: {
+  default: Object.assign(vi.fn(), {
     success: vi.fn(),
     error: vi.fn(),
-  },
+  }),
 }));
 
 const mockRanges: ApiTimeRange[] = [

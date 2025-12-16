@@ -52,11 +52,14 @@ export function useHistory<T>(initialState: T): HistoryResult<T> {
   // Push new state: Commits the *current* 'present' to history, then sets new 'present'.
   // Use this for discrete actions (like Copy, or Drag Start/End boundary).
   const pushState = useCallback((newState: StateOrUpdater<T>) => {
-    setPast(prev => [...prev, present]);
-    const resolvedState = typeof newState === 'function' ? (newState as (value: T) => T)(present) : newState;
-    setPresent(resolvedState);
+    setPresent(prevPresent => {
+      setPast(prev => [...prev, prevPresent]);
+      const resolvedState =
+        typeof newState === 'function' ? (newState as (value: T) => T)(prevPresent) : newState;
+      return resolvedState;
+    });
     setFuture([]); // Clear future when a new action is taken
-  }, [present]);
+  }, []);
 
   const clearHistory = useCallback(() => {
       setPast([]);
