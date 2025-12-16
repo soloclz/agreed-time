@@ -8,7 +8,6 @@ import FloatingEditMenu from './FloatingEditMenu';
 import {
   getTodayLocal,
   addDays,
-  diffInDays,
   formatHour,
 } from '../utils/dateUtils';
 import {
@@ -19,6 +18,7 @@ import {
 import { useTimeSlotDragSelection } from '../hooks/useTimeSlotDragSelection';
 import { useHistory } from '../hooks/useHistory';
 import { GRID_STYLES } from '../constants/gridStyles';
+import { mergeWeek1PatternIntoFollowingWeeks } from '../utils/weekPatternUtils';
 
 // Helper to convert hour to time slot with duration for display logic
 const getTimeSlotFromHour = (hour: number, duration: number): { startTime: string; endTime: string } => {
@@ -108,10 +108,10 @@ export default function TimeSlotSelector({
 
   // Sync history state with initialSelectedCells on load (if props change)
   useEffect(() => {
-    setState({
-      ...state,
+    setState(prev => ({
+      ...prev,
       selectedCells: initialSelectedCells
-    });
+    }));
   }, [initialSelectedCells, setState]);
 
   // Available cells set for fast lookup in Guest Mode
@@ -330,10 +330,10 @@ export default function TimeSlotSelector({
     // Pass managed state
     value: selectedCells,
     // Update only the cells part of the state (live update during drag)
-    onChange: (newCells) => setState({ ...state, selectedCells: newCells }),
+    onChange: (newCells) => setState(prev => ({ ...prev, selectedCells: newCells })),
     onDragStart: () => {
         // Snapshot current FULL state to history
-        pushState({ ...state, selectedCells: new Set(selectedCells) });
+        pushState(prev => ({ ...prev, selectedCells: new Set(prev.selectedCells) }));
     }
   });
 
@@ -356,7 +356,7 @@ export default function TimeSlotSelector({
     }
 
     // Snapshot state
-    pushState({ ...state, selectedCells: new Set(selectedCells) });
+    pushState(prev => ({ ...prev, selectedCells: new Set(prev.selectedCells) }));
 
     const timeSlotsForDay: Array<{ startHour: number; label: string }> = [];
     const durationInHours = slotDuration / 60;
@@ -385,111 +385,58 @@ export default function TimeSlotSelector({
     }
     
     // Update state
-    setState({ ...state, selectedCells: newSet });
+    setState(prev => ({ ...prev, selectedCells: newSet }));
   };
 
   // Logic to copy first week's pattern to subsequent weeks
   const copyFirstWeekPattern = () => {
     if (!startDate || !endDate) return;
 
-    // 1. Extract pattern
-    const pattern = new Map<number, Set<number>>();
-    let hasPattern = false;
+    const { mergedSelectedCells, hasWeek1Pattern, addedCount } = mergeWeek1PatternIntoFollowingWeeks({
+      selectedCells,
+      startDate,
+      endDate,
+      startHour,
+      endHour,
+      slotDuration,
+    });
 
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(startDate, i);
-      if (date > endDate) break;
-
-      const dayPattern = new Set<number>();
-      const durationInHours = slotDuration / 60;
-      let currentHour = startHour;
-      while (currentHour < endHour) {
-        if (selectedCells.has(getCellKey(date, currentHour))) {
-          dayPattern.add(currentHour);
-          hasPattern = true;
-        }
-        currentHour += durationInHours;
-      }
-      if (dayPattern.size > 0) {
-        pattern.set(i, dayPattern);
-      }
-    }
-
-    if (!hasPattern) {
+    if (!hasWeek1Pattern) {
       toast.error('No slots selected in the first week to copy.');
       return;
     }
 
-    // 2. Extend Date Range if needed
-    let targetEndDate = endDate;
-    const currentDurationDays = diffInDays(startDate, endDate) + 1;
-    let rangeUpdated = false;
-    
-    if (currentDurationDays < 14) {
-      targetEndDate = addDays(startDate, 27);
-      rangeUpdated = true;
+    if (addedCount === 0) {
+      toast('No additional weeks in range to copy into.', { icon: 'ℹ️' });
+      return;
     }
 
-    // 3. Apply pattern
-    const newSelectedCells = new Set<string>();
-    
-    // Keep existing first week
-    for (let i = 0; i < 7; i++) {
-        const date = addDays(startDate, i);
-        if (date > targetEndDate) break; // Check against new target
-        const durationInHours = slotDuration / 60;
-        let currentHour = startHour;
-        while (currentHour < endHour) {
-            const key = getCellKey(date, currentHour);
-            if (selectedCells.has(key)) {
-                newSelectedCells.add(key);
-            }
-            currentHour += durationInHours;
-        }
-    }
+    pushState(prev => ({
+      ...prev,
+      selectedCells: mergeWeek1PatternIntoFollowingWeeks({
+        selectedCells: prev.selectedCells,
+        startDate: prev.startDate,
+        endDate: prev.endDate,
+        startHour: prev.startHour,
+        endHour: prev.endHour,
+        slotDuration,
+      }).mergedSelectedCells,
+    }));
 
-    let currentDayOffset = 7; 
-    let currentDate = addDays(startDate, currentDayOffset);
-
-    while (currentDate <= targetEndDate) {
-      const patternDayIndex = currentDayOffset % 7;
-      const hoursToSelect = pattern.get(patternDayIndex);
-
-      if (hoursToSelect) {
-        hoursToSelect.forEach(hour => {
-          const key = getCellKey(currentDate, hour);
-          newSelectedCells.add(key);
-        });
-      }
-
-      currentDayOffset++;
-      currentDate = addDays(startDate, currentDayOffset);
-    }
-
-    // Commit to history: New Cells AND New Date Range
-    pushState({
-        ...state,
-        selectedCells: newSelectedCells,
-        endDate: targetEndDate
-    });
-    
     if (onRangesChange) {
-        const ranges = cellsToRanges(newSelectedCells, slotDuration);
-        onRangesChange(ranges);
+      const ranges = cellsToRanges(mergedSelectedCells, slotDuration);
+      onRangesChange(ranges);
     }
-    
-    if (rangeUpdated) {
-        toast('Extended date range to 4 weeks and copied pattern', { icon: '📅' });
-    } else {
-        toast.success(`Copied pattern to following weeks!`);
-    }
+
+    toast.success('Copied week 1 pattern into following weeks!');
   };
 
   const hasFirstWeekSelection = useMemo(() => {
     if (!startDate || selectedCells.size === 0) return false;
     const durationInHours = slotDuration / 60;
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(startDate, i);
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const date = addDays(startDate, dayOffset);
+      if (date > endDate) break;
       let currentHour = startHour;
       while (currentHour < endHour) {
         if (selectedCells.has(getCellKey(date, currentHour))) {
@@ -499,7 +446,7 @@ export default function TimeSlotSelector({
       }
     }
     return false;
-  }, [selectedCells, startDate, startHour, endHour, slotDuration]);
+  }, [selectedCells, startDate, endDate, startHour, endHour, slotDuration]);
 
   const selectedSlotsByDate = useMemo(() => {
     const grouped: Record<string, TimeSlot[]> = {};
@@ -636,16 +583,16 @@ export default function TimeSlotSelector({
           selectedSlotsByDate={selectedSlotsByDate}
           onRemoveSlot={(slotId) => {
              // Snapshot current state before removal
-             pushState({ ...state, selectedCells: new Set(selectedCells) });
+             pushState(prev => ({ ...prev, selectedCells: new Set(prev.selectedCells) }));
              removeSlot(slotId);
           }}
           onClearAll={() => {
             // Snapshot before clearing
-            pushState({ ...state, selectedCells: new Set(selectedCells) }); 
+            pushState(prev => ({ ...prev, selectedCells: new Set(prev.selectedCells) })); 
             setShowBottomPanel(false);
             
             // Clear cells via setState (updates live state without another history push)
-            setState({ ...state, selectedCells: new Set() });
+            setState(prev => ({ ...prev, selectedCells: new Set() }));
             if (onRangesChange) onRangesChange([]);
           }}
           showBottomPanel={showBottomPanel}

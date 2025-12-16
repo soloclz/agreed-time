@@ -7,10 +7,10 @@ import * as dateUtils from '../utils/dateUtils';
 
 // Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
-  default: {
+  default: Object.assign(vi.fn(), {
     success: vi.fn(),
     error: vi.fn(),
-  },
+  }),
 }));
 
 // Mock scrollIntoView
@@ -89,6 +89,67 @@ describe('TimeSlotSelector', () => {
     fireEvent.click(undoButton);
     
     expect(startHourSelect).toHaveValue('9');
+  });
+
+  it('copies week 1 pattern into week 2 without removing existing week 2 selections', async () => {
+    const { container } = render(<TimeSlotSelector />);
+
+    // Wait for mount effect to initialize date range
+    expect(await screen.findByTitle('Start date')).toHaveValue('2025-12-15');
+
+    const week1Cell = container.querySelector('td[data-date="2025-12-15"][data-hour="9"]');
+    const week2ExistingCell = container.querySelector('td[data-date="2025-12-22"][data-hour="10"]');
+
+    expect(week1Cell).toBeTruthy();
+    expect(week2ExistingCell).toBeTruthy();
+
+    // Select week 1 pattern cell (Mon 9)
+    fireEvent.mouseDown(week1Cell as HTMLElement, { button: 0 });
+    fireEvent.mouseUp(week1Cell as HTMLElement);
+    expect(week1Cell).toHaveAttribute('aria-selected', 'true');
+
+    // Select an extra cell in week 2 (Mon 10) that should be preserved
+    fireEvent.mouseDown(week2ExistingCell as HTMLElement, { button: 0 });
+    fireEvent.mouseUp(week2ExistingCell as HTMLElement);
+    expect(week2ExistingCell).toHaveAttribute('aria-selected', 'true');
+
+    // Copy Week 1 into following weeks
+    const copyButton = screen.getByLabelText(/Merge Week 1 selections into following weeks/i);
+    expect(copyButton).not.toBeDisabled();
+    fireEvent.click(copyButton);
+
+    // Week 2 should now include the copied pattern cell (Mon 9) AND preserve the existing cell (Mon 10)
+    const week2CopiedCell = container.querySelector('td[data-date="2025-12-22"][data-hour="9"]');
+    expect(week2CopiedCell).toBeTruthy();
+    expect(week2CopiedCell).toHaveAttribute('aria-selected', 'true');
+    expect(week2ExistingCell).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does not clear week 2 selections for days with no week 1 pattern', async () => {
+    const { container } = render(<TimeSlotSelector />);
+
+    expect(await screen.findByTitle('Start date')).toHaveValue('2025-12-15');
+
+    const week1MondayCell = container.querySelector('td[data-date="2025-12-15"][data-hour="9"]');
+    const week2TuesdayExistingCell = container.querySelector('td[data-date="2025-12-23"][data-hour="10"]');
+
+    expect(week1MondayCell).toBeTruthy();
+    expect(week2TuesdayExistingCell).toBeTruthy();
+
+    // Week 1 pattern only on Monday
+    fireEvent.mouseDown(week1MondayCell as HTMLElement, { button: 0 });
+    fireEvent.mouseUp(week1MondayCell as HTMLElement);
+    expect(week1MondayCell).toHaveAttribute('aria-selected', 'true');
+
+    // Existing selection on week 2 Tuesday should be preserved (week 1 Tuesday has no pattern)
+    fireEvent.mouseDown(week2TuesdayExistingCell as HTMLElement, { button: 0 });
+    fireEvent.mouseUp(week2TuesdayExistingCell as HTMLElement);
+    expect(week2TuesdayExistingCell).toHaveAttribute('aria-selected', 'true');
+
+    const copyButton = screen.getByLabelText(/Merge Week 1 selections into following weeks/i);
+    fireEvent.click(copyButton);
+
+    expect(week2TuesdayExistingCell).toHaveAttribute('aria-selected', 'true');
   });
 
 });
