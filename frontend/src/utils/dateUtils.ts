@@ -90,6 +90,7 @@ export function diffInDays(start: string, end: string): number {
  * @returns Formatted time string
  */
 export function formatHour(hour: number): string {
+  if (hour === 24) return '12 AM';
   if (hour === 0) return '12 AM';
   if (hour < 12) return `${hour} AM`;
   if (hour === 12) return '12 PM';
@@ -127,8 +128,12 @@ export function getTimezoneOffsetString(): string {
  * @returns Formatted time string
  */
 export function formatMinimalTimeLabel(hour: number): string {
-  const h = Math.floor(hour);
-  const m = Math.round((hour % 1) * 60); // Round to nearest minute
+  const totalMinutes = Math.round(hour * 60);
+  const minutesInDay = 24 * 60;
+  const normalizedMinutes = ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
+
+  const h = Math.floor(normalizedMinutes / 60);
+  const m = normalizedMinutes % 60;
 
   const ampm = h >= 12 ? 'PM' : 'AM';
   const displayHour = h % 12 === 0 ? 12 : h % 12;
@@ -140,4 +145,3 @@ export function formatMinimalTimeLabel(hour: number): string {
     return `${displayHour}:${displayMinutes} ${ampm}`;
   }
 }
-

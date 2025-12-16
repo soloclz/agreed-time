@@ -117,21 +117,26 @@ describe('dateUtils', () => {
       expect(formatHour(12)).toBe('12 PM');
     });
 
-    it('should format afternoon/evening hours', () => {
-      expect(formatHour(13)).toBe('1 PM');
-      expect(formatHour(18)).toBe('6 PM');
-      expect(formatHour(23)).toBe('11 PM');
-    });
-  });
+	    it('should format afternoon/evening hours', () => {
+	      expect(formatHour(13)).toBe('1 PM');
+	      expect(formatHour(18)).toBe('6 PM');
+	      expect(formatHour(23)).toBe('11 PM');
+	    });
 
-  describe('formatHourTime', () => {
-    it('should format hour with leading zero', () => {
-      expect(formatHourTime(0)).toBe('00:00');
-      expect(formatHourTime(9)).toBe('09:00');
-      expect(formatHourTime(12)).toBe('12:00');
-      expect(formatHourTime(23)).toBe('23:00');
-    });
-  });
+	    it('should format 24 as 12 AM', () => {
+	      expect(formatHour(24)).toBe('12 AM');
+	    });
+	  });
+
+	  describe('formatHourTime', () => {
+	    it('should format hour with leading zero', () => {
+	      expect(formatHourTime(0)).toBe('00:00');
+	      expect(formatHourTime(9)).toBe('09:00');
+	      expect(formatHourTime(12)).toBe('12:00');
+	      expect(formatHourTime(23)).toBe('23:00');
+	      expect(formatHourTime(24)).toBe('24:00');
+	    });
+	  });
 
   describe('getTimezoneOffsetString', () => {
     it('should return timezone string in GMT format', () => {
@@ -146,13 +151,14 @@ describe('dateUtils', () => {
     });
   });
 
-  describe('formatMinimalTimeLabel', () => {
-    it('should format whole hours like formatHour', () => {
-      expect(formatMinimalTimeLabel(0)).toBe('12 AM');
-      expect(formatMinimalTimeLabel(9)).toBe('9 AM');
-      expect(formatMinimalTimeLabel(12)).toBe('12 PM');
-      expect(formatMinimalTimeLabel(23)).toBe('11 PM');
-    });
+	  describe('formatMinimalTimeLabel', () => {
+	    it('should format whole hours like formatHour', () => {
+	      expect(formatMinimalTimeLabel(0)).toBe('12 AM');
+	      expect(formatMinimalTimeLabel(9)).toBe('9 AM');
+	      expect(formatMinimalTimeLabel(12)).toBe('12 PM');
+	      expect(formatMinimalTimeLabel(23)).toBe('11 PM');
+	      expect(formatMinimalTimeLabel(24)).toBe('12 AM');
+	    });
 
     it('should format half hours with minutes', () => {
       expect(formatMinimalTimeLabel(0.5)).toBe('12:30 AM');

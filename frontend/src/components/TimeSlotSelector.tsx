@@ -559,18 +559,23 @@ export default function TimeSlotSelector({
                 <span className="text-ink font-bold text-center hidden sm:block">→</span>
                 <div className="flex-1 min-w-0">
                   <label htmlFor="endHour" className="block sm:hidden text-xs font-mono text-ink/70 mb-1">End Time</label>
-                  <select
-                    id="endHour"
-                    name="endHour"
-                    value={endHour}
-                    onChange={(e) => handleTimeChange('end', parseInt(e.target.value))}
-                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer appearance-none min-h-[52px]"
-                    title="End hour"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i}>{formatHour(i)}</option>
-                    ))}
-                  </select>
+	                  <select
+	                    id="endHour"
+	                    name="endHour"
+	                    value={endHour}
+	                    onChange={(e) => handleTimeChange('end', parseInt(e.target.value))}
+	                    className="w-full px-3 py-3 border border-film-border rounded-lg bg-white text-base focus:outline-none focus:ring-2 focus:ring-film-accent focus:border-film-accent font-mono transition-colors text-ink cursor-pointer appearance-none min-h-[52px]"
+	                    title="End hour"
+	                  >
+	                    {Array.from({ length: 24 }, (_, i) => {
+	                      const hourValue = i + 1; // 1..24
+	                      return (
+	                        <option key={hourValue} value={hourValue}>
+	                          {formatHour(hourValue)}
+	                        </option>
+	                      );
+	                    })}
+	                  </select>
                 </div>
               </div>
             </div>
