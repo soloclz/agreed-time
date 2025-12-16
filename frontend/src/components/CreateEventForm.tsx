@@ -4,7 +4,12 @@ import TimeSlotSelector from './TimeSlotSelector';
 import type { ApiTimeRange } from '../types';
 import { eventService } from '../services/eventService';
 
-export default function CreateEventForm() {
+interface CreateEventFormProps {
+  initialStartDate?: string;
+  initialEndDate?: string;
+}
+
+export default function CreateEventForm({ initialStartDate, initialEndDate }: CreateEventFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organizerName, setOrganizerName] = useState('Organizer');
@@ -147,6 +152,8 @@ export default function CreateEventForm() {
         <TimeSlotSelector 
           slotDuration={SLOT_DURATION}
           onRangesChange={handleRangesChange} 
+          initialStartDate={initialStartDate}
+          initialEndDate={initialEndDate}
         />
       </div>
 
