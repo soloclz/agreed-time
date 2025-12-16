@@ -151,7 +151,7 @@ export default function CreateEventForm() {
       </div>
 
       {/* Submit Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 py-4 sm:py-6 border-t border-film-border pb-20 sm:pb-6">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 py-4 sm:py-6 border-t border-film-border pb-20 sm:pb-6">
         <button
           type="submit"
           disabled={isSubmitting || !title.trim() || selectedRanges.length === 0}
