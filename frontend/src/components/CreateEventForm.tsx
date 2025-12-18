@@ -101,7 +101,13 @@ export default function CreateEventForm({ initialStartDate, initialEndDate }: Cr
       
       // Save admin token to localStorage for long-term history
       try {
-        localStorage.setItem(`agreed_time_admin_${result.id}`, result.organizer_token);
+        const historyData = {
+          token: result.organizer_token,
+          title: title,
+          createdAt: Date.now()
+        };
+        localStorage.setItem(`agreed_time_admin_${result.id}`, JSON.stringify(historyData));
+        
         // Clear draft from session
         sessionStorage.removeItem('create_event_draft');
       } catch (error) {

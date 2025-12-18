@@ -54,6 +54,8 @@ export default function OrganizerDashboard({ organizerToken }: OrganizerDashboar
         const data = await eventService.getOrganizerEvent(organizerToken);
         if (data) {
           setOrganizerData(data);
+          // Update browser tab title
+          document.title = `Manage: ${data.title} - AgreedTime`;
         } else {
           setError('Organizer event not found.');
         }
