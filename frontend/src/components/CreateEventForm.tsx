@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import TimeSlotSelector from './TimeSlotSelector';
 import type { ApiTimeRange } from '../types';
@@ -16,8 +16,47 @@ export default function CreateEventForm({ initialStartDate, initialEndDate }: Cr
   const [selectedRanges, setSelectedRanges] = useState<ApiTimeRange[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  // Separate state for the INITIAL ranges loaded from draft
+  // This ensures we don't pass the constantly changing 'selectedRanges' back into 'initialRanges'
+  const [loadedDraftRanges, setLoadedDraftRanges] = useState<ApiTimeRange[]>([]);
 
   const SLOT_DURATION = 60; // Default for now, could be selectable in future
+
+  // Load draft from sessionStorage on mount (Per-tab isolation)
+  useEffect(() => {
+    try {
+      const savedDraft = sessionStorage.getItem('create_event_draft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.organizerName) setOrganizerName(parsed.organizerName);
+        if (parsed.selectedRanges && Array.isArray(parsed.selectedRanges)) {
+          setSelectedRanges(parsed.selectedRanges);
+          setLoadedDraftRanges(parsed.selectedRanges); // Set the initial value for the child component
+        }
+        toast('Restored your draft', { icon: '📝' });
+      }
+    } catch (e) {
+      console.error('Failed to load draft', e);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, []);
+
+  // Save draft to sessionStorage whenever fields change
+  useEffect(() => {
+    if (!draftLoaded) return;
+
+    const draft = {
+      title,
+      description,
+      organizerName,
+      selectedRanges
+    };
+    sessionStorage.setItem('create_event_draft', JSON.stringify(draft));
+  }, [title, description, organizerName, selectedRanges, draftLoaded]);
 
   const handleRangesChange = useCallback((ranges: ApiTimeRange[]) => {
     setSelectedRanges(ranges);
@@ -60,9 +99,11 @@ export default function CreateEventForm({ initialStartDate, initialEndDate }: Cr
         selectedRanges
       );
       
-      // Save admin token to localStorage for auto-login
+      // Save admin token to localStorage for long-term history
       try {
         localStorage.setItem(`agreed_time_admin_${result.id}`, result.organizer_token);
+        // Clear draft from session
+        sessionStorage.removeItem('create_event_draft');
       } catch (error) {
         console.error('Failed to save admin token to localStorage:', error);
       }
@@ -149,6 +190,7 @@ export default function CreateEventForm({ initialStartDate, initialEndDate }: Cr
           onRangesChange={handleRangesChange} 
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
+          initialRanges={loadedDraftRanges}
         />
       </div>
 

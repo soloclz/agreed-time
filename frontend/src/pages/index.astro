@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import RecentEvents from '../components/RecentEvents';
 ---
 
 <Layout title="Welcome to AgreedTime">
-	<div class="min-h-[calc(100vh-4.5rem)] grid place-items-center bg-paper text-ink">
-		<div class="text-center space-y-8">
+	<div class="min-h-[calc(100vh-4.5rem)] grid place-items-center bg-paper text-ink content-center py-12">
+		<div class="text-center space-y-8 w-full max-w-2xl px-4">
 			<img src="/agreed-time-logo.svg" alt="AgreedTime Logo" class="h-24 w-24 mx-auto" />
 			<p class="text-xl font-sans text-ink/70 max-w-md mx-auto leading-relaxed">
 				Modern scheduling made simple. <br/>
@@ -18,6 +19,8 @@ import Layout from '../layouts/Layout.astro';
 					Create a New Event
 				</a>
 			</div>
+            
+            <RecentEvents client:only="react" />
 		</div>
 	</div>
 </Layout>
