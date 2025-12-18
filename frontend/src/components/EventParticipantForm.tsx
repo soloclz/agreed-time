@@ -13,6 +13,8 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
   const [selectedParticipantRanges, setSelectedParticipantRanges] = useState<ApiTimeRange[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // New state for submit lock
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [loadedDraftRanges, setLoadedDraftRanges] = useState<ApiTimeRange[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -26,8 +28,26 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
             return;
           }
           setEventData(data);
-          // Update browser tab title
-          document.title = `${data.title} - AgreedTime`;
+          
+          // Load draft from sessionStorage AFTER event data is ready
+          try {
+            const savedDraft = sessionStorage.getItem(`participant_draft_${publicToken}`);
+            if (savedDraft) {
+              const parsed = JSON.parse(savedDraft);
+              if (parsed.name) setParticipantName(parsed.name);
+              if (parsed.comment) setParticipantComment(parsed.comment);
+              if (parsed.selectedRanges && Array.isArray(parsed.selectedRanges)) {
+                setSelectedParticipantRanges(parsed.selectedRanges);
+                setLoadedDraftRanges(parsed.selectedRanges);
+              }
+              toast('Restored your draft', { icon: '📝' });
+            }
+          } catch (e) {
+            console.error('Failed to load participant draft', e);
+          } finally {
+            setDraftLoaded(true);
+          }
+
         } else {
           setError('Event not found.');
         }
@@ -41,6 +61,18 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
 
     fetchEvent();
   }, [publicToken]);
+
+  // Save draft to sessionStorage whenever fields change
+  useEffect(() => {
+    if (!draftLoaded) return;
+
+    const draft = {
+      name: participantName,
+      comment: participantComment,
+      selectedRanges: selectedParticipantRanges
+    };
+    sessionStorage.setItem(`participant_draft_${publicToken}`, JSON.stringify(draft));
+  }, [participantName, participantComment, selectedParticipantRanges, draftLoaded, publicToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +97,24 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
       );
       setSubmitted(true);
       toast.success('Your availability has been submitted!');
+
+      // Save to history as a guest (Responded)
+      if (eventData) {
+        try {
+          const historyData = {
+            token: publicToken,
+            title: eventData.title,
+            role: 'guest',
+            createdAt: Date.now()
+          };
+          localStorage.setItem(`agreed_time_guest_${publicToken}`, JSON.stringify(historyData));
+          // Clear draft
+          sessionStorage.removeItem(`participant_draft_${publicToken}`);
+        } catch (e) {
+          console.error('Failed to save history', e);
+        }
+      }
+
     } catch (err: any) {
       if (err instanceof ApiError && err.code === 'PARTICIPANT_LIMIT_REACHED') {
          toast.error('This event has reached the maximum number of participants (10).');
@@ -136,6 +186,7 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
             availableRanges={eventData.eventSlots} // Pass ranges
             slotDuration={eventData.slotDuration}
             onRangesChange={setSelectedParticipantRanges}
+            initialRanges={loadedDraftRanges}
           />
         )}
       </div>
