@@ -4,7 +4,10 @@ import type {
     CreateEventPayload, 
     CreateEventSuccessResponse, 
     EventResponse, 
-    SubmitAvailabilityPayload, 
+    SubmitAvailabilityPayload,
+    SubmitAvailabilitySuccessResponse,
+    UpdateParticipantPayload,
+    ParticipantResponse, 
     EventResultsResponse,
     OrganizerEventResponse,
     ApiErrorResponse
@@ -98,7 +101,7 @@ import type {
       return response.json() as Promise<CreateEventSuccessResponse>;
     },
   
-    submitResponse: async (publicToken: string, participantName: string, ranges: ApiTimeRange[], comment: string | undefined): Promise<void> => {
+    submitResponse: async (publicToken: string, participantName: string, ranges: ApiTimeRange[], comment: string | undefined): Promise<SubmitAvailabilitySuccessResponse> => {
       const payload: SubmitAvailabilityPayload = {
         participant_name: participantName,
         availabilities: ranges,
@@ -116,6 +119,54 @@ import type {
       if (!apiResponse.ok) {
         const errorDetail: ApiErrorResponse = await apiResponse.json();
         throw new ApiError(errorDetail.error || errorDetail.message || `Failed to submit response: ${apiResponse.statusText}`, errorDetail.code);
+      }
+
+      return apiResponse.json() as Promise<SubmitAvailabilitySuccessResponse>;
+    },
+
+    getParticipant: async (publicToken: string, participantToken: string): Promise<ParticipantResponse | null> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/events/${publicToken}/participants/${participantToken}`);
+        
+        if (response.status === 404) {
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch participant: ${response.statusText}`);
+        }
+
+        return response.json() as Promise<ParticipantResponse>;
+      } catch (error) {
+        console.error("Error fetching participant:", error);
+        return null;
+      }
+    },
+
+    updateParticipant: async (
+      publicToken: string, 
+      participantToken: string, 
+      participantName: string, 
+      ranges: ApiTimeRange[], 
+      comment: string | undefined
+    ): Promise<void> => {
+      const payload: UpdateParticipantPayload = {
+        participant_name: participantName,
+        availabilities: ranges,
+        comment: comment || undefined,
+      };
+
+      const apiResponse = await fetch(`${API_BASE_URL}/events/${publicToken}/participants/${participantToken}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!apiResponse.ok) {
+        const errorDetail: ApiErrorResponse = await apiResponse.json();
+        throw new ApiError(errorDetail.error || errorDetail.message || `Failed to update response: ${apiResponse.statusText}`, errorDetail.code);
       }
     },
   

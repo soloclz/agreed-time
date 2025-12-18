@@ -69,6 +69,26 @@ pub struct SubmitAvailabilityRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SubmitAvailabilityResponse {
+    pub participant_token: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParticipantResponse {
+    pub participant_token: Uuid,
+    pub name: String,
+    pub comment: Option<String>,
+    pub availabilities: Vec<TimeRangeRequest>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateParticipantRequest {
+    pub participant_name: String,
+    pub availabilities: Vec<TimeRangeRequest>,
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ParticipantAvailability {
     pub name: String,
     pub is_organizer: bool, // Add this to help frontend identify organizer

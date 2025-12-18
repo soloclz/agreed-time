@@ -15,6 +15,7 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
   const [isSubmitting, setIsSubmitting] = useState(false); // New state for submit lock
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [loadedDraftRanges, setLoadedDraftRanges] = useState<ApiTimeRange[]>([]);
+  const [participantToken, setParticipantToken] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -29,24 +30,56 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
           }
           setEventData(data);
           
-          // Load draft from sessionStorage AFTER event data is ready
+          // 1. Check for existing participant token (Edit Mode)
+          let foundExisting = false;
           try {
-            const savedDraft = sessionStorage.getItem(`participant_draft_${publicToken}`);
-            if (savedDraft) {
-              const parsed = JSON.parse(savedDraft);
-              if (parsed.name) setParticipantName(parsed.name);
-              if (parsed.comment) setParticipantComment(parsed.comment);
-              if (parsed.selectedRanges && Array.isArray(parsed.selectedRanges)) {
-                setSelectedParticipantRanges(parsed.selectedRanges);
-                setLoadedDraftRanges(parsed.selectedRanges);
+            const historyKey = `agreed_time_guest_${publicToken}`;
+            const historyStr = localStorage.getItem(historyKey);
+            if (historyStr) {
+              const historyData = JSON.parse(historyStr);
+              if (historyData.token === publicToken && historyData.participant_token) {
+                 // Found a token, try to fetch participant data
+                 const pToken = historyData.participant_token;
+                 try {
+                   const participantData = await eventService.getParticipant(publicToken, pToken);
+                   if (participantData) {
+                     setParticipantToken(pToken);
+                     setParticipantName(participantData.name);
+                     setParticipantComment(participantData.comment || '');
+                     setSelectedParticipantRanges(participantData.availabilities);
+                     setLoadedDraftRanges(participantData.availabilities);
+                     foundExisting = true;
+                     toast('Loaded your previous response', { icon: '✏️' });
+                   }
+                 } catch (fetchErr) {
+                   console.error('Failed to fetch existing participant', fetchErr);
+                   // If fetch fails (e.g. wiped from DB), ignore and fall back to draft
+                 }
               }
-              toast('Restored your draft', { icon: '📝' });
             }
           } catch (e) {
-            console.error('Failed to load participant draft', e);
-          } finally {
-            setDraftLoaded(true);
+            console.error('Failed to check history', e);
           }
+
+          // 2. Load draft if no existing participant found
+          if (!foundExisting) {
+            try {
+              const savedDraft = sessionStorage.getItem(`participant_draft_${publicToken}`);
+              if (savedDraft) {
+                const parsed = JSON.parse(savedDraft);
+                if (parsed.name) setParticipantName(parsed.name);
+                if (parsed.comment) setParticipantComment(parsed.comment);
+                if (parsed.selectedRanges && Array.isArray(parsed.selectedRanges)) {
+                  setSelectedParticipantRanges(parsed.selectedRanges);
+                  setLoadedDraftRanges(parsed.selectedRanges);
+                }
+                toast('Restored your draft', { icon: '📝' });
+              }
+            } catch (e) {
+              console.error('Failed to load participant draft', e);
+            }
+          }
+          setDraftLoaded(true);
 
         } else {
           setError('Event not found.');
@@ -63,6 +96,8 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
   }, [publicToken]);
 
   // Save draft to sessionStorage whenever fields change
+  // Only save draft if we are NOT in edit mode (or maybe we should? let's keep it simple)
+  // Actually, even in edit mode, draft protection is good against refresh.
   useEffect(() => {
     if (!draftLoaded) return;
 
@@ -89,23 +124,42 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
 
     setIsSubmitting(true); // Lock the form
     try {
-      await eventService.submitResponse(
-        publicToken,
-        participantName,
-        selectedParticipantRanges,
-        participantComment
-      );
-      setSubmitted(true);
-      toast.success('Your availability has been submitted!');
+      let currentToken = participantToken;
 
-      // Save to history as a guest (Responded)
-      if (eventData) {
+      if (currentToken) {
+        // Update existing
+        await eventService.updateParticipant(
+          publicToken,
+          currentToken,
+          participantName,
+          selectedParticipantRanges,
+          participantComment
+        );
+        toast.success('Your availability has been updated!');
+      } else {
+        // Create new
+        const response = await eventService.submitResponse(
+          publicToken,
+          participantName,
+          selectedParticipantRanges,
+          participantComment
+        );
+        currentToken = response.participant_token;
+        setParticipantToken(currentToken);
+        toast.success('Your availability has been submitted!');
+      }
+      
+      setSubmitted(true);
+
+      // Save to history as a guest (Responded) with participant_token
+      if (eventData && currentToken) {
         try {
           const historyData = {
             token: publicToken,
             title: eventData.title,
             role: 'guest',
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            participant_token: currentToken // Save the key for future edits
           };
           localStorage.setItem(`agreed_time_guest_${publicToken}`, JSON.stringify(historyData));
           // Clear draft
@@ -197,7 +251,9 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
           className="px-8 py-4 font-sans font-medium tracking-wide transition-colors duration-300 rounded-lg shadow-md text-lg disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none bg-film-accent text-white hover:bg-film-accent-hover hover:shadow-lg"
           disabled={selectedParticipantRanges.length === 0 || !participantName.trim() || isSubmitting} // Updated disabled condition
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Availability'} {/* Updated button text */}
+          {isSubmitting 
+            ? (participantToken ? 'Updating...' : 'Submitting...') 
+            : (participantToken ? 'Update Availability' : 'Submit Availability')}
         </button>
       </div>
     </form>
