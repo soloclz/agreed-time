@@ -3,11 +3,7 @@ import { useState, useEffect } from 'react';
 interface RecentEvent {
   id: string;
   token: string;
-  // In a future version, we could store title and date too, 
-  // but for now let's just use the token/ID or fetch them?
-  // Fetching all of them might be slow. 
-  // Let's just show "Event [ID]" for now, or update the storage logic to save titles later.
-  // For this fix, let's keep it simple: "Saved Event"
+  title: string;
   timestamp: number;
 }
 
@@ -22,15 +18,38 @@ export default function RecentEvents() {
       const key = localStorage.key(i);
       if (key && key.startsWith('agreed_time_admin_')) {
         const id = key.replace('agreed_time_admin_', '');
-        const token = localStorage.getItem(key);
-        if (token) {
-           // We don't have timestamp in current storage format, so just push
-           loadedEvents.push({ id, token, timestamp: 0 });
+        const value = localStorage.getItem(key);
+        
+        if (value) {
+          try {
+            // Try to parse as new JSON format
+            const data = JSON.parse(value);
+            if (data.token && data.title) {
+               loadedEvents.push({
+                 id,
+                 token: data.token,
+                 title: data.title,
+                 timestamp: data.createdAt || 0
+               });
+               continue;
+            }
+          } catch (e) {
+            // Ignore parse error, treat as legacy string
+          }
+
+          // Fallback for legacy data (just a string token)
+          loadedEvents.push({ 
+            id, 
+            token: value, // The value itself is the token in legacy format
+            title: 'Untitled Event', // Placeholder for legacy data
+            timestamp: 0 
+          });
         }
       }
     }
 
-    // Since we don't have timestamps yet, just show them as is.
+    // Sort by newest first (if timestamps exist)
+    loadedEvents.sort((a, b) => b.timestamp - a.timestamp);
     setEvents(loadedEvents);
   }, []);
 
@@ -49,10 +68,17 @@ export default function RecentEvents() {
               className="block p-4 bg-white border border-film-border/50 rounded-lg hover:border-film-accent hover:shadow-sm transition-all group"
             >
               <div className="flex justify-between items-center">
-                <span className="font-mono text-sm text-ink/70 group-hover:text-film-accent transition-colors">
-                   Manage Event 
-                   <span className="ml-2 opacity-30 text-xs">{event.id.slice(0, 8)}...</span>
-                </span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-ink group-hover:text-film-accent transition-colors">
+                     {event.title}
+                  </span>
+                  <span className="text-xs text-ink/40 font-mono mt-1">
+                    {event.timestamp > 0 
+                      ? new Date(event.timestamp).toLocaleDateString() 
+                      : `ID: ${event.id.slice(0, 8)}...`
+                    }
+                  </span>
+                </div>
                 <span className="text-film-accent opacity-0 group-hover:opacity-100 transition-opacity">→</span>
               </div>
             </a>

@@ -26,6 +26,8 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
             return;
           }
           setEventData(data);
+          // Update browser tab title
+          document.title = `${data.title} - AgreedTime`;
         } else {
           setError('Event not found.');
         }
