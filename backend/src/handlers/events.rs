@@ -276,12 +276,9 @@ pub async fn submit_availability(
     let id = participant.id;
     let participant_token = participant.token;
 
-    sqlx::query!(
-        "DELETE FROM availabilities WHERE participant_id = $1",
-        id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!("DELETE FROM availabilities WHERE participant_id = $1", id)
+        .execute(&mut *transaction)
+        .await?;
 
     let merged_availabilities = merge_time_ranges(payload.availabilities);
 
@@ -579,9 +576,7 @@ pub async fn update_participant(
     }
     for range in &payload.availabilities {
         if range.start_at >= range.end_at {
-            return Err(AppError::BadRequest(
-                "Invalid time range".to_string(),
-            ));
+            return Err(AppError::BadRequest("Invalid time range".to_string()));
         }
     }
 
@@ -625,12 +620,9 @@ pub async fn update_participant(
     .await?;
 
     // 4. Update Availabilities (using internal ID)
-    sqlx::query!(
-        "DELETE FROM availabilities WHERE participant_id = $1",
-        id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!("DELETE FROM availabilities WHERE participant_id = $1", id)
+        .execute(&mut *transaction)
+        .await?;
 
     let merged = merge_time_ranges(payload.availabilities);
     for range in merged {
