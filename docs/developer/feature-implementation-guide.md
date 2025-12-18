@@ -43,13 +43,18 @@
     - `cargo test`：驗證邏輯與邊界狀況。
     - **必做：** 針對新功能撰寫整合測試 (`backend/tests/`)。
 
-### 6. 前端服務層更新 (API Service)
-**為什麼第六做？** 隔離 API 實作細節，讓 UI 元件專注於呈現。
+### 6. 更新 SQLx 離線快取 (SQLx Prepare)
+**為什麼第六做？** 如果你修改了 SQL 查詢，Docker Build (CI/CD) 需要最新的 `.sqlx` 快取才能通過編譯。
+- **操作：** 在 `backend/` 目錄執行 `cargo sqlx prepare`。
+- **核心考量：** 檢查 `.sqlx/` 目錄是否有新的 JSON 檔案產生，並將其 commit。這是為了支援 `SQLX_OFFLINE=true` 的編譯環境。
+
+### 7. 前端服務層更新 (API Service)
+**為什麼第七做？** 隔離 API 實作細節，讓 UI 元件專注於呈現。
 - **位置：**
     - `frontend/src/types/index.ts`：更新 TypeScript 型別，與 Rust Structs 100% 對齊。
     - `frontend/src/services/eventService.ts`：新增 API 呼叫方法。
 
-### 7. 前端 UI 元件開發 (UI/UX)
+### 8. 前端 UI 元件開發 (UI/UX)
 **為什麼最後做？** 資料管道打通後，最後才是處理使用者的互動。
 - **位置：** `frontend/src/components/`。
 - **核心考量：**
