@@ -83,10 +83,6 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
     return allSortedSlots.filter(slot => slot.count === maxCount && maxCount > 0);
   }, [allSortedSlots, maxCount]);
 
-  const otherOptions = useMemo(() => {
-    return allSortedSlots.filter(slot => slot.count < maxCount);
-  }, [allSortedSlots, maxCount]);
-
   // Check if only the organizer has responded
   const isOrganizerOnly = checkIsOrganizerOnly(totalParticipants, data.participants);
 
@@ -160,32 +156,6 @@ export default function EventResultsDisplay({ data, publicToken: _publicToken, t
             ) : (
               <p className="text-ink/50 italic font-serif">No common times found yet.</p>
             )}
-          </section>
-
-          {/* Other Options List */}
-          <section>
-            <h3 className="text-2xl font-serif font-bold text-ink mb-6">Other Options</h3>
-            <div className="space-y-3">
-                {otherOptions.length > 0 ? (
-                  otherOptions.slice(0, 10).map((item, idx) => (
-                      <div key={idx} className="group flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-lg border border-film-border hover:border-film-accent/30 transition-colors">
-                          <div className="flex items-center gap-4 mb-2 sm:mb-0">
-                              <span className="font-mono text-ink text-lg">
-                                  {format(parseISO(item.slot), 'MMM d, HH:mm')}
-                              </span>
-                          </div>
-                          <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                              <span className="text-sm text-ink/60 truncate max-w-[150px]">{item.participants.join(', ')}</span>
-                              <span className="bg-paper border border-film-border text-ink/70 px-3 py-1 rounded-md text-xs font-bold whitespace-nowrap">
-                                  {item.count} available
-                              </span>
-                          </div>
-                      </div>
-                  ))
-                ) : (
-                  <p className="text-ink/50 italic font-serif">No other options.</p>
-                )}
-            </div>
           </section>
 
           {/* Participants List */}
