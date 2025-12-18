@@ -98,6 +98,40 @@ fn test_submit_availability_request() {
 }
 
 #[test]
+fn test_submit_availability_response_serialization() {
+    let token = Uuid::new_v4();
+    let response = SubmitAvailabilityResponse {
+        participant_token: token,
+    };
+
+    let json = serde_json::to_string(&response).unwrap();
+    assert!(json.contains("\"participant_token\":"));
+    assert!(json.contains(&token.to_string()));
+
+    let deserialized: SubmitAvailabilityResponse = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized.participant_token, token);
+}
+
+#[test]
+fn test_participant_response_serialization() {
+    let token = Uuid::new_v4();
+    let response = ParticipantResponse {
+        participant_token: token,
+        name: "Test User".to_string(),
+        comment: Some("My comment".to_string()),
+        availabilities: vec![],
+    };
+
+    let json = serde_json::to_string(&response).unwrap();
+    assert!(json.contains("\"participant_token\":"));
+    assert!(json.contains("Test User"));
+
+    let deserialized: ParticipantResponse = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized.participant_token, token);
+    assert_eq!(deserialized.name, "Test User");
+}
+
+#[test]
 fn test_event_results_response_structure() {
     let response = EventResultsResponse {
         id: Uuid::new_v4(),

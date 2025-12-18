@@ -10,8 +10,9 @@ use crate::{
     error::{AppError, AppResult},
     models::{
         CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
-        EventSlot, OrganizerEventResponse, ParticipantAvailability, SubmitAvailabilityRequest,
-        TimeRangeRequest,
+        EventSlot, OrganizerEventResponse, ParticipantAvailability, ParticipantResponse,
+        SubmitAvailabilityRequest, SubmitAvailabilityResponse, TimeRangeRequest,
+        UpdateParticipantRequest,
     },
 };
 
@@ -220,7 +221,7 @@ pub async fn submit_availability(
     State(pool): State<PgPool>,
     Path(public_token): Path<String>,
     Json(payload): Json<SubmitAvailabilityRequest>,
-) -> AppResult<()> {
+) -> AppResult<Json<SubmitAvailabilityResponse>> {
     // Validate participant name
     if payload.participant_name.trim().is_empty() {
         return Err(AppError::BadRequest(
@@ -261,8 +262,9 @@ pub async fn submit_availability(
     }
 
     // Insert new participant (Always insert, allowing duplicates)
-    let participant_id = sqlx::query_scalar!(
-        "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id",
+    // We need to return both id (for internal FK) and token (for external client)
+    let participant = sqlx::query!(
+        "INSERT INTO participants (event_id, name, is_organizer, comment) VALUES ($1, $2, $3, $4) RETURNING id, token",
         event_id,
         payload.participant_name,
         false, // Default is not organizer
@@ -271,9 +273,12 @@ pub async fn submit_availability(
     .fetch_one(&mut *transaction)
     .await?;
 
+    let id = participant.id;
+    let participant_token = participant.token;
+
     sqlx::query!(
         "DELETE FROM availabilities WHERE participant_id = $1",
-        participant_id
+        id
     )
     .execute(&mut *transaction)
     .await?;
@@ -283,7 +288,7 @@ pub async fn submit_availability(
     for range in merged_availabilities {
         sqlx::query!(
             "INSERT INTO availabilities (participant_id, start_at, end_at) VALUES ($1, $2, $3)",
-            participant_id,
+            id,
             range.start_at,
             range.end_at
         )
@@ -293,7 +298,7 @@ pub async fn submit_availability(
 
     transaction.commit().await?;
 
-    Ok(())
+    Ok(Json(SubmitAvailabilityResponse { participant_token }))
 }
 
 async fn fetch_event_results_data(
@@ -514,6 +519,134 @@ pub async fn close_event(
         event_slots,
         organizer_name,
     }))
+}
+
+pub async fn get_participant(
+    State(pool): State<PgPool>,
+    Path((public_token, participant_token)): Path<(String, Uuid)>,
+) -> AppResult<Json<ParticipantResponse>> {
+    // 1. Verify Event exists
+    let event = sqlx::query!(
+        "SELECT id FROM events WHERE public_token = $1",
+        public_token
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // 2. Fetch Participant using TOKEN (ensure it belongs to this event)
+    let participant = sqlx::query!(
+        "SELECT id, name, comment FROM participants WHERE token = $1 AND event_id = $2",
+        participant_token,
+        event.id
+    )
+    .fetch_optional(&pool)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    // 3. Fetch Availabilities using internal ID
+    let availabilities = sqlx::query_as!(
+        TimeRangeRequest,
+        r#"
+        SELECT start_at, end_at
+        FROM availabilities
+        WHERE participant_id = $1
+        ORDER BY start_at
+        "#,
+        participant.id
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    Ok(Json(ParticipantResponse {
+        participant_token, // Corrected field name
+        name: participant.name,
+        comment: participant.comment,
+        availabilities,
+    }))
+}
+
+pub async fn update_participant(
+    State(pool): State<PgPool>,
+    Path((public_token, participant_token)): Path<(String, Uuid)>,
+    Json(payload): Json<UpdateParticipantRequest>,
+) -> AppResult<()> {
+    // Validate inputs
+    if payload.participant_name.trim().is_empty() {
+        return Err(AppError::BadRequest(
+            "Participant name is required".to_string(),
+        ));
+    }
+    for range in &payload.availabilities {
+        if range.start_at >= range.end_at {
+            return Err(AppError::BadRequest(
+                "Invalid time range".to_string(),
+            ));
+        }
+    }
+
+    let mut transaction = pool.begin().await?;
+
+    // 1. Verify Event
+    let event = sqlx::query!(
+        "SELECT id, state FROM events WHERE public_token = $1",
+        public_token
+    )
+    .fetch_optional(&mut *transaction)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    if event.state == "closed" {
+        return Err(AppError::BadRequest(
+            "Cannot update participation for a closed event".to_string(),
+        ));
+    }
+
+    // 2. Verify Participant ownership using TOKEN and get internal ID
+    let participant = sqlx::query!(
+        "SELECT id FROM participants WHERE token = $1 AND event_id = $2",
+        participant_token,
+        event.id
+    )
+    .fetch_optional(&mut *transaction)
+    .await?
+    .ok_or_else(|| AppError::NotFound)?;
+
+    let id = participant.id;
+
+    // 3. Update Participant details
+    sqlx::query!(
+        "UPDATE participants SET name = $1, comment = $2, updated_at = NOW() WHERE id = $3",
+        payload.participant_name,
+        payload.comment,
+        id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    // 4. Update Availabilities (using internal ID)
+    sqlx::query!(
+        "DELETE FROM availabilities WHERE participant_id = $1",
+        id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    let merged = merge_time_ranges(payload.availabilities);
+    for range in merged {
+        sqlx::query!(
+            "INSERT INTO availabilities (participant_id, start_at, end_at) VALUES ($1, $2, $3)",
+            id,
+            range.start_at,
+            range.end_at
+        )
+        .execute(&mut *transaction)
+        .await?;
+    }
+
+    transaction.commit().await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

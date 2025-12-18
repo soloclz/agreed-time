@@ -27,5 +27,9 @@ pub fn create_router(pool: PgPool) -> Router {
             "/events/organizer/{organizer_token}",
             get(handlers::events::get_organizer_event),
         )
+        .route(
+            "/events/{public_token}/participants/{participant_token}",
+            get(handlers::events::get_participant).put(handlers::events::update_participant),
+        )
         .with_state(pool)
 }

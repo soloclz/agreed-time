@@ -77,6 +77,23 @@ export interface SubmitAvailabilityPayload {
   comment?: string;
 }
 
+export interface SubmitAvailabilitySuccessResponse {
+  participant_token: string;
+}
+
+export interface UpdateParticipantPayload {
+  participant_name: string;
+  availabilities: ApiTimeRange[];
+  comment?: string;
+}
+
+export interface ParticipantResponse {
+  participant_token: string; // This is the UUID
+  name: string;
+  comment?: string;
+  availabilities: ApiTimeRange[];
+}
+
 // --- Results View Types ---
 
 export interface ParticipantAvailability {
