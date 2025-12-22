@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT public_token, state \n        FROM events \n        WHERE public_token = ANY($1)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_token",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "state",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "bfde28ec3639d86b7b41bdb0f1387bb3096636e3f967d08c40f961fd4cd0bb54"
+}
