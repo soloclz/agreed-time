@@ -124,3 +124,13 @@ pub struct OrganizerEventResponse {
     pub total_participants: i64,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchCheckStatusRequest {
+    pub tokens: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BatchCheckStatusResponse {
+    pub statuses: std::collections::HashMap<String, String>,
+}

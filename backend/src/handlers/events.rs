@@ -9,10 +9,10 @@ use uuid::Uuid;
 use crate::{
     error::{AppError, AppResult},
     models::{
-        CreateEventRequest, CreateEventResponse, Event, EventResponse, EventResultsResponse,
-        EventSlot, OrganizerEventResponse, ParticipantAvailability, ParticipantResponse,
-        SubmitAvailabilityRequest, SubmitAvailabilityResponse, TimeRangeRequest,
-        UpdateParticipantRequest,
+        BatchCheckStatusRequest, BatchCheckStatusResponse, CreateEventRequest, CreateEventResponse,
+        Event, EventResponse, EventResultsResponse, EventSlot, OrganizerEventResponse,
+        ParticipantAvailability, ParticipantResponse, SubmitAvailabilityRequest,
+        SubmitAvailabilityResponse, TimeRangeRequest, UpdateParticipantRequest,
     },
 };
 
@@ -639,6 +639,47 @@ pub async fn update_participant(
     transaction.commit().await?;
 
     Ok(())
+}
+
+pub async fn check_events_status(
+    State(pool): State<PgPool>,
+    Json(payload): Json<BatchCheckStatusRequest>,
+) -> AppResult<Json<BatchCheckStatusResponse>> {
+    if payload.tokens.len() > 50 {
+        return Err(AppError::BadRequest(
+            "Too many tokens to check (max 50)".to_string(),
+        ));
+    }
+
+    if payload.tokens.is_empty() {
+        return Ok(Json(BatchCheckStatusResponse {
+            statuses: std::collections::HashMap::new(),
+        }));
+    }
+
+    struct EventStatus {
+        public_token: String,
+        state: String,
+    }
+
+    let rows = sqlx::query_as!(
+        EventStatus,
+        r#"
+        SELECT public_token, state 
+        FROM events 
+        WHERE public_token = ANY($1)
+        "#,
+        &payload.tokens
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let mut statuses = std::collections::HashMap::new();
+    for row in rows {
+        statuses.insert(row.public_token, row.state);
+    }
+
+    Ok(Json(BatchCheckStatusResponse { statuses }))
 }
 
 #[cfg(test)]
