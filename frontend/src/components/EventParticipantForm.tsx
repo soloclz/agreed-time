@@ -155,11 +155,10 @@ export default function EventParticipantForm({ publicToken }: { publicToken: str
       if (eventData && currentToken) {
         try {
           const historyData = {
-            token: publicToken,
+            public_token: publicToken,
+            participant_token: currentToken,
             title: eventData.title,
-            role: 'guest',
-            createdAt: Date.now(),
-            participant_token: currentToken // Save the key for future edits
+            created_at: Date.now()
           };
           localStorage.setItem(`agreed_time_guest_${publicToken}`, JSON.stringify(historyData));
           // Clear draft

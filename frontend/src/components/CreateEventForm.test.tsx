@@ -81,6 +81,33 @@ describe('CreateEventForm', () => {
     expect(rangesArg).toEqual(mockRanges);
   });
 
+  it('saves organizer_token and public_token to localStorage on success', async () => {
+    render(<CreateEventForm />);
+
+    fireEvent.change(screen.getByLabelText(/Event Title/i), { target: { value: 'Storage Test' } });
+    
+    const submitButton = screen.getByRole('button', { name: /Create Event/i });
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    fireEvent.click(submitButton);
+
+    await waitFor(() => expect(mockCreateEvent).toHaveBeenCalled());
+
+    await waitFor(() => {
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'agreed_time_admin_event-123',
+        expect.stringContaining('"organizer_token":"organizer-token"')
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'agreed_time_admin_event-123',
+        expect.stringContaining('"public_token":"public-token"')
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'agreed_time_admin_event-123',
+        expect.stringContaining('"created_at"')
+      );
+    });
+  });
+
   it('enforces character limits and shows counters', () => {
     render(<CreateEventForm />);
 

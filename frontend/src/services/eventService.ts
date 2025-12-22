@@ -234,5 +234,30 @@ import type {
         }
       }
       return response.json() as Promise<EventResponse>;
+    },
+
+    checkEventsStatus: async (tokens: string[]): Promise<Record<string, string> | null> => {
+      if (tokens.length === 0) return {};
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/events/batch-check`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tokens }),
+        });
+  
+        if (!response.ok) {
+           console.warn('Batch check failed', response.status);
+           return null; 
+        }
+  
+        const data = await response.json();
+        return data.statuses || {};
+      } catch (error) {
+        console.error("Error batch checking events:", error);
+        return null;
+      }
     }
   };

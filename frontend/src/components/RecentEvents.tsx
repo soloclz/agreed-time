@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { eventService } from '../services/eventService';
 
 interface RecentEvent {
   id: string;
-  token: string;
+  public_token: string;
+  organizer_token?: string;
   title: string;
   timestamp: number;
   role: 'host' | 'guest';
@@ -28,42 +30,74 @@ export default function RecentEvents() {
         const role: 'host' | 'guest' = isAdmin ? 'host' : 'guest';
         
         if (value) {
-          let eventObj: RecentEvent | null = null;
           try {
             const data = JSON.parse(value);
-            eventObj = {
-              id,
-              token: data.token,
-              title: data.title,
-              timestamp: data.createdAt || 0,
-              role
-            };
-          } catch (e) {
-            // Legacy string support
-            eventObj = { 
-              id, 
-              token: value, 
-              title: 'Untitled Event', 
-              timestamp: 0,
-              role
-            };
-          }
-
-          if (eventObj) {
-            // Deduplication: If this token already exists, prioritize 'host'
-            const existing = eventsMap[eventObj.token];
-            if (!existing || (eventObj.role === 'host' && existing.role === 'guest')) {
-              eventsMap[eventObj.token] = eventObj;
+            
+            // Mandatory: Every recent event MUST have a public_token for validation
+            if (!data.public_token) {
+              localStorage.removeItem(key);
+              continue;
             }
+
+            const eventObj: RecentEvent = {
+              id,
+              public_token: data.public_token,
+              organizer_token: data.organizer_token, // Only present for host
+              title: data.title,
+              timestamp: data.created_at || 0,
+              role
+            };
+
+            // Deduplication: If this public_token already exists, prioritize 'host'
+            const existing = eventsMap[eventObj.public_token];
+            if (!existing || (eventObj.role === 'host' && existing.role === 'guest')) {
+              eventsMap[eventObj.public_token] = eventObj;
+            }
+          } catch (e) {
+            // Invalid JSON or legacy format - clean it up
+            localStorage.removeItem(key);
           }
         }
       }
     }
 
-    const loadedEvents = Object.values(eventsMap);
-    // Sort by newest first
-    loadedEvents.sort((a, b) => b.timestamp - a.timestamp);
-    setEvents(loadedEvents);
+    const allEvents = Object.values(eventsMap);
+    
+    // Optimistic render: show what we have first (sorted)
+    allEvents.sort((a, b) => b.timestamp - a.timestamp);
+    setEvents(allEvents);
+
+    // Filter & Validate with Backend using PUBLIC tokens
+    const tokensToCheck = allEvents.map(e => e.public_token).slice(0, 50);
+    
+    if (tokensToCheck.length > 0) {
+      eventService.checkEventsStatus(tokensToCheck).then(statuses => {
+        if (statuses === null) return;
+
+        const validEvents: RecentEvent[] = [];
+        let hasChanges = false;
+
+        allEvents.forEach(evt => {
+          if (tokensToCheck.includes(evt.public_token)) {
+             if (statuses[evt.public_token]) {
+                validEvents.push(evt);
+             } else {
+                // Not found in DB - clean up
+                const key = evt.role === 'host' ? `agreed_time_admin_${evt.id}` : `agreed_time_guest_${evt.public_token}`;
+                localStorage.removeItem(key);
+                hasChanges = true;
+             }
+          } else {
+             validEvents.push(evt);
+          }
+        });
+
+        if (hasChanges) {
+           setEvents(validEvents);
+        }
+      });
+    }
+
   }, []);
 
   if (events.length === 0) {
@@ -77,9 +111,9 @@ export default function RecentEvents() {
       </h3>
       <ul className="space-y-3">
         {events.map((event) => (
-          <li key={`${event.role}-${event.token}`}>
+          <li key={`${event.role}-${event.public_token}`}>
             <a 
-              href={event.role === 'host' ? `/manage/${event.token}` : `/event/${event.token}`}
+              href={event.role === 'host' ? `/manage/${event.organizer_token}` : `/event/${event.public_token}`}
               className="block p-4 bg-white border border-film-border/50 rounded-lg hover:border-film-accent hover:shadow-sm transition-all group"
             >
               <div className="flex justify-between items-center">

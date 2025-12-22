@@ -155,4 +155,31 @@ describe('EventParticipantForm', () => {
 
     await waitFor(() => expect(screen.getByText(/Thank you!/i)).toBeInTheDocument(), { timeout: 3000 });
   });
+
+  it('saves public_token and participant_token to localStorage on success', async () => {
+    mockSubmitResponse.mockResolvedValue({ participant_token: 'mock-p-token' });
+    
+    render(<EventParticipantForm publicToken="test-token-123" />);
+    await waitFor(() => expect(screen.getByText('Test Event')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText(/Your Name/i), { target: { value: 'Charlie' } });
+    
+    const submitButton = screen.getByRole('button', { name: /Availability/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => expect(screen.getByText(/Thank you!/i)).toBeInTheDocument());
+
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'agreed_time_guest_test-token-123',
+      expect.stringContaining('"public_token":"test-token-123"')
+    );
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'agreed_time_guest_test-token-123',
+      expect.stringContaining('"participant_token":"mock-p-token"')
+    );
+     expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'agreed_time_guest_test-token-123',
+      expect.stringContaining('"created_at"')
+    );
+  });
 });
