@@ -163,9 +163,9 @@ export default function TimeSlotSelector({
       }));
 
     } else {
-      // Organizer Mode: Default to 4 weeks from today
+      // Organizer Mode: Default to 5 weeks from today
       const today = getTodayLocal();
-      const future = addDays(today, 27);
+      const future = addDays(today, 34);
 
       setState(prev => ({
         ...prev,

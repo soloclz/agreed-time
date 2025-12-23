@@ -41,6 +41,19 @@ describe('TimeSlotSelector', () => {
     expect(screen.getByTitle('End hour')).toBeInTheDocument();
   });
 
+  it('sets default date range to 5 weeks (34 days) in organizer mode', async () => {
+    render(<TimeSlotSelector />);
+    
+    // Default start date is mocked to 2025-12-15
+    const startDateInput = screen.getByTitle('Start date');
+    expect(startDateInput).toHaveValue('2025-12-15');
+
+    // Default end date should be 2025-12-15 + 34 days = 2026-01-18
+    // Note: Our mock addDays implementation correctly handles date math
+    const endDateInput = screen.getByTitle('End date');
+    expect(endDateInput).toHaveValue('2026-01-18');
+  });
+
   it('updates date range and supports undo/redo', async () => {
     render(<TimeSlotSelector />);
     

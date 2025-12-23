@@ -48,7 +48,7 @@ The current build lets an organizer create an event with proposed time windows, 
 
 ### `/new` – Create Event
 - Fields: `title` (required), `description` (optional), `organizer_name` (defaults to `"Organizer"` if left blank), `time_zone` auto-detected from the browser.
-- Time selection: `TimeSlotSelector` with adjustable date range and start/end hours (defaults to today → +27 days, 09:00–18:00). Drag/long-press to paint, or click a date header to toggle a full day. Bottom panel lists selected slots with remove/clear actions.
+- Time selection: `TimeSlotSelector` with adjustable date range and start/end hours (defaults to today → +34 days, 09:00–18:00). Drag/long-press to paint, or click a date header to toggle a full day. Bottom panel lists selected slots with remove/clear actions.
 - Validation: requires non-empty title and at least one selected slot.
 - Submission: `POST /api/events` with the selected ranges (merged server-side). Organizer availability is auto-created with the provided name. Organizer token is stored in `localStorage` (`agreed_time_admin_{eventId}`) for convenience.
 - Success path: toast + redirect to `/manage/{organizer_token}`.
