@@ -40,7 +40,7 @@ Data models live in `backend/src/models`, handlers in `backend/src/handlers/even
 
 ## 4) Data & Time Flow
 - Frontend selection state is stored as local-time grid cells; `cellsToRanges` converts to UTC ISO ranges before API calls. `rangesToCells` converts server ranges back to local cells.
-- `TimeSlotSelector` defaults to today → +27 days and 09:00–18:00 for organizers; in participant mode it auto-sizes the visible range to the provided slots. `TimeGrid` caps display to 4 weeks and surfaces a validation message if exceeded.
+- `TimeSlotSelector` defaults to today → +34 days and 09:00–18:00 for organizers; in participant mode it auto-sizes the visible range to the provided slots. `TimeGrid` caps display to 5 weeks and surfaces a validation message if exceeded.
 - Organizer name defaults to `"Organizer"` on the client; backend requires a non-empty name.
 - Closing an event only changes `state` to `closed`; results remain viewable and no final slot is chosen.
 - Aggregated counts are computed in the frontend using the event's `slot_duration`; the API does not return per-slot aggregates.
