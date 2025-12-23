@@ -121,7 +121,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://agreedti
 
 		</style>
 	</head>
-	<body class="bg-paper text-ink font-serif antialiased selection:bg-film-accent selection:text-white overflow-x-hidden">
+	<body class="bg-paper text-ink font-serif antialiased selection:bg-film-accent selection:text-white overflow-x-hidden flex flex-col min-h-screen">
 		<div class="film-grain"></div>
 		
 		<header class="fixed top-0 left-0 w-full bg-paper z-40 border-b border-film-border shadow-sm">
@@ -137,9 +137,18 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://agreedti
 			</div>
 		</header>
 
-		<main class="pt-[4.5rem]"> {/* Adjust padding top to account for fixed header height */}
+		<main class="pt-[4.5rem] flex-grow"> {/* Adjust padding top to account for fixed header height */}
 			<slot />
 		</main>
+
+		<footer class="py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<p class="text-[10px] sm:text-xs text-ink/30 font-mono tracking-widest">
+					&copy; {new Date().getFullYear()} AgreedTime
+				</p>
+			</div>
+		</footer>
+
 		<ToastContainer client:load />
 	</body>
 </html>
