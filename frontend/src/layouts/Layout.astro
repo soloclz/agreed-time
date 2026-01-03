@@ -23,6 +23,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://agreedti
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="preload" as="image" href="/agreed-time-logo.svg" />
 		
 		<!-- Primary Meta Tags -->
 		<title>{title}</title>
@@ -45,13 +46,14 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://agreedti
 		<meta property="twitter:image" content={new URL(image, Astro.url)} />
 
 		<!-- Favicons & App Icons -->
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/svg+xml" href="/agreed-time-logo.svg" />
+		<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
 		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 		<link rel="icon" href="/favicon.ico" />
 		<link rel="shortcut icon" href="/favicon.ico" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-		<link rel="mask-icon" href="/favicon.svg" color="#0891b2" />
+		<link rel="mask-icon" href="/agreed-time-logo.svg" color="#0891b2" />
 		<meta name="apple-mobile-web-app-title" content="AgreedTime" />
 		<meta name="application-name" content="AgreedTime" />
 		<meta name="msapplication-TileColor" content="#0891b2" />
