@@ -1,78 +1,113 @@
 # AgreedTime
 
-Modern scheduling made simple. Create polls, collect availability, and find the best time for your group in seconds.
+> **Modern scheduling made simple.**  
+> Create polls, collect availability, and find the best time for your group in seconds—no login required.
 
-> Branding notice: The name “AgreedTime” and associated logos are not licensed for reuse. See `TRADEMARKS.md`.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-beta-orange)
 
-## Documentation
+**AgreedTime** is a privacy-focused, high-performance scheduling tool built with **Rust** and **Astro**. It focuses on speed, simplicity, and a "clean up after yourself" data policy.
 
-*   **[Developer Guide](./docs/developer/guide.md)**: Architecture, code standards, and contribution workflow.
-*   **[Product Spec](./docs/product/spec.md)**: Functional requirements and design specifications.
+## ✨ Key Features
 
-## Getting Started
+*   **No Accounts Needed**: Uses secure "Capability URLs" (Token-based access). One link for the organizer to manage, another for participants to vote.
+*   **Privacy First**: Events and all associated data are automatically deleted 7 days after creation.
+*   **Timezone Smart**: Handling specific time slots in UTC while respecting local user context (WIP).
+*   **Mobile Optimized**: "Paint" your availability on touch screens with a custom-built grid interactions.
+*   **High Performance**: Powered by a Rust backend and an SSR-optimized frontend.
+
+## 🛠 Tech Stack
+
+### Backend
+*   **Language**: Rust 🦀
+*   **Framework**: [Axum](https://github.com/tokio-rs/axum)
+*   **Database**: PostgreSQL with [SQLx](https://github.com/launchbadge/sqlx) (Compile-time checked queries)
+*   **Runtime**: Tokio
+
+### Frontend
+*   **Framework**: [Astro](https://astro.build/) (Server-Side Rendering mode)
+*   **UI Library**: React (for complex interactive islands)
+*   **Styling**: Tailwind CSS
+*   **State**: Local state + optimistic UI updates
+
+### Infrastructure
+*   **Containerization**: Docker & Docker Compose
+*   **Reverse Proxy**: Caddy (Production)
+*   **Task Runner**: `just`
+
+## 🚀 Getting Started
 
 ### Prerequisites
-*   Docker Desktop (or OrbStack)
+*   [Docker Desktop](https://www.docker.com/) (or OrbStack)
+*   [Just](https://github.com/casey/just) (`brew install just`)
 *   Node.js & npm
 *   Rust (Cargo)
 
-### One-Time Bootstrap
-After cloning the repo, run `./scripts/bootstrap.sh`. The script:
-*   Verifies the tools above are installed.
-*   Installs Rust via rustup automatically if `cargo` is missing (requires `curl`).
-*   Installs `sqlx-cli` once Rust/Cargo are available.
-*   Initializes the `knowledge/` git submodule (requires SSH access to `git@soloclz:soloclz/knowledge.git`).
-*   Creates `backend/.env` with local defaults if it doesn’t exist.
-*   Starts the Postgres container, applies database migrations, runs `cargo check`, installs frontend dependencies, and completes an `npm run build` so both apps are ready.
+### Quick Start
 
-### Environment Setup
-If you skip the bootstrap script, ensure you have a `.env` file in the `backend/` directory with your database connection string and other settings. A template for required variables is typically available or can be inferred from `backend/src/config.rs`.
-
-### Running Locally
-
-1.  **Start Database**:
+1.  **Clone the repository**:
     ```bash
-    docker compose up -d
+    git clone https://github.com/yourusername/agreed-time.git
+    cd agreed-time
     ```
 
-2.  **Run Backend** (in a new terminal):
+2.  **Bootstrap the environment**:
+    We provide a helper script to check dependencies, setup the `.env` files, and initialize the database.
     ```bash
-    cd backend
-    cargo run
+    ./scripts/bootstrap.sh
     ```
-    *Server runs at `http://localhost:3000`*
 
-3.  **Run Frontend** (in a new terminal):
-    ```bash
-    cd frontend
-    npm run dev
-    ```
-    *Frontend runs at `http://localhost:4321`*
+3.  **Run Locally**:
+    *   **Database**: Start the postgres container.
+        ```bash
+        docker compose up -d
+        ```
+    *   **Backend**:
+        ```bash
+        cd backend && cargo run
+        # Server runs at http://localhost:3000
+        ```
+    *   **Frontend**:
+        ```bash
+        cd frontend && npm run dev
+        # Frontend runs at http://localhost:4321
+        ```
 
-### Testing
-- Backend: `cd backend && cargo test`
-- Frontend (Vitest): `cd frontend && npm test`  
-  - Run a single spec: `npm test -- CreateEventForm.test.tsx`
+### Development Commands
 
-## Roadmap
+We use `just` to manage common development tasks. Run `just` to see all available commands.
 
-- [x] **Event Creation (Organizer View)**
-    - [x] Sticky time column layout
-    - [x] Mobile long-press selection
-    - [x] UTC timezone storage
-- [x] **Guest Response View**
-    - [x] Availability overlay ("painting" on top of organizer's slots)
-    - [x] Heatmap visualization
-- [x] **Backend Infrastructure**
-    - [x] Rust + Axum project initialization
-    - [x] Modular architecture (routes, handlers, models, db)
-    - [x] CORS configuration
-    - [x] Error handling and logging
-    - [x] Database schema and migrations (PostgreSQL)
-    - [x] Create Event API endpoints
-    - [ ] Authentication system
-- [ ] **Advanced Features**
-    - [ ] Public Roadmap Page (`/roadmap`)
-    - [ ] Timezone auto-detection for participants
-    - [ ] GitHub Actions CI/CD
-    - [ ] VPS deployment
+```bash
+just fix    # Format code & update SQLx cache (Run this often!)
+just check  # Run format checks, linters (clippy), and type checks
+just ci     # Run full test suite (backend + frontend)
+```
+
+## 📚 Documentation
+-
+-*   **[Interview & Architecture Guide](./knowledge/agreed-time-interview-guide.md)**: A high-level overview of technical decisions and potential interview questions.
+-*   **[Architecture Decisions (ADR)](./docs/architecture/decisions.md)**: Why we chose atomic rows, SSR, and capability URLs.
+-*   **[Developer Guide](./docs/developer/guide.md)**: Code standards and contribution workflow.
+
+## 🗺 Roadmap
+
+- [x] **Core Functionality**
+    - [x] Event Creation (Organizer View)
+    - [x] Participant Availability Voting (Guest View)
+    - [x] Heatmap Result Visualization
+    - [x] "Business Hours" auto-expansion logic
+- [x] **Technical Foundation**
+    - [x] Rust + Axum Backend with SQLx
+    - [x] Astro SSR + React Islands Frontend
+    - [x] Docker + Docker Compose Setup
+    - [x] GitHub Actions CI/CD Pipeline
+- [ ] **Upcoming**
+    - [ ] Finalize Timezone Auto-detection
+    - [ ] iCal / Google Calendar Export
+    - [ ] Email Notifications (Optional)
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+> **Note:** The name "AgreedTime" and the logo are trademarks and not included in the open-source license. See `TRADEMARKS.md` for details.
