@@ -113,3 +113,22 @@
     *   (-) **Loss of "update by re-entering name" feature**: Users can no longer modify their previous submissions by typing the same name. Each submission will create a new entry with a duplicate name.
     *   (-) Leads to potentially multiple entries with the same name for a single event in the database and UI, which might require UI adjustments to distinguish or group them.
     *   (Future Work): If modification functionality is desired, a more robust identity mechanism (e.g., cookie-based `participant_token` or magic links) will need to be implemented.
+
+## ADR-009: Participant Tokens for Secure Editing
+
+*   **Status**: Accepted
+*   **Date**: 2025-12-18
+*   **Context**: 
+    *   Following ADR-008, we allowed duplicate names to prevent overwriting, but this removed the ability for users to update their own availability.
+    *   We needed a way to allow users to securely edit their *own* submission without implementing a full user account system.
+    *   Exposing the database `id` (integer) in URLs is insecure as it allows enumeration and IDOR (Insecure Direct Object Reference) attacks.
+*   **Decision**: 
+    *   Add a `token` (UUID) column to the `participants` table.
+    *   Return this token to the frontend upon initial submission.
+    *   Store the token in the user's browser (LocalStorage).
+    *   Authenticate update requests (`PUT`) using this token combined with the event's public token.
+*   **Consequences**:
+    *   (+) **Restored Edit Capability**: Users can now update their availabilities.
+    *   (+) **Security**: The UUID token acts as a secret key. Knowing a participant's name or ID is no longer sufficient to modify their data.
+    *   (+) **No Login Required**: Maintains the friction-free "no account" philosophy of the product.
+    *   (-) **Device Bound**: Since the token is stored locally, the user cannot edit their response from a different device unless they manually transfer the link/token.
