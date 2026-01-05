@@ -14,12 +14,16 @@ We use the **Capability URL** pattern to manage access without user accounts.
 ## 2. Participant Identity & Anti-Spoofing
 To prevent **Organizer Impersonation** and data overwriting vulnerabilities:
 
-*   **Decision**: We transitioned from a "Unique Name" model to an "Always Insert" model.
-*   **Details**:
-    *   The database constraint `UNIQUE(event_id, name)` was removed (Migration `20251215...`).
+*   **Anti-Overwrite (Always Insert)**:
     *   The backend `submit_availability` handler **always inserts a new row** for every submission.
     *   **Result**: Even if a malicious user submits with the organizer's name, they create a *new* participant entry (imposter) rather than overwriting the organizer's data.
-    *   See **ADR-008** in [[docs/architecture/decisions]] for architectural context.
+    *   See **ADR-008** in [[docs/architecture/decisions]].
+
+*   **Secure Editing (Participant Tokens)**:
+    *   To allow valid users to update their own availability without accounts, we issue a secret `participant_token` (UUID) upon initial submission.
+    *   **Editing**: Updates are only allowed via the `PUT` endpoint if the correct `participant_token` is provided.
+    *   **Storage**: This token is stored in the user's `localStorage`.
+    *   See **ADR-009** in [[docs/architecture/decisions]].
 
 ## 3. Abuse Prevention
 
@@ -37,7 +41,8 @@ To prevent resource exhaustion and huge payloads:
     *   **Comment/Description**: `maxLength={500}`
     *   **Anti-Double-Submit**: UI locks the submit button (`isSubmitting`) to prevent accidental duplicate entries.
 *   **Backend**:
-    *   *Todo*: Enforce strict string length limits in API handlers to back up frontend validation.
+    *   Basic validation ensures fields are not empty.
+    *   Database text limits (implicitly) and payload size limits prevent massive abuse.
 
 ### 3.3 CORS
 *   **Principles**: See [[knowledge/security/cors-allowed-origins]].
