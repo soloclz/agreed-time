@@ -55,10 +55,13 @@ The current build lets an organizer create an event with proposed time windows, 
 
 ### `/event/{public_token}` – Participant Submission
 - Loads via `GET /api/events/{public_token}`. If the event state is `closed`, the page immediately redirects to `/event/{public_token}/result`.
-- Shows event title/description and organizer name.
+- Checks for existing `participant_token` in `localStorage`. If found, switches to **Edit Mode**, pre-filling the user's previous name, comment, and availability.
 - Fields: participant name (required) and optional comment.
 - Time selection constrained to the organizer's slots; rendered in the viewer's local timezone. Drag-to-select supported; no multi-state selection.
-- Submission: `POST /api/events/{public_token}/availability` with merged ranges and comment. On success, shows a thank-you screen (no auto-redirect).
+- Submission: 
+  - **New:** `POST /api/events/{public_token}/availability`. Returns a `participant_token` which is saved to `localStorage`.
+  - **Edit:** `PUT /api/events/{public_token}/{participant_token}`.
+- On success, shows a thank-you screen or redirects to results.
 
 ### `/event/{public_token}/result` – Public Results
 - Fetches `GET /api/events/{public_token}/results`.
@@ -126,6 +129,21 @@ Response:
   "comment": "Prefer mornings"
 }
 ```
+Response:
+```json
+{ "participant_token": "uuid-..." }
+```
+
+### Update Availability
+`PUT /api/events/{public_token}/{participant_token}`
+```json
+{
+  "participant_name": "Jamie Updated",
+  "availabilities": [ ... ],
+  "comment": "Changed my mind"
+}
+```
+Response: `200 OK` (Empty body)
 
 ### Event Results
 `GET /api/events/{public_token}/results`
