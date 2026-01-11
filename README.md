@@ -12,7 +12,7 @@
 
 *   **No Accounts Needed**: Uses secure "Capability URLs" (Token-based access). One link for the organizer to manage, another for participants to vote.
 *   **Privacy First**: Events and all associated data are automatically deleted 7 days after creation.
-*   **Timezone Smart**: Handling specific time slots in UTC while respecting local user context (WIP).
+*   **Timezone Smart**: Handling specific time slots in UTC while respecting local user context.
 *   **Mobile Optimized**: "Paint" your availability on touch screens with a custom-built grid interactions.
 *   **High Performance**: Powered by a Rust backend and an SSR-optimized frontend.
 
@@ -94,16 +94,17 @@ just ci     # Run full test suite (backend + frontend)
 - [x] **Core Functionality**
     - [x] Event Creation (Organizer View)
     - [x] Participant Availability Voting (Guest View)
+    - [x] **Secure Edit Mode**: Token-based editing for participants
     - [x] Heatmap Result Visualization
     - [x] "Business Hours" auto-expansion logic
 - [x] **Technical Foundation**
     - [x] Rust + Axum Backend with SQLx
     - [x] Astro SSR + React Islands Frontend
+    - [x] **Timezone Auto-detection**: Support for local time context
     - [x] Docker + Docker Compose Setup
     - [x] GitHub Actions CI/CD Pipeline
 - [ ] **Upcoming**
-    - [ ] Finalize Timezone Auto-detection
-    - [ ] iCal / Google Calendar Export
+    - [ ] **Calendar Integration**: Import/Export (e.g. Google Calendar) to simplify slot selection
     - [ ] Email Notifications (Optional)
 
 ## 📄 License
