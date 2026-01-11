@@ -28,10 +28,10 @@ We adopt a dual-track approach to serve both casual users and professionals with
 ## 3. Technical Architecture Strategy
 
 ### Repository & Open Source
-*   **Core Codebase**: **Private**. Contains backend logic, API handling, and booking algorithms.
-*   **Monorepo Structure**: Logical layering within a single repo (`backend/`, `frontend/`, `packages/ui`).
+*   **Core Codebase**: **Public**. This repository contains the backend logic, API handling, and the scheduling frontend.
+*   **Monorepo Structure**: Logical layering within a single repo (`backend/`, `frontend/`).
 *   **Public Assets**:
-    *   **UI Kit / Design System**: Open sourced to build brand reputation.
+    *   **UI Kit / Design System**: Part of the open-source repository to build brand reputation.
     *   **i18n Locales**: Open sourced for community translation.
     *   **Figma**: Public for marketing.
 
