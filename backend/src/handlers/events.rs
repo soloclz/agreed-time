@@ -55,12 +55,12 @@ pub async fn create_event(
         ));
     }
 
-    if let Some(ref desc) = payload.description {
-        if desc.len() > 1000 {
-            return Err(AppError::BadRequest(
-                "Description must be less than 1000 characters".to_string(),
-            ));
-        }
+    if let Some(ref desc) = payload.description
+        && desc.len() > 1000
+    {
+        return Err(AppError::BadRequest(
+            "Description must be less than 1000 characters".to_string(),
+        ));
     }
 
     if payload.organizer_name.trim().is_empty() || payload.organizer_name.len() > 50 {
@@ -249,12 +249,12 @@ pub async fn submit_availability(
         ));
     }
 
-    if let Some(ref comment) = payload.comment {
-        if comment.len() > 500 {
-            return Err(AppError::BadRequest(
-                "Comment must be less than 500 characters".to_string(),
-            ));
-        }
+    if let Some(ref comment) = payload.comment
+        && comment.len() > 500
+    {
+        return Err(AppError::BadRequest(
+            "Comment must be less than 500 characters".to_string(),
+        ));
     }
 
     // Validate time ranges
@@ -603,12 +603,12 @@ pub async fn update_participant(
         ));
     }
 
-    if let Some(ref comment) = payload.comment {
-        if comment.len() > 500 {
-            return Err(AppError::BadRequest(
-                "Comment must be less than 500 characters".to_string(),
-            ));
-        }
+    if let Some(ref comment) = payload.comment
+        && comment.len() > 500
+    {
+        return Err(AppError::BadRequest(
+            "Comment must be less than 500 characters".to_string(),
+        ));
     }
 
     for range in &payload.availabilities {

@@ -127,7 +127,7 @@ describe('TimeSlotSelector', () => {
     expect(week2ExistingCell).toHaveAttribute('aria-selected', 'true');
 
     // Copy Week 1 into following weeks
-    const copyButton = screen.getByLabelText(/Merge Week 1 selections into following weeks/i);
+    const copyButton = screen.getByLabelText(/Copy the schedule from the first 7 days to all remaining dates/i);
     expect(copyButton).not.toBeDisabled();
     fireEvent.click(copyButton);
 
@@ -159,7 +159,7 @@ describe('TimeSlotSelector', () => {
     fireEvent.mouseUp(week2TuesdayExistingCell as HTMLElement);
     expect(week2TuesdayExistingCell).toHaveAttribute('aria-selected', 'true');
 
-    const copyButton = screen.getByLabelText(/Merge Week 1 selections into following weeks/i);
+    const copyButton = screen.getByLabelText(/Copy the schedule from the first 7 days to all remaining dates/i);
     fireEvent.click(copyButton);
 
     expect(week2TuesdayExistingCell).toHaveAttribute('aria-selected', 'true');
