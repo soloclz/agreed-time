@@ -32,8 +32,6 @@ export default function FloatingEditMenu({
   
   // Common button classes
   const actionBtnBase = "flex items-center justify-center transition-all shadow-md border border-film-border";
-  const actionBtnEnabled = "bg-white text-ink hover:bg-film-light hover:scale-110 active:scale-95";
-  const actionBtnDisabled = "bg-gray-50 text-gray-300 border-film-border/50 shadow-none cursor-not-allowed";
 
   return (
     <div className="z-40 print:hidden animate-pop-in">
