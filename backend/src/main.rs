@@ -1,5 +1,5 @@
 use agreed_time_backend::config::Config;
-use agreed_time_backend::middleware::RateLimitLayer;
+use agreed_time_backend::middleware::{RateLimitLayer, SecurityHeadersLayer};
 use std::{net::SocketAddr, time::Duration};
 
 use axum::http::{HeaderValue, Method};
@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
                         .map(|origin| origin.parse::<HeaderValue>().unwrap())
                         .collect::<Vec<HeaderValue>>(),
                 )
-                .allow_methods([Method::GET, Method::POST])
+                .allow_methods([Method::GET, Method::POST, Method::PUT])
                 .allow_headers([
                     axum::http::header::ACCEPT,
                     axum::http::header::AUTHORIZATION,
@@ -101,6 +101,7 @@ async fn main() -> anyhow::Result<()> {
             // Create router
             let app = agreed_time_backend::routes::create_router(pool)
                 .layer(rate_limit_layer)
+                .layer(SecurityHeadersLayer)
                 .layer(cors);
 
             // Start server

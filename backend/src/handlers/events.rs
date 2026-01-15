@@ -49,6 +49,26 @@ pub async fn create_event(
     Json(payload): Json<CreateEventRequest>,
 ) -> AppResult<Json<CreateEventResponse>> {
     // Validate input
+    if payload.title.trim().is_empty() || payload.title.len() > 100 {
+        return Err(AppError::BadRequest(
+            "Title is required and must be less than 100 characters".to_string(),
+        ));
+    }
+
+    if let Some(ref desc) = payload.description {
+        if desc.len() > 1000 {
+            return Err(AppError::BadRequest(
+                "Description must be less than 1000 characters".to_string(),
+            ));
+        }
+    }
+
+    if payload.organizer_name.trim().is_empty() || payload.organizer_name.len() > 50 {
+        return Err(AppError::BadRequest(
+            "Organizer name is required and must be less than 50 characters".to_string(),
+        ));
+    }
+
     if payload.time_slots.is_empty() {
         return Err(AppError::BadRequest(
             "At least one time slot is required".to_string(),
@@ -223,10 +243,18 @@ pub async fn submit_availability(
     Json(payload): Json<SubmitAvailabilityRequest>,
 ) -> AppResult<Json<SubmitAvailabilityResponse>> {
     // Validate participant name
-    if payload.participant_name.trim().is_empty() {
+    if payload.participant_name.trim().is_empty() || payload.participant_name.len() > 50 {
         return Err(AppError::BadRequest(
-            "Participant name is required".to_string(),
+            "Participant name is required and must be less than 50 characters".to_string(),
         ));
+    }
+
+    if let Some(ref comment) = payload.comment {
+        if comment.len() > 500 {
+            return Err(AppError::BadRequest(
+                "Comment must be less than 500 characters".to_string(),
+            ));
+        }
     }
 
     // Validate time ranges
@@ -569,11 +597,20 @@ pub async fn update_participant(
     Json(payload): Json<UpdateParticipantRequest>,
 ) -> AppResult<()> {
     // Validate inputs
-    if payload.participant_name.trim().is_empty() {
+    if payload.participant_name.trim().is_empty() || payload.participant_name.len() > 50 {
         return Err(AppError::BadRequest(
-            "Participant name is required".to_string(),
+            "Participant name is required and must be less than 50 characters".to_string(),
         ));
     }
+
+    if let Some(ref comment) = payload.comment {
+        if comment.len() > 500 {
+            return Err(AppError::BadRequest(
+                "Comment must be less than 500 characters".to_string(),
+            ));
+        }
+    }
+
     for range in &payload.availabilities {
         if range.start_at >= range.end_at {
             return Err(AppError::BadRequest("Invalid time range".to_string()));
