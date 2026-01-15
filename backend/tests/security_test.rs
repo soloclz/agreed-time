@@ -1,4 +1,6 @@
-use agreed_time_backend::models::{CreateEventRequest, TimeRangeRequest, SubmitAvailabilityRequest};
+use agreed_time_backend::models::{
+    CreateEventRequest, SubmitAvailabilityRequest, TimeRangeRequest,
+};
 use axum::http::StatusCode;
 use axum_test::TestServer;
 use chrono::Utc;
@@ -6,13 +8,13 @@ use chrono::Utc;
 async fn setup_test_server() -> TestServer {
     let config = agreed_time_backend::config::Config::from_env().unwrap();
     let pool = agreed_time_backend::db::create_pool_lazy(&config.database_url);
-    
+
     // In actual tests, we usually mock the DB or use a test DB.
     // Assuming the test environment sets up DATABASE_URL correctly.
     let app = agreed_time_backend::routes::create_router(pool)
         .layer(agreed_time_backend::middleware::SecurityHeadersLayer)
         .layer(agreed_time_backend::middleware::RateLimitLayer::new());
-        
+
     TestServer::new(app).unwrap()
 }
 
@@ -23,13 +25,16 @@ async fn test_security_headers() {
 
     response.assert_status_ok();
     response.assert_header("X-Content-Type-Options", "nosniff");
-    response.assert_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    response.assert_header(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains",
+    );
 }
 
 #[tokio::test]
 async fn test_input_length_validation_create_event() {
     let server = setup_test_server().await;
-    
+
     // Title too long (101 chars)
     let long_title = "a".repeat(101);
     let payload = CreateEventRequest {
@@ -51,7 +56,7 @@ async fn test_input_length_validation_create_event() {
 #[tokio::test]
 async fn test_input_length_validation_submit_availability() {
     let server = setup_test_server().await;
-    
+
     // Name too long (51 chars)
     let long_name = "a".repeat(51);
     let payload = SubmitAvailabilityRequest {
@@ -60,9 +65,12 @@ async fn test_input_length_validation_submit_availability() {
         comment: None,
     };
 
-    let response = server.post("/events/some-token/availability").json(&payload).await;
+    let response = server
+        .post("/events/some-token/availability")
+        .json(&payload)
+        .await;
     assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
-    
+
     // Comment too long (501 chars)
     let long_comment = "c".repeat(501);
     let payload_comment = SubmitAvailabilityRequest {
@@ -70,7 +78,10 @@ async fn test_input_length_validation_submit_availability() {
         availabilities: vec![],
         comment: Some(long_comment),
     };
-    
-    let response = server.post("/events/some-token/availability").json(&payload_comment).await;
+
+    let response = server
+        .post("/events/some-token/availability")
+        .json(&payload_comment)
+        .await;
     assert_eq!(response.status_code(), StatusCode::BAD_REQUEST);
 }
