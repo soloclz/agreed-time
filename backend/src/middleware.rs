@@ -15,7 +15,7 @@ use tower::{Layer, Service};
 
 // Rate limiting configuration
 const RATE_LIMIT_DURATION: Duration = Duration::from_secs(60); // 1 minute
-const MAX_REQUESTS_PER_DURATION: u32 = 5; // 5 requests per minute
+const MAX_REQUESTS_PER_DURATION: u32 = 60; // 60 requests per minute
 
 #[derive(Clone)]
 pub struct RateLimitLayer {
@@ -88,10 +88,10 @@ where
             SocketAddr::from(([127, 0, 0, 1], 0))
         };
 
-        let mut clients = self.clients.lock().unwrap();
-        let now = Instant::now();
-
         let should_limit = {
+            let mut clients = self.clients.lock().unwrap();
+            let now = Instant::now();
+            
             if let Some((last_req_time, count)) = clients.get_mut(&peer_addr) {
                 if now.duration_since(*last_req_time) > RATE_LIMIT_DURATION {
                     // Reset counter if window expired
@@ -231,6 +231,52 @@ mod tests {
             .call(req_other)
             .await
             .unwrap();
-        assert_eq!(res_other.status(), StatusCode::OK);
-    }
-}
+                    assert_eq!(res_other.status(), StatusCode::OK);
+            }
+        }
+        
+        #[derive(Clone, Default)]
+        pub struct SecurityHeadersLayer;
+        
+        impl<S> Layer<S> for SecurityHeadersLayer {
+            type Service = SecurityHeadersService<S>;
+        
+            fn layer(&self, inner: S) -> Self::Service {
+                SecurityHeadersService { inner }
+            }
+        }
+        
+        #[derive(Clone)]
+        pub struct SecurityHeadersService<S> {
+            inner: S,
+        }
+        
+        impl<S> Service<Request> for SecurityHeadersService<S>
+        where
+            S: Service<Request, Response = Response> + Send + 'static,
+            S::Future: Send + 'static,
+        {
+            type Response = S::Response;
+            type Error = S::Error;
+            type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+        
+            fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+                self.inner.poll_ready(cx)
+            }
+        
+            fn call(&mut self, req: Request) -> Self::Future {
+                let fut = self.inner.call(req);
+                Box::pin(async move {
+                    let mut res: Response = fut.await?;
+                    let headers = res.headers_mut();
+                    
+                    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+                    headers.insert(
+                        "Strict-Transport-Security",
+                        "max-age=31536000; includeSubDomains".parse().unwrap(),
+                    );
+                    
+                    Ok(res)
+                })
+            }
+        }
