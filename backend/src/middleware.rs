@@ -142,8 +142,8 @@ mod tests {
 
         let ip = SocketAddr::from(([127, 0, 0, 1], 12345));
 
-        // Send 5 requests (Allowed)
-        for _ in 0..5 {
+        // Send MAX_REQUESTS_PER_DURATION requests (Allowed)
+        for _ in 0..MAX_REQUESTS_PER_DURATION {
             let mut req = Request::builder().body(Body::empty()).unwrap();
             req.extensions_mut().insert(ConnectInfo(ip));
             let res = rate_limit_service
@@ -156,7 +156,7 @@ mod tests {
             assert_eq!(res.status(), StatusCode::OK);
         }
 
-        // Send 6th request (Blocked)
+        // Send one more request (Blocked)
         let mut req = Request::builder().body(Body::empty()).unwrap();
         req.extensions_mut().insert(ConnectInfo(ip));
         let res = rate_limit_service
@@ -185,8 +185,8 @@ mod tests {
         // Real Client IP
         let client_ip = "203.0.113.195";
 
-        // Send 5 requests from client_ip
-        for _ in 0..5 {
+        // Send MAX_REQUESTS_PER_DURATION requests from client_ip
+        for _ in 0..MAX_REQUESTS_PER_DURATION {
             let mut req = Request::builder()
                 .header("x-forwarded-for", client_ip)
                 .body(Body::empty())
@@ -202,7 +202,7 @@ mod tests {
             assert_eq!(res.status(), StatusCode::OK);
         }
 
-        // 6th from client_ip should be blocked
+        // Next request from client_ip should be blocked
         let mut req = Request::builder()
             .header("x-forwarded-for", client_ip)
             .body(Body::empty())
